@@ -1,0 +1,10 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/cmake_install.cmake",
+		"/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/_deps/ftxui-build/cmake_install.cmake",
+		"/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/_deps/ftxui-build/examples/cmake_install.cmake",
+		"/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/_deps/ftxui-build/doc/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

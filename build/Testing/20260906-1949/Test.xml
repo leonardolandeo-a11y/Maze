@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20260906-1949-Experimental"
+	Name="(empty)"
+	Generator="ctest-4.2.3"
+	CompilerName=""
+	CompilerVersion=""
+	OSName="Linux"
+	Hostname="leonard-ASUS-TUF-Gaming-A16-FA608PP-FA608PP"
+	OSRelease="7.0.0-31-generic"
+	OSVersion="#31-Ubuntu SMP PREEMPT_DYNAMIC Sat Aug  1 04:26:38 UTC 2026"
+	OSPlatform="x86_64"
+	Is64Bits="1"
+	VendorString="AuthenticAMD"
+	VendorID="Advanced Micro Devices"
+	FamilyID="25"
+	ModelID="97"
+	ModelName="AMD Ryzen 9 8940HX with Radeon Graphics"
+	ProcessorCacheSize="1024"
+	NumberOfLogicalCPU="32"
+	NumberOfPhysicalCPU="16"
+	TotalVirtualMemory="4095"
+	TotalPhysicalMemory="14676"
+	LogicalProcessorsPerPhysical="2"
+	ProcessorClockFrequency="4410.96"
+	>
+	<Testing>
+		<StartDateTime>Sep 06 15:27 -05</StartDateTime>
+		<StartTestTime>1788726466</StartTestTime>
+		<TestList/>
+		<EndDateTime>Sep 06 15:27 -05</EndDateTime>
+		<EndTestTime>1788726466</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>
