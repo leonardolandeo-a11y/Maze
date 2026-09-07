@@ -281,15 +281,6 @@ CPACK_SOURCE_TZ:BOOL=ON
 //Enable to build ZIP source packages
 CPACK_SOURCE_ZIP:BOOL=OFF
 
-//Value Computed by CMake
-CircuitEscape_BINARY_DIR:STATIC=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build
-
-//Value Computed by CMake
-CircuitEscape_IS_TOP_LEVEL:STATIC=ON
-
-//Value Computed by CMake
-CircuitEscape_SOURCE_DIR:STATIC=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze
-
 //Directory under which to collect all populated content
 FETCHCONTENT_BASE_DIR:PATH=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/_deps
 

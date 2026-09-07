@@ -1,2 +1,0 @@
-/usr/bin/ar qc libcircuit_escape_core.a CMakeFiles/circuit_escape_core.dir/src/environment.cpp.o CMakeFiles/circuit_escape_core.dir/src/controllers.cpp.o
-/usr/bin/ranlib libcircuit_escape_core.a
