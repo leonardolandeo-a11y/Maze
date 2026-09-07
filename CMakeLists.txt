@@ -35,13 +35,13 @@ target_link_libraries(Maze PRIVATE
 
 # enable_testing()
 
-# add_executable(circuit_escape_tests
+# add_executable(Maze_test
 #     tests/grid_test.cpp
-#     tests/environment_test.cpp
-#     tests/interactions_test.cpp
-#     tests/controllers_test.cpp
+# #     tests/environment_test.cpp
+# #     tests/interactions_test.cpp
+# #     tests/controllers_test.cpp
 # )
 
-# target_link_libraries(circuit_escape_tests PRIVATE circuit_escape_core)
+# target_link_libraries(Maze_test PRIVATE Maze_core)
 
-# add_test(NAME circuit_escape_tests COMMAND circuit_escape_tests)
+# add_test(NAME Maze_test COMMAND Maze_test)
