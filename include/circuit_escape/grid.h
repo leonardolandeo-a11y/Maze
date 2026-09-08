@@ -11,12 +11,20 @@ private:
 public:
     using value_type = CellType;
 
-    // using iterator = /* iterador de la representación */;
-    // using const_iterator = /* iterador const de la representación */;
+    // Iterator that allows modification of cells
+    // typename tell us that ::iterator is a type which depending of the type of the array 
+    using iterator = typename std::array<CellType, Rows * Columns>::iterator;
 
-    static constexpr std::size_t rows() noexcept { return Rows; }
+    // Iterator that does NOT allow modification of cells
+    using const_iterator = typename std::array<CellType, Rows * Columns>::const_iterator;
 
-    static constexpr std::size_t columns() noexcept { return Columns; }
+    static constexpr std::size_t rows() noexcept {
+        return Rows;
+    }
+
+    static constexpr std::size_t columns() noexcept {
+        return Columns;
+    }
 
     [[nodiscard]] constexpr bool contains(Position position) const noexcept{
         if (position.row < Rows && position.column < Columns) {
@@ -35,11 +43,23 @@ public:
     }
 
 
-    // iterator begin() noexcept;
-    // iterator end() noexcept;
-    // const_iterator begin() const noexcept;
-    // const_iterator end() const noexcept;
-    // const_iterator cbegin() const noexcept;
-    // const_iterator cend() const noexcept;
+    iterator begin() noexcept{
+        return cells_.begin();
+    }
+    iterator end() noexcept{
+        return cells_.end();
+    }
+    const_iterator begin() const noexcept{
+        return cells_.begin();
+    }
+    const_iterator end() const noexcept{
+        return cells_.end();
+    }
+    const_iterator cbegin() const noexcept{
+        return cells_.cbegin();
+    }
+    const_iterator cend() const noexcept{
+        return cells_.cend();
+    }
 
 };
