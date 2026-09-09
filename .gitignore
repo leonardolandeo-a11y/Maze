@@ -1,0 +1,11 @@
+# CLion
+.idea/
+
+# Build
+build/
+cmake-build-*/
+
+# Archivos compilados
+*.exe
+*.o
+*.obj
