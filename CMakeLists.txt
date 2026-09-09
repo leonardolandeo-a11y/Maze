@@ -17,6 +17,7 @@ FetchContent_MakeAvailable(ftxui)
 add_library(Maze_core
     src/environment.cpp
     src/controllers.cpp
+        src/game_rules.cpp
 )
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
