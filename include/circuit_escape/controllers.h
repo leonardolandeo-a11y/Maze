@@ -12,10 +12,13 @@ struct Observation;
 
 class IController {
 public:
-    virtual Action chooseAction(
+    virtual ~IController() = default;
+
+    virtual Action selectAction(
         const Observation& observation,
-        const std::vector<Action>& legalActions
-        ) = 0;
+        std::span<const Action> legalActions
+    ) = 0;
+};
 
     virtual ~IController() = default;
 };
