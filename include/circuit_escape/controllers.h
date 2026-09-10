@@ -23,3 +23,10 @@ concept NavigationPolicy = requires(
 ) {
     { policy.selectAction(observation, actions) }-> std::same_as<Action>;
 };
+
+struct HuristicPolicy {
+    Action selectAction(
+        const Observation& observation, 
+        std::span<const Action> legalActions
+    );
+};
