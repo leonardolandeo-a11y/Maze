@@ -20,7 +20,7 @@ Overloaded(FLambda...) -> Overloaded<FLambda...>;
 /*---------------------------------------------------------------------*/
 
 //funcion auxiliar para aplicar los efectos de la celda
-void applyEffectCell(Agent& agent_, const GameRules&rules_, Cell& new_cell) {
+void applyEffectCell(Agent& agent_, const GameRules&rules_, Cell& target_cell) {
     //std::visis permite ir a la celda, revisar el tipo y escoger la funcion que pueda manejar el tipo de celda
     //la funcion apply... solo se encarga de definir overloaded para pasarlo usarlo en std::visit
     std::visit(Overloaded{
@@ -33,7 +33,7 @@ void applyEffectCell(Agent& agent_, const GameRules&rules_, Cell& new_cell) {
         //logica para recarga de bateria
         [&](Battery& battery){
             if (battery.consumed) return;
-            agent_.setEnergy(rules_.batteryRecharge);
+            agent_.addEnergy(rules_.batteryRecharge);
             battery.consumed = true;
         },
         //caso generico
@@ -41,7 +41,7 @@ void applyEffectCell(Agent& agent_, const GameRules&rules_, Cell& new_cell) {
             //nada
         },
             //etc etc etc
-    },new_cell);
+    },target_cell);
 }
 
 enum class EndReason {
