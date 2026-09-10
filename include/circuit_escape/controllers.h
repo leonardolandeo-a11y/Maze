@@ -42,3 +42,10 @@ public:
         return policy_.selectAction(observation,legalActions);
     }
 };
+
+struct HuristicPolicy {
+    Action selectAction(
+        const Observation& observation, 
+        std::span<const Action> legalActions
+    );
+};
