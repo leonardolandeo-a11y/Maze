@@ -13,6 +13,7 @@ namespace {
             -rules.trapScorePenalty
         );
     }
+}
     EndReason evaluateTermination(
         bool agentOnExit,
         int energy,
@@ -34,4 +35,3 @@ namespace {
 
         return EndReason::none;
     }
-}

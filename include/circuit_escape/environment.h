@@ -4,7 +4,9 @@
 #include "circuit_escape/cells.h"
 #include "circuit_escape/game_rules.h"
 #include "circuit_escape/grid.h"
+#include <cstddef>
 #include <variant>
+#include <vector>
 
 /*---------------------------------------------------------------------*/
 /*Patron de C++ para trabajar con std::visit (necesario por la rubrica)
@@ -21,7 +23,7 @@ Overloaded(FLambda...) -> Overloaded<FLambda...>;
 /*---------------------------------------------------------------------*/
 
 //funcion auxiliar para aplicar los efectos de la celda
-void applyEffectCell(Agent& agent_, const GameRules&rules_, Cell& new_cell) {
+void applyEffectCell(Agent& agent_, const GameRules&rules_, Cell& target_cell) {
     //std::visis permite ir a la celda, revisar el tipo y escoger la funcion que pueda manejar el tipo de celda
     //la funcion apply... solo se encarga de definir overloaded para pasarlo usarlo en std::visit
     std::visit(Overloaded{
@@ -34,7 +36,7 @@ void applyEffectCell(Agent& agent_, const GameRules&rules_, Cell& new_cell) {
         //logica para recarga de bateria
         [&](Battery& battery){
             if (battery.consumed) return;
-            agent_.setEnergy(rules_.batteryRecharge);
+            agent_.addEnergy(rules_.batteryRecharge);
             battery.consumed = true;
         },
         //caso generico
@@ -42,7 +44,7 @@ void applyEffectCell(Agent& agent_, const GameRules&rules_, Cell& new_cell) {
             //nada
         },
             //etc etc etc
-    },new_cell);
+    },target_cell);
 }
 
 enum class EndReason {
@@ -52,6 +54,62 @@ enum class EndReason {
     turnLimit
 };
 
+struct Observation {
+    Position agent;
+    Position goal;
+    int energy{};
+    int maximumEnergy{};
+    int score{};
+    std::size_t collectedResources{};
+    std::size_t turn{};
+    std::vector<Action> availableActions;
+};
+
+struct MovedEvent {
+    Position from;
+    Position to;
+    int energyCost;
+};
+
+struct MovementRejectedEvent {
+    Position from;
+    Action action;
+};
+
+struct ResourceCollectedEvent {
+    Position at;
+    int points;
+};
+
+struct EnergyChangedEvent {
+    int previous;
+    int current;
+};
+
+struct TrapTriggeredEvent {
+    Position at;
+};
+
+struct GoalReachedEvent {
+    Position at;
+};
+
+using NavigationEvent = std::variant<
+    MovedEvent,
+    MovementRejectedEvent,
+    ResourceCollectedEvent,
+    EnergyChangedEvent,
+    TrapTriggeredEvent,
+    GoalReachedEvent
+>;
+
+struct StepResult {
+    Observation observation;
+    std::vector<NavigationEvent> events;
+    bool finished{false};
+    EndReason reason{EndReason::none};
+};
+
 [[nodiscard]] EndReason evaluateTermination(
     bool agentOnExit,
     int energy,
@@ -59,24 +117,100 @@ enum class EndReason {
     std::size_t turnLimit
 ) noexcept;
 
-struct StepResult;
-
+// NavigationEnvironment for movement costs.
 template<std::size_t Rows, std::size_t Columns>
 class NavigationEnvironment {
-public:
-    using grid_type = Grid<Cell, Rows, Columns>;
-
-    NavigationEnvironment(
-        grid_type initialGrid,
-        Agent initialAgent,
-        GameRules rules
-    );
-
-    [[nodiscard]] StepResult step(Action action);
-
 private:
-    grid_type grid_;
-    Agent agent_;
-    GameRules rules_;
-    std::size_t turn_{0};
+    Grid<Cell, Rows, Columns> grid;
+    Agent agent;
+    GameRules rules;
+    std::size_t turn{0};
+
+    int movementCost(const Cell& cell) const {
+        return std::visit(Overloaded{
+            [&](const Empty&) {
+                return rules.normalCellCost;
+            },
+
+            [&](const RoughTerrain&) {
+                return rules.roughTerrainCost;
+            },
+
+            [&](const ResourceCell<int>&) {
+                return rules.normalCellCost;
+            },
+
+            [&](const Battery&) {
+                return rules.normalCellCost;
+            },
+
+            [&](const Trap&) {
+                return rules.normalCellCost;
+            },
+
+            [&](const Exit&) {
+                return rules.normalCellCost;
+            },
+
+            [&](const Wall&) {
+                return rules.waitOrInvalidCost;
+            }
+        }, cell);
+    }
+
+public:
+    NavigationEnvironment(
+        Grid<Cell, Rows, Columns> grid_,
+        Agent agent_,
+        GameRules rules_
+    )
+        : grid(grid_),
+          agent(agent_),
+          rules(rules_) {
+    }
+
+    void step(Action action) {
+        if (action == Action::wait) {
+            agent.setEnergy(
+                agent.getEnergy() - rules.waitOrInvalidCost
+            );
+            ++turn;
+            return;
+        }
+
+        auto candidate = neighbor(agent.getPosition(), action);
+
+        if (!candidate.has_value()) {
+            agent.setEnergy(
+                agent.getEnergy() - rules.waitOrInvalidCost
+            );
+            ++turn;
+            return;
+        }
+
+        if (!grid.contains(candidate.value())) {
+            agent.setEnergy(
+                agent.getEnergy() - rules.waitOrInvalidCost
+            );
+            ++turn;
+            return;
+        }
+
+        Cell& destination = grid.at(candidate.value());
+
+        if (std::holds_alternative<Wall>(destination)) {
+            agent.setEnergy(
+                agent.getEnergy() - rules.waitOrInvalidCost
+            );
+            ++turn;
+            return;
+        }
+
+        const int cost = movementCost(destination);
+
+        agent.setPosition(candidate.value());
+        agent.setEnergy(agent.getEnergy() - cost);
+
+        ++turn;
+    }
 };
