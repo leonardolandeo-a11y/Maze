@@ -29,14 +29,14 @@ Overloaded(FLambda...) -> Overloaded<FLambda...>;
 
 /*---------------------------------------------------------------------*/
 
-
+//struct que indica por que acabo el juego
 enum class EndReason {
     none,
     goalReached,
     noEnergy,
     turnLimit
 };
-
+//struct que guarda toda la informacion del agent. necesario para el controller
 struct Observation {
     Position agent;
     Position goal;
@@ -47,7 +47,12 @@ struct Observation {
     std::size_t turn{};
     std::vector<Action> availableActions;
 };
-
+/*structs eventos
+Guardan los detalles de lo que ocurrio en un turno
+Se agrupan en std::variant NavigationEvent
+Estos structs son guardados en std::variant NavigationEvent
+Seran pasados a std::visit para el motor grafico
+*/
 struct MovedEvent {
     Position from;
     Position to;
@@ -76,7 +81,7 @@ struct TrapTriggeredEvent {
 struct GoalReachedEvent {
     Position at;
 };
-
+//navigationevent es un tipo que represente cualquier tipo de evento
 using NavigationEvent = std::variant<
     MovedEvent,
     MovementRejectedEvent,
@@ -85,14 +90,22 @@ using NavigationEvent = std::variant<
     TrapTriggeredEvent,
     GoalReachedEvent
 >;
+/*
+strcut stepresult guarda:
+- la informacion de observation (estado del agente) 
+- el vector de eventos
+- un flag para ver si termino
+- un endreason,  si termino
 
+En resumen. informacion tras realizar un paso
+*/
 struct StepResult {
     Observation observation;
     std::vector<NavigationEvent> events;
     bool finished{false};
     EndReason reason{EndReason::none};
 };
-
+//funcion que evalua si ya termino el juego, retorna un endreason
 [[nodiscard]] EndReason evaluateTermination(
     bool agentOnExit,
     int energy,
@@ -102,6 +115,14 @@ struct StepResult {
 
 
 // NavigationEnvironment for movement costs.
+/*
+Esta clase se encarga de lo siguiente:
+- Proceso la accion solicita mediante step()
+- Calcula los costos de mov y efectos de celda
+- Evalua la condicion en que termino el juego
+- Genera el registro de eventos vector<NavigationEvent> events
+- Crear un OBservation inofensivo que se pasara a los controllers para que sepan que pasa en cada turno
+*/
 template<std::size_t Rows, std::size_t Columns>
 class NavigationEnvironment {
     Grid<Cell, Rows, Columns> initialGrid_;
@@ -109,14 +130,19 @@ class NavigationEnvironment {
 
     Agent initialAgent_;
     Agent agent;
-
+    /*
+    Se tiene un obj inicial para agente y tablero para guarda la informacion del inicio del juego
+    Los otros obj se modifican durante el juego
+    se instancian las reglas y el turno=0
+    */
     GameRules rules;
     std::size_t turn{0};
 
     //condiciones lo validamos
+    //metodo para que se verifica que la posicion de inicializacion sea correcta
     void validateInitialState() const {
         const Position start = agent.getPosition();
-
+        
         if (!grid_.contains(start)) {
             throw std::invalid_argument(
                 "Initial position is outside the grid"
@@ -128,9 +154,10 @@ class NavigationEnvironment {
                 "Initial position is not traversable"
             );
         }
-
+        //contador de salidas
+        //una vez inicializao el tablero, se cuenta cuatnas salidas hay
         std::size_t exitCount = 0;
-
+        
         for (const Cell &cell: grid_) {
             if (std::holds_alternative<Exit>(cell)) {
                 ++exitCount;
@@ -142,20 +169,20 @@ class NavigationEnvironment {
                 "Environment must contain exactly one exit"
             );
         }
-
+        //tirar errores si algo falla
         if (agent.getEnergy() <= 0) {
             throw std::invalid_argument(
                 "Initial energy must be positive"
             );
         }
-
+        
         if (rules.turnLimit == 0) {
             throw std::invalid_argument(
                 "Turn limit must be positive"
             );
         }
     }
-
+    //este metodo retorna la posicion de cell donde se encuentra la salida 
     Position goalPosition() const {
         for (std::size_t row = 0; row < Rows; ++row) {
             for (std::size_t column = 0; column < Columns; ++column) {
@@ -171,7 +198,11 @@ class NavigationEnvironment {
             "Environment invariant violated: exit not found"
         );
     }
-
+    /*
+    el metodo movcost usa el patron el struct Overloaded que guarda funciones lambda
+    usa la misma logica que applyeffectcell para obtener el tipo de cell y aplicar 
+    el costo de moviemiento
+    */
     int movementCost(const Cell &cell) const {
         return std::visit(Overloaded{
                               [&](const Empty &) {
@@ -216,7 +247,7 @@ class NavigationEnvironment {
                            if (resource.collected) {
                                return;
                            }
-
+                           //se agrega la recomepnsa puntos  y colecciona la recompensa
                            agent.addScore(rules.resourcePoints);
                            agent.addcollectedResources(1);
                            resource.collected = true;
@@ -234,9 +265,9 @@ class NavigationEnvironment {
                            if (battery.consumed) {
                                return;
                            }
-
+                           //se guarda la bateria actual, se recarga, y si la energia cambia (no es max) se registra el evento
                            const int previousEnergy = agent.getEnergy();
-
+                           
                            agent.addEnergy(rules.batteryRecharge);
                            battery.consumed = true;
 
@@ -279,22 +310,23 @@ class NavigationEnvironment {
 
                    }, target_cell);
     }
-
+    //Al final de cada turno, evalua si ya termino, los eventos y retorna un stepresult con la informacion
     [[nodiscard]] StepResult finalizeStep(
         std::vector<NavigationEvent> events
     ) {
+        //verifica si el agente esta en la salida
         const bool agentOnExit =
                 std::holds_alternative<Exit>(
                     grid_.at(agent.getPosition())
                 );
-
+        //llama a la funcion evaluateTermination para corrobar si ya llego al final
         const EndReason reason = evaluateTermination(
             agentOnExit,
             agent.getEnergy(),
             turn,
             rules.turnLimit
         );
-
+        //VERIFICA SI SE LLEGA A LA META
         if (reason == EndReason::goalReached) {
             events.push_back(
                 GoalReachedEvent{
@@ -302,11 +334,11 @@ class NavigationEnvironment {
                 }
             );
         }
-
+        //VERIFICA SI TERMINO EL JUEGO
         if (reason != EndReason::none) {
             agent.finish();
         }
-
+        //
         return StepResult{
             state(),
             events,
@@ -340,22 +372,28 @@ public:
         agent = initialAgent_;
         turn = 0;
     }
-
+    /*
+    Realiza lo sgiguiente:
+    - Filtra mov invalidos
+    - Registra acciones invalidas
+    - 
+    */
     [[nodiscard]] std::vector<Action> availableActions() const {
-        if (isFinished()) {
+        if (isFinished()) {//verifica si ya acabo la partida
             return {};
         }
 
         std::vector<Action> actions;
-
+        
         const Action movementActions[] = {
             Action::up,
             Action::down,
             Action::left,
             Action::right
         };
-
+        //mediante un for verifica que acciones son validas para agregarlas al vector actions
         for (Action action: movementActions) {
+            //instancia cada posicion de casilla
             auto candidate = neighbor(agent.getPosition(), action);
 
             if (!candidate.has_value()) {
@@ -374,12 +412,12 @@ public:
 
             actions.push_back(action);
         }
-
+        //wait siempre es valido
         actions.push_back(Action::wait);
 
         return actions;
     }
-
+    //funcion que retirna un bjeto observation con toda la informacion del momento
     [[nodiscard]] Observation state() const {
         return Observation{
             agent.getPosition(),
@@ -392,11 +430,11 @@ public:
             availableActions()
         };
     }
-
+    //se explica solo
     [[nodiscard]] bool isFinished() const noexcept {
         return !agent.isActive();
     }
-
+    //retorna el tableroS
     [[nodiscard]] const grid_type &grid() const noexcept {
         return grid_;
     }
@@ -438,7 +476,7 @@ public:
             agent.getPosition(),
             action
         );
-
+        //verifica y rechaza mov fueras del tablerp (inncesario)
         // movimiento fuera del tablero
         if (!candidate.has_value() ||
             !grid_.contains(candidate.value())) {
@@ -447,7 +485,7 @@ public:
             agent.setEnergy(
                 agent.getEnergy() - rules.waitOrInvalidCost
             );
-
+            //guarda evento cambio de energia
             if (agent.getEnergy() != previousEnergy) {
                 events.push_back(
                     EnergyChangedEvent{
@@ -456,7 +494,7 @@ public:
                     }
                 );
             }
-
+            //gaurda evento movimeinto rechazados
             events.push_back(
                 MovementRejectedEvent{
                     previousPosition,
@@ -476,7 +514,7 @@ public:
             agent.setEnergy(
                 agent.getEnergy() - rules.waitOrInvalidCost
             );
-
+        
             if (agent.getEnergy() != previousEnergy) {
                 events.push_back(
                     EnergyChangedEvent{
