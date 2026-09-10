@@ -318,6 +318,30 @@ src/environment.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Maze_core.dir/build.make CMakeFiles/Maze_core.dir/src/environment.cpp.s
 .PHONY : src/environment.cpp.s
 
+src/game_rules.o: src/game_rules.cpp.o
+.PHONY : src/game_rules.o
+
+# target to build an object file
+src/game_rules.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Maze_core.dir/build.make CMakeFiles/Maze_core.dir/src/game_rules.cpp.o
+.PHONY : src/game_rules.cpp.o
+
+src/game_rules.i: src/game_rules.cpp.i
+.PHONY : src/game_rules.i
+
+# target to preprocess a source file
+src/game_rules.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Maze_core.dir/build.make CMakeFiles/Maze_core.dir/src/game_rules.cpp.i
+.PHONY : src/game_rules.cpp.i
+
+src/game_rules.s: src/game_rules.cpp.s
+.PHONY : src/game_rules.s
+
+# target to generate assembly for a file
+src/game_rules.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Maze_core.dir/build.make CMakeFiles/Maze_core.dir/src/game_rules.cpp.s
+.PHONY : src/game_rules.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -346,6 +370,9 @@ help:
 	@echo "... src/environment.o"
 	@echo "... src/environment.i"
 	@echo "... src/environment.s"
+	@echo "... src/game_rules.o"
+	@echo "... src/game_rules.i"
+	@echo "... src/game_rules.s"
 .PHONY : help
 
 

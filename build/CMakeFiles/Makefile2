@@ -161,12 +161,12 @@ _deps/ftxui-build/examples/clean:
 CMakeFiles/Maze_core.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Maze_core.dir/build.make CMakeFiles/Maze_core.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Maze_core.dir/build.make CMakeFiles/Maze_core.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=3,4,5 "Built target Maze_core"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=3,4,5,6 "Built target Maze_core"
 .PHONY : CMakeFiles/Maze_core.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/Maze_core.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles 3
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles 4
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/Maze_core.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles 0
 .PHONY : CMakeFiles/Maze_core.dir/rule
@@ -178,7 +178,7 @@ Maze_core: CMakeFiles/Maze_core.dir/rule
 # codegen rule for target.
 CMakeFiles/Maze_core.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Maze_core.dir/build.make CMakeFiles/Maze_core.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=3,4,5 "Finished codegen for target Maze_core"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=3,4,5,6 "Finished codegen for target Maze_core"
 .PHONY : CMakeFiles/Maze_core.dir/codegen
 
 # clean rule for target.
@@ -201,7 +201,7 @@ CMakeFiles/Maze.dir/all: _deps/ftxui-build/CMakeFiles/component.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/Maze.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles 84
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles 85
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/Maze.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles 0
 .PHONY : CMakeFiles/Maze.dir/rule
@@ -228,7 +228,7 @@ CMakeFiles/Maze.dir/clean:
 _deps/ftxui-build/CMakeFiles/screen.dir/all:
 	$(MAKE) $(MAKESILENT) -f _deps/ftxui-build/CMakeFiles/screen.dir/build.make _deps/ftxui-build/CMakeFiles/screen.dir/depend
 	$(MAKE) $(MAKESILENT) -f _deps/ftxui-build/CMakeFiles/screen.dir/build.make _deps/ftxui-build/CMakeFiles/screen.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=76,77,78,79,80,81,82,83,84 "Built target screen"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=77,78,79,80,81,82,83,84,85 "Built target screen"
 .PHONY : _deps/ftxui-build/CMakeFiles/screen.dir/all
 
 # Build rule for subdir invocation for target.
@@ -245,7 +245,7 @@ screen: _deps/ftxui-build/CMakeFiles/screen.dir/rule
 # codegen rule for target.
 _deps/ftxui-build/CMakeFiles/screen.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f _deps/ftxui-build/CMakeFiles/screen.dir/build.make _deps/ftxui-build/CMakeFiles/screen.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=76,77,78,79,80,81,82,83,84 "Finished codegen for target screen"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=77,78,79,80,81,82,83,84,85 "Finished codegen for target screen"
 .PHONY : _deps/ftxui-build/CMakeFiles/screen.dir/codegen
 
 # clean rule for target.
@@ -260,7 +260,7 @@ _deps/ftxui-build/CMakeFiles/screen.dir/clean:
 _deps/ftxui-build/CMakeFiles/dom.dir/all: _deps/ftxui-build/CMakeFiles/screen.dir/all
 	$(MAKE) $(MAKESILENT) -f _deps/ftxui-build/CMakeFiles/dom.dir/build.make _deps/ftxui-build/CMakeFiles/dom.dir/depend
 	$(MAKE) $(MAKESILENT) -f _deps/ftxui-build/CMakeFiles/dom.dir/build.make _deps/ftxui-build/CMakeFiles/dom.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75 "Built target dom"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76 "Built target dom"
 .PHONY : _deps/ftxui-build/CMakeFiles/dom.dir/all
 
 # Build rule for subdir invocation for target.
@@ -277,7 +277,7 @@ dom: _deps/ftxui-build/CMakeFiles/dom.dir/rule
 # codegen rule for target.
 _deps/ftxui-build/CMakeFiles/dom.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f _deps/ftxui-build/CMakeFiles/dom.dir/build.make _deps/ftxui-build/CMakeFiles/dom.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75 "Finished codegen for target dom"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76 "Finished codegen for target dom"
 .PHONY : _deps/ftxui-build/CMakeFiles/dom.dir/codegen
 
 # clean rule for target.
@@ -293,7 +293,7 @@ _deps/ftxui-build/CMakeFiles/component.dir/all: _deps/ftxui-build/CMakeFiles/scr
 _deps/ftxui-build/CMakeFiles/component.dir/all: _deps/ftxui-build/CMakeFiles/dom.dir/all
 	$(MAKE) $(MAKESILENT) -f _deps/ftxui-build/CMakeFiles/component.dir/build.make _deps/ftxui-build/CMakeFiles/component.dir/depend
 	$(MAKE) $(MAKESILENT) -f _deps/ftxui-build/CMakeFiles/component.dir/build.make _deps/ftxui-build/CMakeFiles/component.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32 "Built target component"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33 "Built target component"
 .PHONY : _deps/ftxui-build/CMakeFiles/component.dir/all
 
 # Build rule for subdir invocation for target.
@@ -310,7 +310,7 @@ component: _deps/ftxui-build/CMakeFiles/component.dir/rule
 # codegen rule for target.
 _deps/ftxui-build/CMakeFiles/component.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f _deps/ftxui-build/CMakeFiles/component.dir/build.make _deps/ftxui-build/CMakeFiles/component.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32 "Finished codegen for target component"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33 "Finished codegen for target component"
 .PHONY : _deps/ftxui-build/CMakeFiles/component.dir/codegen
 
 # clean rule for target.
