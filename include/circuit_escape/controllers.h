@@ -8,12 +8,13 @@
 #include <span>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 struct Observation;
 
 /*
 - clase abstracta de la que heredan todos los controllers
-- destructor virtual necesario y funcion abstracta selectAction
+- destructor virtual necesario y todas las funciones abtractas
 */
 class IController {
 public:
@@ -24,7 +25,6 @@ public:
         std::span<const Action> legalActions
     ) = 0;
 };
-
 
 class RandomPolicy {
     std::mt19937 generator_;
@@ -51,10 +51,11 @@ public:
     }
 };
 
-
 /*
-Concept que verifica que Policy tenga un metodo selectAction
-que reciba Observation y acciones legales, y devuelva Action.
+Concept que verifica que el tipo de dato Policy tenga un metodo un metodo llamada selectAction
+y verifica que este bien implementado: seleciona una accion que sea
+std::span() objeto ligero hacia una lista contigua de elementos
+std::same_As() verifica si los 2 tipos son exacatamente iguales
 */
 template<typename Policy>
 concept NavigationPolicy = requires(
@@ -66,11 +67,15 @@ concept NavigationPolicy = requires(
 };
 
 
-template<NavigationPolicy Policy>
-class PolicyController final : public IController {
+template<typename Policy>
+requires NavigationPolicy<Policy>
+class PolicyController : public IController {
     Policy policy_;
 
 public:
+    //explicit es una buena practica para eivtar conversiones impliucitas
+    // se usa la asignacion por movimiento por eficiencia (una copia seria innecesaria pues no necesitamos mantener el parametro policy despues del contructor)
+    //PolicyController posee su propia politica (policy)
     explicit PolicyController(Policy policy)
         : policy_(std::move(policy)) {}
 
@@ -81,7 +86,6 @@ public:
         return policy_.selectAction(observation, legalActions);
     }
 };
-
 
 struct HeuristicPolicy {
     Action selectAction(
