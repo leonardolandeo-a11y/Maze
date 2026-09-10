@@ -51,7 +51,7 @@ void Agent::addcollectedResources(size_t resources) {
 }
 
 void Agent::addEnergy(int energy_) {
-    energy += energy_;
+    setEnergy(energy + energy_);
 }
 
 void Agent::finish() {
