@@ -104,12 +104,8 @@ struct StepResult {
 // NavigationEnvironment for movement costs.
 template<std::size_t Rows, std::size_t Columns>
 class NavigationEnvironment {
-public:
-    using grid_type = Grid<Cell, Rows, Columns>;
-
-private:
-    grid_type initialGrid_;
-    grid_type grid_;
+    Grid<Cell, Rows, Columns> initialGrid_;
+    Grid<Cell, Rows, Columns> grid_;
 
     Agent initialAgent_;
     Agent agent;
@@ -320,6 +316,8 @@ private:
     }
 
 public:
+    using grid_type = Grid<Cell, Rows, Columns>;
+
     NavigationEnvironment(
         grid_type initialGrid,
         Agent agent_,
@@ -334,9 +332,9 @@ public:
     }
 
     void reset(std::uint32_t seed) {
-        // actualmente el entorno no realiza decisiones aleatorias
-        // la semilla se mantiene en la interfaz para simulaciones reproducibles
-        (void)seed;
+        // entorno no realiza decisiones aleatorias
+        // semilla para reproducciones
+        (void) seed;
 
         grid_ = initialGrid_;
         agent = initialAgent_;
