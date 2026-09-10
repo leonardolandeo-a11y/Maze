@@ -6,6 +6,7 @@
 #include "circuit_escape/grid.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <stdexcept>
 #include <variant>
 #include <vector>
@@ -107,8 +108,12 @@ public:
     using grid_type = Grid<Cell, Rows, Columns>;
 
 private:
+    grid_type initialGrid_;
     grid_type grid_;
+
+    Agent initialAgent_;
     Agent agent;
+
     GameRules rules;
     std::size_t turn{0};
 
@@ -320,10 +325,22 @@ public:
         Agent agent_,
         GameRules rules_
     )
-        : grid_(initialGrid),
+        : initialGrid_(initialGrid),
+          grid_(initialGrid),
+          initialAgent_(agent_),
           agent(agent_),
           rules(rules_) {
         validateInitialState();
+    }
+
+    void reset(std::uint32_t seed) {
+        // actualmente el entorno no realiza decisiones aleatorias
+        // la semilla se mantiene en la interfaz para simulaciones reproducibles
+        (void)seed;
+
+        grid_ = initialGrid_;
+        agent = initialAgent_;
+        turn = 0;
     }
 
     [[nodiscard]] std::vector<Action> availableActions() const {
