@@ -28,5 +28,6 @@ public:
     void setEnergy(int amount) ;
     void addScore(int points) ;
     void addcollectedResources(size_t resources) ;
+    void addEnergy(int energy_) ;
     void finish() ;
 };
