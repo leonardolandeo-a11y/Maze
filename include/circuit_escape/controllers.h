@@ -1,16 +1,25 @@
 #pragma once
 
-#include "circuit_escape/types.h"
-#include <vector>
+#include "circuit_escape/environment.h"
 
-struct Observation;
+#include <span>
+#include <concepts>
 
 class IController {
 public:
-    virtual Action chooseAction(
-        const Observation& observation,
-        const std::vector<Action>& legalActions
-        ) = 0;
-
     virtual ~IController() = default;
+
+    virtual Action selectAction(
+        const Observation& observation,
+        std::span<const Action> legalActions
+    ) = 0;
+};
+
+template<typename Policy>
+concept NavigationPolicy = requires(
+    Policy& policy,
+    const Observation& observation,
+    std::span<const Action> actions
+) {
+    { policy.selectAction(observation, actions) }-> std::same_as<Action>;
 };
