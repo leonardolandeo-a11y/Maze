@@ -166,7 +166,8 @@ private:
                     return;
                 }
 
-                agent.addcollectedResources(rules.resourcePoints);
+                agent.addScore(rules.resourcePoints);
+                agent.addcollectedResources(1);
                 resource.collected = true;
             },
 
@@ -179,6 +180,12 @@ private:
                 agent.addEnergy(rules.batteryRecharge);
                 battery.consumed = true;
             },
+
+            // logica para trampas
+            [&](Trap&) {
+                  agent.setEnergy(agent.getEnergy() - rules.trapEnergyPenalty);
+                  agent.addScore(-rules.trapScorePenalty);
+      },
 
             // caso generico
             [&](auto&) {
