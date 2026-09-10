@@ -4,6 +4,7 @@
 #include "circuit_escape/cells.h"
 #include "circuit_escape/game_rules.h"
 #include "circuit_escape/grid.h"
+
 #include <cstddef>
 #include <variant>
 #include <vector>
@@ -126,6 +127,20 @@ private:
     GameRules rules;
     std::size_t turn{0};
 
+    Position goalPosition() const {
+        for (std::size_t row = 0; row < Rows; ++row) {
+            for (std::size_t column = 0; column < Columns; ++column) {
+                Position position{row, column};
+
+                if (std::holds_alternative<Exit>(grid.at(position))) {
+                    return position;
+                }
+            }
+        }
+
+        return agent.getPosition(); //Temporal hasta validar salida
+    }
+
     int movementCost(const Cell& cell) const {
         return std::visit(Overloaded{
             [&](const Empty&) {
@@ -167,6 +182,58 @@ public:
         : grid(grid_),
           agent(agent_),
           rules(rules_) {
+    }
+
+    [[nodiscard]] std::vector<Action> availableActions() const {
+        std::vector<Action> actions;
+
+        const Action movementActions[] = {
+            Action::up,
+            Action::down,
+            Action::left,
+            Action::right
+        };
+
+        for (Action action : movementActions) {
+            auto candidate = neighbor(agent.getPosition(), action);
+
+            if (!candidate.has_value()) {
+                continue;
+            }
+
+            if (!grid.contains(candidate.value())) {
+                continue;
+            }
+
+            const Cell& destination = grid.at(candidate.value());
+
+            if (std::holds_alternative<Wall>(destination)) {
+                continue;
+            }
+
+            actions.push_back(action);
+        }
+
+        actions.push_back(Action::wait);
+
+        return actions;
+    }
+
+    [[nodiscard]] Observation state() const {
+        return Observation{
+            agent.getPosition(),
+            goalPosition(),
+            agent.getEnergy(),
+            agent.getMaximumEnergy(),
+            agent.getScore(),
+            agent.getCollectedResources(),
+            turn,
+            availableActions()
+        };
+    }
+
+    [[nodiscard]] bool isFinished() const noexcept {
+        return !agent.isActive();
     }
 
     void step(Action action) {
