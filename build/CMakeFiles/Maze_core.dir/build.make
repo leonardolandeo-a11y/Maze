@@ -100,19 +100,35 @@ CMakeFiles/Maze_core.dir/src/controllers.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Maze_core.dir/src/controllers.cpp.s"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/src/controllers.cpp -o CMakeFiles/Maze_core.dir/src/controllers.cpp.s
 
+CMakeFiles/Maze_core.dir/src/game_rules.cpp.o: CMakeFiles/Maze_core.dir/flags.make
+CMakeFiles/Maze_core.dir/src/game_rules.cpp.o: /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/src/game_rules.cpp
+CMakeFiles/Maze_core.dir/src/game_rules.cpp.o: CMakeFiles/Maze_core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/Maze_core.dir/src/game_rules.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Maze_core.dir/src/game_rules.cpp.o -MF CMakeFiles/Maze_core.dir/src/game_rules.cpp.o.d -o CMakeFiles/Maze_core.dir/src/game_rules.cpp.o -c /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/src/game_rules.cpp
+
+CMakeFiles/Maze_core.dir/src/game_rules.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Maze_core.dir/src/game_rules.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/src/game_rules.cpp > CMakeFiles/Maze_core.dir/src/game_rules.cpp.i
+
+CMakeFiles/Maze_core.dir/src/game_rules.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Maze_core.dir/src/game_rules.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/src/game_rules.cpp -o CMakeFiles/Maze_core.dir/src/game_rules.cpp.s
+
 # Object files for target Maze_core
 Maze_core_OBJECTS = \
 "CMakeFiles/Maze_core.dir/src/environment.cpp.o" \
-"CMakeFiles/Maze_core.dir/src/controllers.cpp.o"
+"CMakeFiles/Maze_core.dir/src/controllers.cpp.o" \
+"CMakeFiles/Maze_core.dir/src/game_rules.cpp.o"
 
 # External object files for target Maze_core
 Maze_core_EXTERNAL_OBJECTS =
 
 libMaze_core.a: CMakeFiles/Maze_core.dir/src/environment.cpp.o
 libMaze_core.a: CMakeFiles/Maze_core.dir/src/controllers.cpp.o
+libMaze_core.a: CMakeFiles/Maze_core.dir/src/game_rules.cpp.o
 libMaze_core.a: CMakeFiles/Maze_core.dir/build.make
 libMaze_core.a: CMakeFiles/Maze_core.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX static library libMaze_core.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX static library libMaze_core.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/Maze_core.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/Maze_core.dir/link.txt --verbose=$(VERBOSE)
 

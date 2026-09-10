@@ -10,6 +10,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/src/controllers.cpp" "CMakeFiles/Maze_core.dir/src/controllers.cpp.o" "gcc" "CMakeFiles/Maze_core.dir/src/controllers.cpp.o.d"
   "/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/src/environment.cpp" "CMakeFiles/Maze_core.dir/src/environment.cpp.o" "gcc" "CMakeFiles/Maze_core.dir/src/environment.cpp.o.d"
+  "/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/src/game_rules.cpp" "CMakeFiles/Maze_core.dir/src/game_rules.cpp.o" "gcc" "CMakeFiles/Maze_core.dir/src/game_rules.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.
