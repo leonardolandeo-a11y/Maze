@@ -57,3 +57,90 @@ enum class EndReason {
     std::size_t turn,
     std::size_t turnLimit
 ) noexcept;
+
+// NavegationEnvironment para movement_cost
+template<std::size_t Rows, std::size_t Columns>
+class NavigationEnvironment {
+private:
+    Grid<Cell, Rows, Columns> grid;
+    Agent agent;
+    GameRules rules;
+    std::size_t turn{0};
+
+    int movementCost(const Cell& cell) const {
+        return std::visit(Overloaded{
+            [&](const Empty&) {
+                return rules.normalCellCost;
+            },
+
+            [&](const RoughTerrain&) {
+                return rules.roughTerrainCost;
+            },
+
+            [&](const ResourceCell<int>&) {
+                return rules.normalCellCost;
+            },
+
+            [&](const Battery&) {
+                return rules.normalCellCost;
+            },
+
+            [&](const Trap&) {
+                return rules.normalCellCost;
+            },
+
+            [&](const Exit&) {
+                return rules.normalCellCost;
+            },
+
+            [&](const Wall&) {
+                return rules.waitOrInvalidCost;
+            }
+
+        }, cell);
+    }
+
+public:
+    NavigationEnvironment(
+        Grid<Cell, Rows, Columns> grid_, Agent agent_, GameRules rules_) 
+        : grid(grid_), agent(agent_), rules(rules_) {}
+
+    void step(Action action) {
+        if (action == Action::wait) {
+            agent.setEnergy(agent.getEnergy() - rules.waitOrInvalidCost);
+            ++turn;
+            return;
+        }
+
+        auto candidate = neighbor(agent.getPosition(), action);
+
+        if (!candidate.has_value()) {
+            agent.setEnergy(agent.getEnergy() - rules.waitOrInvalidCost);
+            ++turn;
+            return;
+        }
+
+        if (!grid.contains(candidate.value())) {
+            agent.setEnergy(agent.getEnergy() - rules.waitOrInvalidCost);
+            ++turn;
+            return;
+        }
+
+        Cell& destination = grid.at(
+            candidate.value()
+        );
+
+        if (std::holds_alternative<Wall>(destination)) {
+            agent.setEnergy(agent.getEnergy() - rules.waitOrInvalidCost);
+            ++turn;
+            return;
+        }
+
+        int cost = movementCost(destination);
+
+        agent.setPosition(candidate.value());
+
+        agent.setEnergy(agent.getEnergy() - cost);
+        ++turn;
+    }
+};
