@@ -40,7 +40,6 @@ void Agent::setEnergy(int amount) {
     if (amount >= 0 && amount <= maximumEnergy){
         energy = amount; 
     }
-    
 }
 
 void Agent::addScore(int points) {
@@ -49,6 +48,10 @@ void Agent::addScore(int points) {
 
 void Agent::addcollectedResources(size_t resources) {
     collectedResources += resources;
+}
+
+void Agent::addEnergy(int energy_) {
+    energy += energy_;
 }
 
 void Agent::finish() {
