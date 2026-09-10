@@ -3,6 +3,7 @@
 #include "circuit_escape/agent.h"
 #include "circuit_escape/cells.h"
 #include "circuit_escape/game_rules.h"
+#include "circuit_escape/grid.h"
 #include <variant>
 
 /*---------------------------------------------------------------------*/
@@ -57,3 +58,25 @@ enum class EndReason {
     std::size_t turn,
     std::size_t turnLimit
 ) noexcept;
+
+struct StepResult;
+
+template<std::size_t Rows, std::size_t Columns>
+class NavigationEnvironment {
+public:
+    using grid_type = Grid<Cell, Rows, Columns>;
+
+    NavigationEnvironment(
+        grid_type initialGrid,
+        Agent initialAgent,
+        GameRules rules
+    );
+
+    [[nodiscard]] StepResult step(Action action);
+
+private:
+    grid_type grid_;
+    Agent agent_;
+    GameRules rules_;
+    std::size_t turn_{0};
+};
