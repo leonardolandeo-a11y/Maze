@@ -19,30 +19,6 @@ template<class... FLambda>
 Overloaded(FLambda...) -> Overloaded<FLambda...>;
 /*---------------------------------------------------------------------*/
 
-//funcion auxiliar para aplicar los efectos de la celda
-void applyEffectCell(Agent& agent_, const GameRules&rules_, Cell& target_cell) {
-    //std::visis permite ir a la celda, revisar el tipo y escoger la funcion que pueda manejar el tipo de celda
-    //la funcion apply... solo se encarga de definir overloaded para pasarlo usarlo en std::visit
-    std::visit(Overloaded{
-        //logica para celdas con recompensas
-        [&](ResourceCell<int>& resource){
-            if (resource.collected) return;
-            agent_.addcollectedResources(rules_.resourcePoints); //funcion modificada en games_rules.cpp
-            resource.collected = true;
-        },
-        //logica para recarga de bateria
-        [&](Battery& battery){
-            if (battery.consumed) return;
-            agent_.addEnergy(rules_.batteryRecharge);
-            battery.consumed = true;
-        },
-        //caso generico
-        [&](auto& unknown_cell){
-            //nada
-        },
-            //etc etc etc
-    },target_cell);
-}
 
 enum class EndReason {
     none,
@@ -100,6 +76,32 @@ private:
         }, cell);
     }
 
+    //funcion auxiliar para aplicar los efectos de la celda
+    void applyEffectCell(Cell& target_cell) {
+        //std::visis permite ir a la celda, revisar el tipo y escoger la funcion que pueda manejar el tipo de celda
+        //la funcion apply... solo se encarga de definir overloaded para pasarlo usarlo en std::visit
+        std::visit(Overloaded{
+            //logica para celdas con recompensas
+            [&](ResourceCell<int>& resource){
+                if (resource.collected) return;
+                agent.addcollectedResources(rules.resourcePoints); //funcion modificada en games_rules.cpp
+                resource.collected = true;
+            },
+            //logica para recarga de bateria
+            [&](Battery& battery){
+                if (battery.consumed) return;
+                agent.addEnergy(rules.batteryRecharge);
+                battery.consumed = true;
+            },
+            //caso generico
+            [&](auto& unknown_cell){
+                //nada
+            },
+                //etc etc etc
+        },target_cell);
+    }
+
+
 public:
     NavigationEnvironment(
         Grid<Cell, Rows, Columns> grid_, Agent agent_, GameRules rules_) 
@@ -114,17 +116,12 @@ public:
 
         auto candidate = neighbor(agent.getPosition(), action);
 
-        if (!candidate.has_value()) {
+        if (!candidate.has_value() || !grid.contains(candidate.value())) {
             agent.setEnergy(agent.getEnergy() - rules.waitOrInvalidCost);
             ++turn;
             return;
         }
 
-        if (!grid.contains(candidate.value())) {
-            agent.setEnergy(agent.getEnergy() - rules.waitOrInvalidCost);
-            ++turn;
-            return;
-        }
 
         Cell& destination = grid.at(
             candidate.value()
@@ -141,6 +138,8 @@ public:
         agent.setPosition(candidate.value());
 
         agent.setEnergy(agent.getEnergy() - cost);
+
+        applyEffectCell(destination);
         ++turn;
     }
 };
