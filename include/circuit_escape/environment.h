@@ -1,3 +1,5 @@
+#pragma once
+
 #include "circuit_escape/agent.h"
 #include "circuit_escape/cells.h"
 #include "circuit_escape/game_rules.h"
@@ -41,3 +43,17 @@ void applyEffectCell(Agent& agent_, const GameRules&rules_, Cell& new_cell) {
             //etc etc etc
     },new_cell);
 }
+
+enum class EndReason {
+    none,
+    goalReached,
+    noEnergy,
+    turnLimit
+};
+
+[[nodiscard]] EndReason evaluateTermination(
+    bool agentOnExit,
+    int energy,
+    std::size_t turn,
+    std::size_t turnLimit
+) noexcept;

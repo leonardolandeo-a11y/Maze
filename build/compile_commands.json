@@ -13,6 +13,12 @@
 },
 {
   "directory": "/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build",
+  "command": "/usr/bin/g++  -I/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/include -g -std=gnu++20 -o CMakeFiles/Maze_core.dir/src/game_rules.cpp.o -c /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/src/game_rules.cpp",
+  "file": "/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/src/game_rules.cpp",
+  "output": "CMakeFiles/Maze_core.dir/src/game_rules.cpp.o"
+},
+{
+  "directory": "/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build",
   "command": "/usr/bin/g++  -I/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/include -isystem /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/_deps/ftxui-src/include -g -std=gnu++20 -o CMakeFiles/Maze.dir/app/main.cpp.o -c /home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/app/main.cpp",
   "file": "/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/app/main.cpp",
   "output": "CMakeFiles/Maze.dir/app/main.cpp.o"
