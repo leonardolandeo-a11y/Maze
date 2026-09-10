@@ -2,25 +2,29 @@
 
 #include "circuit_escape/types.h"
 
+#include <concepts>
 #include <cstdint>
 #include <random>
 #include <span>
 #include <stdexcept>
-#include <vector>
-#include <concepts>
 #include <utility>
+
+struct Observation;
+
 /*
 - clase abstracta de la que heredan todos los controllers
-- destructor virtual necesario y todas las funciones abtractas
+- destructor virtual necesario y funcion abstracta selectAction
 */
 class IController {
 public:
     virtual ~IController() = default;
-    virtual Action selectAction(const Observation& observation, std::span<const Action> legalActions) = 0;
+
+    virtual Action selectAction(
+        const Observation& observation,
+        std::span<const Action> legalActions
+    ) = 0;
 };
 
-    virtual ~IController() = default;
-};
 
 class RandomPolicy {
     std::mt19937 generator_;
@@ -44,12 +48,13 @@ public:
         );
 
         return legalActions[distribution(generator_)];
-}
+    }
+};
+
+
 /*
-Concept que verifica que el tipo de dato Policy tenga un metodo un metodo llamada selectAction 
-y verifica que este bien implementado: seleciona una accion que sea
-std::span() objeto ligero hacia una lista contigua de elementos
-std::same_As() verifica si los 2 tipos son exacatamente iguales
+Concept que verifica que Policy tenga un metodo selectAction
+que reciba Observation y acciones legales, y devuelva Action.
 */
 template<typename Policy>
 concept NavigationPolicy = requires(
@@ -57,27 +62,30 @@ concept NavigationPolicy = requires(
     const Observation& observation,
     std::span<const Action> actions
 ) {
-    { policy.selectAction(observation, actions) }-> std::same_as<Action>;
+    { policy.selectAction(observation, actions) } -> std::same_as<Action>;
 };
 
 
-template<typename Policy>
-requires NavigationPolicy<Policy>
-class PolicyController: public IController {
+template<NavigationPolicy Policy>
+class PolicyController final : public IController {
     Policy policy_;
+
 public:
-    //explicit es una buena practica para eivtar conversiones impliucitas
-    // se usa la asignacion por movimiento por eficiencia (una copia seria innecesaria pues no necesitamos mantener el parametro policy despues del contructor)
-    //PolicyController posee su propia politica (policy)
-    explicit PolicyController(Policy policy) : policy_(std::move(policy)) {}
-    Action selectAction(const Observation& observation, std::span<const Action> legalActions) override {
-        return policy_.selectAction(observation,legalActions);
+    explicit PolicyController(Policy policy)
+        : policy_(std::move(policy)) {}
+
+    Action selectAction(
+        const Observation& observation,
+        std::span<const Action> legalActions
+    ) override {
+        return policy_.selectAction(observation, legalActions);
     }
 };
 
-struct HuristicPolicy {
+
+struct HeuristicPolicy {
     Action selectAction(
-        const Observation& observation, 
+        const Observation& observation,
         std::span<const Action> legalActions
     );
 };
