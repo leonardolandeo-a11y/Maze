@@ -1,6 +1,7 @@
 #pragma once
 
 #include "circuit_escape/types.h"
+#include "circuit_escape/environment.h"
 
 #include <concepts>
 #include <cstdint>
@@ -9,8 +10,6 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
-
-struct Observation;
 
 /*
 - clase abstracta de la que heredan todos los controllers
