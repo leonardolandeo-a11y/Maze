@@ -27,6 +27,6 @@ public:
     void setPosition(Position newPosition) ;
     void setEnergy(int amount) ;
     void addScore(int points) ;
-    void addcollectedResources() ;
+    void addcollectedResources(size_t resources) ;
     void finish() ;
 };
