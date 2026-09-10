@@ -6,6 +6,7 @@
 #include "circuit_escape/grid.h"
 
 #include <cstddef>
+#include <stdexcept>
 #include <variant>
 #include <vector>
 
@@ -155,7 +156,7 @@ private:
     }
 
     // funcion auxiliar para aplicar los efectos de la celda
-    void applyEffectCell(Cell& target_cell) {
+    void applyEffectCell(Cell& target_cell, std::vector<NavigationEvent>& events) {
         // std::visit permite revisar el tipo de celda y escoger
         // la funcion lambda correspondiente
         std::visit(Overloaded{
@@ -169,6 +170,13 @@ private:
                 agent.addScore(rules.resourcePoints);
                 agent.addcollectedResources(1);
                 resource.collected = true;
+
+                events.push_back(
+                ResourceCollectedEvent{
+                    agent.getPosition(),
+                    rules.resourcePoints
+                    }
+                );
             },
 
             // logica para recarga de bateria
@@ -177,15 +185,42 @@ private:
                     return;
                 }
 
+                const int previousEnergy = agent.getEnergy();
+
                 agent.addEnergy(rules.batteryRecharge);
                 battery.consumed = true;
+
+                if (agent.getEnergy() != previousEnergy) {
+                events.push_back(
+                    EnergyChangedEvent{
+                        previousEnergy,
+                        agent.getEnergy()
+                        }
+                    );
+                }
             },
 
             // logica para trampas
             [&](Trap&) {
-                  agent.setEnergy(agent.getEnergy() - rules.trapEnergyPenalty);
-                  agent.addScore(-rules.trapScorePenalty);
-      },
+                const int previousEnergy = agent.getEnergy();
+                agent.setEnergy(agent.getEnergy() - rules.trapEnergyPenalty);
+                agent.addScore(-rules.trapScorePenalty);
+
+                if (agent.getEnergy() != previousEnergy) {
+                events.push_back(
+                    EnergyChangedEvent{
+                        previousEnergy,
+                        agent.getEnergy()
+                        }
+                    );
+                }
+
+            events.push_back(
+                TrapTriggeredEvent{
+                    agent.getPosition()
+                    }
+                );
+            },
 
             // caso generico
             [&](auto&) {
@@ -195,6 +230,40 @@ private:
         }, target_cell);
     }
 
+    [[nodiscard]] StepResult finalizeStep(
+        std::vector<NavigationEvent> events
+    ) {
+        const bool agentOnExit =
+            std::holds_alternative<Exit>(
+                grid.at(agent.getPosition())
+            );
+
+        const EndReason reason = evaluateTermination(
+            agentOnExit,
+            agent.getEnergy(),
+            turn,
+            rules.turnLimit
+        );
+
+        if (reason == EndReason::goalReached) {
+            events.push_back(
+                GoalReachedEvent{
+                    agent.getPosition()
+                }
+            );
+        }
+
+        if (reason != EndReason::none) {
+            agent.finish();
+        }
+
+        return StepResult{
+            state(),
+            events,
+            reason != EndReason::none,
+            reason
+        };
+    }
 
 public:
     NavigationEnvironment(
@@ -208,6 +277,10 @@ public:
     }
 
     [[nodiscard]] std::vector<Action> availableActions() const {
+        if (isFinished()) {
+            return {};
+        }
+
         std::vector<Action> actions;
 
         const Action movementActions[] = {
@@ -258,46 +331,133 @@ public:
     [[nodiscard]] bool isFinished() const noexcept {
         return !agent.isActive();
     }
+    [[nodiscard]] StepResult step(Action action) {
+        if (isFinished()) {
+            throw std::logic_error(
+                "Cannot execute step after the game has finished"
+                );
+            }
 
-    void step(Action action) {
-        if (action == Action::wait) {
-            agent.setEnergy(
-                agent.getEnergy() - rules.waitOrInvalidCost
+    std::vector<NavigationEvent> events;
+
+    ++turn;
+
+    const Position previousPosition = agent.getPosition();
+
+    // accion wait
+    if (action == Action::wait) {
+        const int previousEnergy = agent.getEnergy();
+
+        agent.setEnergy(
+            agent.getEnergy() - rules.waitOrInvalidCost
+        );
+
+        if (agent.getEnergy() != previousEnergy) {
+            events.push_back(
+                EnergyChangedEvent{
+                    previousEnergy,
+                    agent.getEnergy()
+                }
             );
-
-            ++turn;
-            return;
         }
 
-        auto candidate = neighbor(agent.getPosition(), action);
-
-        if (!candidate.has_value() || !grid.contains(candidate.value())) {
-            agent.setEnergy(
-                agent.getEnergy() - rules.waitOrInvalidCost
-            );
-
-            ++turn;
-            return;
-        }
-
-        Cell& destination = grid.at(candidate.value());
-
-        if (std::holds_alternative<Wall>(destination)) {
-            agent.setEnergy(
-                agent.getEnergy() - rules.waitOrInvalidCost
-            );
-
-            ++turn;
-            return;
-        }
-
-        const int cost = movementCost(destination);
-
-        agent.setPosition(candidate.value());
-        agent.setEnergy(agent.getEnergy() - cost);
-
-        applyEffectCell(destination);
-
-        ++turn;
+        return finalizeStep(events);
     }
+
+    auto candidate = neighbor(
+        agent.getPosition(),
+        action
+    );
+
+    // movimiento fuera del tablero
+    if (!candidate.has_value() ||
+        !grid.contains(candidate.value())) {
+
+        const int previousEnergy = agent.getEnergy();
+
+        agent.setEnergy(
+            agent.getEnergy() - rules.waitOrInvalidCost
+        );
+
+        if (agent.getEnergy() != previousEnergy) {
+            events.push_back(
+                EnergyChangedEvent{
+                    previousEnergy,
+                    agent.getEnergy()
+                }
+            );
+        }
+
+        events.push_back(
+            MovementRejectedEvent{
+                previousPosition,
+                action
+            }
+        );
+
+        return finalizeStep(events);
+    }
+
+    Cell& destination = grid.at(candidate.value());
+
+    // movimiento hacia un muro
+    if (std::holds_alternative<Wall>(destination)) {
+        const int previousEnergy = agent.getEnergy();
+
+        agent.setEnergy(
+            agent.getEnergy() - rules.waitOrInvalidCost
+        );
+
+        if (agent.getEnergy() != previousEnergy) {
+            events.push_back(
+                EnergyChangedEvent{
+                    previousEnergy,
+                    agent.getEnergy()
+                }
+            );
+        }
+
+        events.push_back(
+            MovementRejectedEvent{
+                previousPosition,
+                action
+            }
+        );
+
+        return finalizeStep(events);
+    }
+
+    // movimiento valido
+    const int cost = movementCost(destination);
+
+    agent.setPosition(candidate.value());
+
+    events.push_back(
+        MovedEvent{
+            previousPosition,
+            agent.getPosition(),
+            cost
+        }
+    );
+
+    const int previousEnergy = agent.getEnergy();
+
+    agent.setEnergy(
+        agent.getEnergy() - cost
+    );
+
+    if (agent.getEnergy() != previousEnergy) {
+        events.push_back(
+            EnergyChangedEvent{
+                previousEnergy,
+                agent.getEnergy()
+            }
+        );
+    }
+
+    // aplicar el efecto despues del costo de entrada
+    applyEffectCell(destination, events);
+
+    return finalizeStep(events);
+}
 };
