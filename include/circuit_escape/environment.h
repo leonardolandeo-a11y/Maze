@@ -108,6 +108,49 @@ private:
     GameRules rules;
     std::size_t turn{0};
 
+    //condiciones lo validamos
+    void validateInitialState() const {
+        const Position start = agent.getPosition();
+
+        if (!grid.contains(start)) {
+            throw std::invalid_argument(
+                "Initial position is outside the grid"
+            );
+        }
+
+        if (std::holds_alternative<Wall>(grid.at(start))) {
+            throw std::invalid_argument(
+                "Initial position is not traversable"
+            );
+        }
+
+        std::size_t exitCount = 0;
+
+        for (const Cell& cell : grid) {
+            if (std::holds_alternative<Exit>(cell)) {
+                ++exitCount;
+            }
+        }
+
+        if (exitCount != 1) {
+            throw std::invalid_argument(
+                "Environment must contain exactly one exit"
+            );
+        }
+
+        if (agent.getEnergy() <= 0) {
+            throw std::invalid_argument(
+                "Initial energy must be positive"
+            );
+        }
+
+        if (rules.turnLimit == 0) {
+            throw std::invalid_argument(
+                "Turn limit must be positive"
+            );
+        }
+    }
+
     Position goalPosition() const {
         for (std::size_t row = 0; row < Rows; ++row) {
             for (std::size_t column = 0; column < Columns; ++column) {
@@ -119,7 +162,9 @@ private:
             }
         }
 
-        return agent.getPosition(); // Temporal hasta validar salida
+        throw std::logic_error(
+                "Environment invariant violated: exit not found"
+        );
     }
 
     int movementCost(const Cell& cell) const {
@@ -274,6 +319,7 @@ public:
         : grid(grid_),
           agent(agent_),
           rules(rules_) {
+            validateInitialState();
     }
 
     [[nodiscard]] std::vector<Action> availableActions() const {
