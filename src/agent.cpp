@@ -47,8 +47,8 @@ void Agent::addScore(int points) {
     score += points;
 }
 
-void Agent::addcollectedResources() {
-    collectedResources++;
+void Agent::addcollectedResources(size_t resources) {
+    collectedResources += resources;
 }
 
 void Agent::finish() {

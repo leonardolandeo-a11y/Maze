@@ -11,12 +11,12 @@ struct RoughTerrain {
 
 template<typename Reward>
 struct ResourceCell {
-    Reward reward;
-    bool collected{false};
+    Reward reward;  //struct template recompensa
+    bool collected{false}; //Permite controlar que ya fueron recogias
 };
 struct Battery {
-    int energy{3};
-    bool consumed{false};
+    int energy{3}; // Puede ser configurable por la dificultad
+    bool consumed{false}; //Permite controlar que ya fue recogida
 };
 struct Trap {
     int energyPenalty{2};
