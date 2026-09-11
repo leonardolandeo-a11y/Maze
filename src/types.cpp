@@ -30,3 +30,6 @@ std::optional<Position> neighbor(Position origin, Action action){
 std::string toString(Position position){
     return "( "+ std::to_string(position.column) + " , " + std::to_string(position.row) +" )";
 }
+bool operator==(const Position& lhs, const Position& rhs) {
+    return lhs.row == rhs.row && lhs.column == rhs.column;
+}
