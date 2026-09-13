@@ -22,6 +22,8 @@ enum class UICommand{
 class ConsoleUI {
 private:
     RenderMode mode_;
+
+    ftxui::Element RenderCell(const Cell& cell, bool IsAgent) const;
 public:
     explicit ConsoleUI(RenderMode mode = RenderMode::emoji);
 
@@ -29,7 +31,7 @@ public:
         const NavigationEnvironment<20, 30>& environment,
         std::span<const NavigationEvent> recentEvents) const;
     
-    std::optional<UICommand> translate(const ftxui::Event& event) const;
+    std::optional<UICommand> KeyMapping(const ftxui::Event& event) const;
 
 
 

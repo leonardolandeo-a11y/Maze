@@ -1,1 +1,0 @@
-/usr/bin/g++ -g -Wl,--dependency-file=CMakeFiles/Maze.dir/link.d CMakeFiles/Maze.dir/app/main.cpp.o -o Maze  libMaze_core.a _deps/ftxui-build/libftxui-screen.a _deps/ftxui-build/libftxui-dom.a _deps/ftxui-build/libftxui-component.a _deps/ftxui-build/libftxui-dom.a _deps/ftxui-build/libftxui-screen.a
