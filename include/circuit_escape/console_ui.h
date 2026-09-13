@@ -22,6 +22,8 @@ enum class UICommand{
 class ConsoleUI {
 private:
     RenderMode mode_;
+
+    ftxui::Element RenderCell(const Cell& cell, bool IsAgent) const;
 public:
     explicit ConsoleUI(RenderMode mode = RenderMode::emoji);
 
