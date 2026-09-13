@@ -92,10 +92,37 @@ void test_same_seed_produces_same_final_results() {
     assert(firstResult.remainingEnergy == secondResult.remainingEnergy);
 }
 
+//Comprueba que SimulationResult coincida con el estado final del environment
+void test_simulation_result_matches_final_environment_state() {
+    Grid<Cell, 2, 4> grid;
+
+    grid.at({0, 1}) = ResourceCell<int>{100};
+    grid.at({1, 1}) = Trap{};
+    grid.at({1, 2}) = Battery{};
+    grid.at({1, 3}) = Exit{};
+
+    Agent agent({0, 0}, 10, 10);
+
+    NavigationEnvironment<2, 4> environment(grid, agent, simulationTestRules());
+
+    const std::uint32_t seed = 13579;
+
+    SimulationResult result = runRandomSimulation(environment, seed);
+    Observation finalState = environment.state();
+
+    assert(environment.isFinished());
+    assert(result.reason != EndReason::none);
+    assert(result.turns == finalState.turn);
+    assert(result.score == finalState.score);
+    assert(result.remainingEnergy == finalState.energy);
+    assert(result.actions.size() == finalState.turn);
+}
+
 int main() {
     test_random_simulation_completes_automatically();
     test_same_seed_produces_same_action_sequence();
     test_same_seed_produces_same_final_results();
+    test_simulation_result_matches_final_environment_state();
 
     return 0;
 }
