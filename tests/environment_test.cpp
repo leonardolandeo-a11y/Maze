@@ -538,3 +538,26 @@ void test_acciones_en_esquina() {
     assert(std::find(actions.begin(), actions.end(), Action::right) != actions.end());
     assert(std::find(actions.begin(), actions.end(), Action::wait) != actions.end());
 }
+
+// Comprueba que no haya acciones disponibles después de terminar.
+void test_acciones_despues_del_termino() {
+    Grid<Cell, 1, 2> grid;
+
+    grid.at({0, 1}) = Exit{};
+
+    Agent agent({0, 0}, 10, 10);
+
+    NavigationEnvironment<1, 2> environment(
+        grid,
+        agent,
+        testRules()
+    );
+
+    environment.step(Action::right);
+
+    assert(environment.isFinished());
+
+    auto actions = environment.availableActions();
+
+    assert(actions.empty());
+}
