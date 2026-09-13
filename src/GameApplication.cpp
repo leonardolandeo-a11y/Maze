@@ -1,5 +1,7 @@
 #include "circuit_escape/GameApplication.h"
 
+#include <array>
+#include <string>
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -56,48 +58,156 @@ void GameApplication::RunStartupAnimation(){
     ScreenInteractive screen = ScreenInteractive::Fullscreen();
 
     int frame = 0;
-    constexpr int maxFrames = 38;
+
+    constexpr int bootEndFrame = 38;
+    constexpr int scanStartFrame = 42;
+    constexpr int maxFrames = 67;
 
     std::atomic<bool> animationRunning{true};
 
     Component renderer = Renderer([&] {
-        Elements bootLines;
+        //Secuencia inicial del sistema
+        if (frame < bootEndFrame) {
+            Elements bootLines;
 
-        if (frame >= 4) {
-            bootLines.push_back(text("> INITIALIZING CORE...") | color(Color::GreenLight));
+            if (frame >= 4) {
+                bootLines.push_back(text("> INITIALIZING CORE...") | color(Color::GreenLight));
+            }
+
+            if (frame >= 9) {
+                bootLines.push_back(text("> NAVIGATION SYSTEM ........ OK") | color(Color::GreenLight));
+            }
+
+            if (frame >= 14) {
+                bootLines.push_back(text("> GRID MATRIX .............. OK") | color(Color::GreenLight));
+            }
+
+            if (frame >= 19) {
+                bootLines.push_back(text("> MEMORY CHECK ............. OK") | color(Color::GreenLight));
+            }
+
+            if (frame >= 24) {
+                bootLines.push_back(text("> ESCAPE PROTOCOL .......... ACTIVE") | color(Color::CyanLight));
+            }
+
+            if (frame >= 29) {
+                bootLines.push_back(text(""));
+                bootLines.push_back(text("> SYSTEM LINK ESTABLISHED") | color(Color::CyanLight) | bold);
+            }
+
+            if (frame >= 4) {
+                const std::string cursor = frame % 2 == 0 ? "█" : " ";
+                bootLines.push_back(text(cursor) | color(Color::GreenLight));
+            }
+
+            return vbox({
+                filler(),
+                hbox({
+                    filler(),
+                    vbox(bootLines),
+                    filler()
+                }),
+                filler()
+            }) | bgcolor(Color::Black);
         }
 
-        if (frame >= 9) {
-            bootLines.push_back(text("> NAVIGATION SYSTEM ........ OK") | color(Color::GreenLight));
+        //Pequena pausa negra entre el inicio y el escaneo
+        if (frame < scanStartFrame) {
+            return vbox({
+                filler(),
+                text(""),
+                filler()
+            }) | bgcolor(Color::Black);
         }
 
-        if (frame >= 14) {
-            bootLines.push_back(text("> GRID MATRIX .............. OK") | color(Color::GreenLight));
+        //Escaneo digital del laberinto
+        const int scanFrame = frame - scanStartFrame;
+
+        const std::array<std::string, 9> mazeLines = {
+            "########################################",
+            "# @        #              #            #",
+            "# #######  #  ##########  #  #######   #",
+            "#       #     #              #         #",
+            "######  #######  ##########  #  #####  #",
+            "#       #        #           #         #",
+            "#  ###########   #   ###############   #",
+            "#                             EXIT     #",
+            "########################################"
+        };
+
+        const std::array<std::string, 6> noiseFrames = {
+            "01#@:://001101##::0101",
+            "##10::SIGNAL//001::#@",
+            "0110##:://GRID::10110",
+            "@@01::MATRIX//##00110",
+            "10##::SYNC//0101::@@",
+            "001101:://##::SYSTEM"
+        };
+
+        Elements scanLines;
+
+        scanLines.push_back(
+            text(">>> GRID MATRIX SCAN") |
+            color(Color::CyanLight) |
+            bold
+        );
+
+        scanLines.push_back(text(""));
+
+        const int visibleRows = scanFrame / 2;
+
+        for (std::size_t i = 0; i < mazeLines.size(); ++i) {
+            if (static_cast<int>(i) < visibleRows) {
+                scanLines.push_back(
+                    text(mazeLines[i]) |
+                    color(Color::GreenLight)
+                );
+            }
+            else if (static_cast<int>(i) == visibleRows && visibleRows < static_cast<int>(mazeLines.size())) {
+                scanLines.push_back(
+                    text(mazeLines[i]) |
+                    color(Color::CyanLight) |
+                    bold
+                );
+            }
+            else {
+                scanLines.push_back(text(""));
+            }
         }
 
-        if (frame >= 19) {
-            bootLines.push_back(text("> MEMORY CHECK ............. OK") | color(Color::GreenLight));
+        scanLines.push_back(text(""));
+
+        int scanProgress = (scanFrame * 100) / 22;
+
+        if (scanProgress > 100) {
+            scanProgress = 100;
         }
 
-        if (frame >= 24) {
-            bootLines.push_back(text("> ESCAPE PROTOCOL .......... ACTIVE") | color(Color::CyanLight));
-        }
+        scanLines.push_back(
+            text("SCAN PROGRESS: " + std::to_string(scanProgress) + "%") |
+            color(Color::CyanLight)
+        );
 
-        if (frame >= 29) {
-            bootLines.push_back(text(""));
-            bootLines.push_back(text("> SYSTEM LINK ESTABLISHED") | color(Color::CyanLight) | bold);
-        }
+        scanLines.push_back(
+            text(noiseFrames[scanFrame % noiseFrames.size()]) |
+            color(Color::GreenLight)
+        );
 
-        if (frame >= 4) {
-            const std::string cursor = frame % 2 == 0 ? "█" : " ";
-            bootLines.push_back(text(cursor) | color(Color::GreenLight));
+        if (scanFrame >= 20) {
+            scanLines.push_back(text(""));
+
+            scanLines.push_back(
+                text("> GRID SIGNAL ACQUIRED") |
+                color(Color::CyanLight) |
+                bold
+            );
         }
 
         return vbox({
             filler(),
             hbox({
                 filler(),
-                vbox(bootLines),
+                vbox(scanLines),
                 filler()
             }),
             filler()
