@@ -1,5 +1,12 @@
 #include "circuit_escape/GameApplication.h"
 
+#include <atomic>
+#include <chrono>
+#include <thread>
+
+#include <ftxui/dom/elements.hpp>
+#include <ftxui/screen/color.hpp>
+
 Grid<Cell, 20,30> GameApplication::CreateScenario(){
     Grid<Cell, 20,30> grid;
 
@@ -42,6 +49,90 @@ Agent GameApplication::CreatePlayer(){
     return Agent({1,1}, 10,10);
 }
 
+void GameApplication::RunStartupAnimation(){
+    using namespace ftxui;
+    using namespace std::chrono_literals;
+
+    ScreenInteractive screen = ScreenInteractive::Fullscreen();
+
+    int frame = 0;
+    constexpr int maxFrames = 38;
+
+    std::atomic<bool> animationRunning{true};
+
+    Component renderer = Renderer([&] {
+        Elements bootLines;
+
+        if (frame >= 4) {
+            bootLines.push_back(text("> INITIALIZING CORE...") | color(Color::GreenLight));
+        }
+
+        if (frame >= 9) {
+            bootLines.push_back(text("> NAVIGATION SYSTEM ........ OK") | color(Color::GreenLight));
+        }
+
+        if (frame >= 14) {
+            bootLines.push_back(text("> GRID MATRIX .............. OK") | color(Color::GreenLight));
+        }
+
+        if (frame >= 19) {
+            bootLines.push_back(text("> MEMORY CHECK ............. OK") | color(Color::GreenLight));
+        }
+
+        if (frame >= 24) {
+            bootLines.push_back(text("> ESCAPE PROTOCOL .......... ACTIVE") | color(Color::CyanLight));
+        }
+
+        if (frame >= 29) {
+            bootLines.push_back(text(""));
+            bootLines.push_back(text("> SYSTEM LINK ESTABLISHED") | color(Color::CyanLight) | bold);
+        }
+
+        if (frame >= 4) {
+            const std::string cursor = frame % 2 == 0 ? "█" : " ";
+            bootLines.push_back(text(cursor) | color(Color::GreenLight));
+        }
+
+        return vbox({
+            filler(),
+            hbox({
+                filler(),
+                vbox(bootLines),
+                filler()
+            }),
+            filler()
+        }) | bgcolor(Color::Black);
+    });
+
+    std::thread animationThread([&] {
+        while (animationRunning) {
+            std::this_thread::sleep_for(110ms);
+
+            if (!animationRunning) {
+                break;
+            }
+
+            screen.Post([&] {
+                ++frame;
+
+                if (frame >= maxFrames) {
+                    animationRunning = false;
+                    screen.Exit();
+                }
+            });
+
+            screen.Post(Event::Custom);
+        }
+    });
+
+    screen.Loop(renderer);
+
+    animationRunning = false;
+
+    if (animationThread.joinable()) {
+        animationThread.join();
+    }
+}
 
 ftxui::Component GameApplication::CreateGameComponent(NavigationEnvironment<20,30>& environment,ConsoleUI& ui, std::vector<NavigationEvent>& recentEvents, ftxui::ScreenInteractive& screen){
     ftxui::Component renderer = ftxui::Renderer(
@@ -88,6 +179,8 @@ ftxui::Component GameApplication::CreateGameComponent(NavigationEnvironment<20,3
 
 
 void GameApplication::Run(){
+    RunStartupAnimation();
+
     auto grid = CreateScenario();
     Agent player = CreatePlayer();
     GameRules rules = rulesFor(Difficulty::standard);
