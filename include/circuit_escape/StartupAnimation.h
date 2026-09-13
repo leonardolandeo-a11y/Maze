@@ -17,12 +17,13 @@ private:
     static constexpr int loadingStartFrame = 124;
     static constexpr int loadingCompleteFrame = 156;
 
-    static constexpr int maxFrames = 166;
-    ftxui::Element RenderStartupFrame(int frame) const;
+    
+    ftxui::Element RenderBootSquence(int frame) const;
     ftxui::Element RenderBlankTransition(int frame) const;
-    ftxui::Element RenderGlitchSequence(int frame) const;
     ftxui::Element RenderTitleSequence(int frame) const;
+    ftxui::Element RenderLogoFormation(int frame) const;
 public:
+    static constexpr int maxFrames = 166;
     ftxui::Element RenderStartupFrame(int frame) const;
 
 };
