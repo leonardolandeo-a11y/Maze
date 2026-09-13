@@ -242,23 +242,23 @@ class NavigationEnvironment {
         // la funcion lambda correspondiente
         std::visit(Overloaded{
 
-                       // logica para celdas con recompensas
-                       [&](ResourceCell<int> &resource) {
-                           if (resource.collected) {
-                               return;
-                           }
-                           //se agrega la recomepnsa puntos  y colecciona la recompensa
-                           agent.addScore(rules.resourcePoints);
-                           agent.addcollectedResources(1);
-                           resource.collected = true;
+                    // Logica para celdas con recompensas
+                    [&](ResourceCell<int>& resource) {
+                        if (resource.collected) {
+                        return;
+                    }
 
-                           events.push_back(
-                               ResourceCollectedEvent{
-                                   agent.getPosition(),
-                                   rules.resourcePoints
-                               }
-                           );
-                       },
+                    // Se agrega la recompensa y se marca como recolectada
+                    agent.addScore(resource.reward);
+                    agent.addcollectedResources(1);
+                    resource.collected = true;
+
+                    events.push_back(
+                        ResourceCollectedEvent{
+                            agent.getPosition(), resource.reward
+                    }
+                );
+},
 
                        // logica para recarga de bateria
                        [&](Battery &battery) {
