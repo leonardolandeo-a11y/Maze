@@ -69,10 +69,37 @@ void test_random_policy_empty_actions_throws() {
     assert(exceptionThrown);
 }
 
+// Comprueba que dos RandomPolicy inicializadas con la misma semilla haga o tenga una misma secuencia
+void test_random_policy_same_seed_same_sequence() {
+    RandomPolicy firstPolicy(2026);
+    RandomPolicy secondPolicy(2026);
+
+    Observation observation{};
+
+    std::vector<Action> legalActions{
+        Action::up,
+        Action::down,
+        Action::left,
+        Action::right,
+        Action::wait
+    };
+
+    for (int i = 0; i < 100; ++i) {
+        const Action firstAction =
+            firstPolicy.selectAction(observation, legalActions);
+
+        const Action secondAction =
+            secondPolicy.selectAction(observation, legalActions);
+
+        assert(firstAction == secondAction);
+    }
+}
+
 int main() {
     test_random_policy_selects_legal_action();
     test_random_policy_single_legal_action();
     test_random_policy_empty_actions_throws();
+    test_random_policy_same_seed_same_sequence();
 
     return 0;
 }
