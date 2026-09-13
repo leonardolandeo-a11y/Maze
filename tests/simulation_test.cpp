@@ -60,9 +60,42 @@ void test_same_seed_produces_same_action_sequence() {
     assert(firstResult.actions == secondResult.actions);
 }
 
+//Comprueba que la misma semilla produzca los mismo resultados finales
+void test_same_seed_produces_same_final_results() {
+    Grid<Cell, 2, 4> firstGrid;
+    Grid<Cell, 2, 4> secondGrid;
+
+    firstGrid.at({0, 1}) = ResourceCell<int>{100};
+    firstGrid.at({1, 1}) = Trap{};
+    firstGrid.at({1, 2}) = Battery{};
+    firstGrid.at({1, 3}) = Exit{};
+
+    secondGrid.at({0, 1}) = ResourceCell<int>{100};
+    secondGrid.at({1, 1}) = Trap{};
+    secondGrid.at({1, 2}) = Battery{};
+    secondGrid.at({1, 3}) = Exit{};
+
+    Agent firstAgent({0, 0}, 10, 10);
+    Agent secondAgent({0, 0}, 10, 10);
+
+    NavigationEnvironment<2, 4> firstEnvironment(firstGrid, firstAgent, simulationTestRules());
+    NavigationEnvironment<2, 4> secondEnvironment(secondGrid, secondAgent, simulationTestRules());
+
+    const std::uint32_t seed = 24680;
+
+    SimulationResult firstResult = runRandomSimulation(firstEnvironment, seed);
+    SimulationResult secondResult = runRandomSimulation(secondEnvironment, seed);
+
+    assert(firstResult.reason == secondResult.reason);
+    assert(firstResult.turns == secondResult.turns);
+    assert(firstResult.score == secondResult.score);
+    assert(firstResult.remainingEnergy == secondResult.remainingEnergy);
+}
+
 int main() {
     test_random_simulation_completes_automatically();
     test_same_seed_produces_same_action_sequence();
+    test_same_seed_produces_same_final_results();
 
     return 0;
 }
