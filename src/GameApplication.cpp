@@ -8,7 +8,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-
+#include "circuit_escape/console_ui.h"
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/screen/color.hpp>
 
@@ -29,74 +29,55 @@ namespace {
 
     constexpr int maxFrames = 166;
 
-    ftxui::Element CenterGameView(ftxui::Element content){
-        using namespace ftxui;
-
-        Element fixedView =
-            content |
-            size(WIDTH, EQUAL, gameViewWidth) |
-            size(HEIGHT, EQUAL, gameViewHeight);
-
-        return vbox({
-            filler(),
-            hbox({
-                filler(),
-                fixedView,
-                filler()
-            }),
-            filler()
-        }) | bgcolor(Color::Black);
-    }
 
     ftxui::Element RenderStartupFrame(int frame){
-        using namespace ftxui;
 
         //Secuencia inicial tipo sistema
         if (frame < bootEndFrame) {
-            Elements bootLines;
+            ftxui::Elements bootLines;
 
             if (frame >= 4) {
                 bootLines.push_back(
-                    text("> INITIALIZING CORE...") |
-                    color(Color::GreenLight)
+                    ftxui::text("> INITIALIZING CORE...") |
+                    ftxui::color(ftxui::Color::GreenLight)
                 );
             }
 
             if (frame >= 9) {
                 bootLines.push_back(
-                    text("> NAVIGATION SYSTEM ........ OK") |
-                    color(Color::GreenLight)
+                    ftxui::text("> NAVIGATION SYSTEM ........ OK") |
+                    ftxui::color(ftxui::Color::GreenLight)
                 );
             }
 
             if (frame >= 14) {
                 bootLines.push_back(
-                    text("> GRID MATRIX .............. OK") |
-                    color(Color::GreenLight)
+                    ftxui::text("> GRID MATRIX .............. OK") |
+                    ftxui::color(ftxui::Color::GreenLight)
                 );
             }
 
             if (frame >= 19) {
                 bootLines.push_back(
-                    text("> MEMORY CHECK ............. OK") |
-                    color(Color::GreenLight)
+                    ftxui::text("> MEMORY CHECK ............. OK") |
+                    ftxui::color(ftxui::Color::GreenLight)
                 );
             }
 
             if (frame >= 24) {
                 bootLines.push_back(
-                    text("> ESCAPE PROTOCOL .......... ACTIVE") |
-                    color(Color::CyanLight)
+                    ftxui::text("> ESCAPE PROTOCOL .......... ACTIVE") |
+                    ftxui::color(ftxui::Color::CyanLight)
                 );
             }
 
             if (frame >= 29) {
-                bootLines.push_back(text(""));
+                bootLines.push_back(ftxui::text(""));
 
                 bootLines.push_back(
-                    text("> SYSTEM LINK ESTABLISHED") |
-                    color(Color::CyanLight) |
-                    bold
+                    ftxui::text("> SYSTEM LINK ESTABLISHED") |
+                    ftxui::color(ftxui::Color::CyanLight) |
+                    ftxui::bold
                 );
             }
 
@@ -104,33 +85,33 @@ namespace {
                 const std::string cursor = frame % 2 == 0 ? "█" : " ";
 
                 bootLines.push_back(
-                    text(cursor) |
-                    color(Color::GreenLight)
+                    ftxui::text(cursor) |
+                    ftxui::color(ftxui::Color::GreenLight)
                 );
             }
 
             return CenterGameView(
-                vbox({
-                    filler(),
-                    hbox({
-                        filler(),
-                        vbox(bootLines),
-                        filler()
+                ftxui::vbox({
+                    ftxui::filler(),
+                    ftxui::hbox({
+                        ftxui::filler(),
+                        ftxui::vbox(bootLines),
+                        ftxui::filler()
                     }),
-                    filler()
+                    ftxui::filler()
                 }) |
-                bgcolor(Color::Black)
+                ftxui::bgcolor(ftxui::Color::Black)
             );
         }
 
         if (frame < glitchStartFrame) {
             return CenterGameView(
-                vbox({
-                    filler(),
-                    text(""),
-                    filler()
+                ftxui::vbox({
+                    ftxui::filler(),
+                    ftxui::text(""),
+                    ftxui::filler()
                 }) |
-                bgcolor(Color::Black)
+                ftxui::bgcolor(ftxui::Color::Black)
             );
         }
 
@@ -238,10 +219,10 @@ namespace {
                 }
             }
 
-            Elements interferenceLines;
+            ftxui::Elements interferenceLines;
 
             for (int row = 0; row < gameViewHeight; ++row) {
-                Elements rowElements;
+                ftxui::Elements rowElements;
 
                 for (int col = 0; col < gameViewWidth; ++col) {
                     const std::string character(
@@ -251,27 +232,27 @@ namespace {
 
                     if (logoActive[row][col] == '1') {
                         rowElements.push_back(
-                            text(character) |
-                            color(Color::CyanLight) |
-                            bold
+                            ftxui::text(character) |
+                            ftxui::color(ftxui::Color::CyanLight) |
+                            ftxui::bold
                         );
                     }
                     else {
                         rowElements.push_back(
-                            text(character) |
-                            color(Color::GreenLight)
+                            ftxui::text(character) |
+                            ftxui::color(ftxui::Color::GreenLight)
                         );
                     }
                 }
 
                 interferenceLines.push_back(
-                    hbox(rowElements)
+                    ftxui::hbox(rowElements)
                 );
             }
 
             return CenterGameView(
-                vbox(interferenceLines) |
-                bgcolor(Color::Black)
+                ftxui::vbox(interferenceLines) |
+                ftxui::bgcolor(ftxui::Color::Black)
             );
         }
 
@@ -285,26 +266,26 @@ namespace {
             "╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝"
         };
 
-        Elements titleLines;
+        ftxui::Elements titleLines;
 
         for (const auto& line : mazeTitle) {
             titleLines.push_back(
-                text(line) |
-                color(Color::CyanLight) |
-                bold |
-                center
+                ftxui::text(line) |
+                ftxui::color(ftxui::Color::CyanLight) |
+                ftxui::bold |
+                ftxui::center
             );
         }
 
         //Primero el titulo se queda solo
         if (frame >= subtitleFrame) {
-            titleLines.push_back(text(""));
+            titleLines.push_back(ftxui::text(""));
 
             titleLines.push_back(
-                text("ESCAPE PROTOCOL ACTIVE") |
-                color(Color::GreenLight) |
-                bold |
-                center
+                ftxui::text("ESCAPE PROTOCOL ACTIVE") |
+                ftxui::color(ftxui::Color::GreenLight) |
+                ftxui::bold |
+                ftxui::center
             );
         }
 
@@ -326,30 +307,24 @@ namespace {
             std::string loadingMessage;
 
             if (loadingProgress < 25) {
-                loadingMessage =
-                    "LOADING GRID...";
+                loadingMessage ="LOADING GRID...";
             }
             else if (loadingProgress < 50) {
-                loadingMessage =
-                    "LOADING NAVIGATION SYSTEM...";
+                loadingMessage ="LOADING NAVIGATION SYSTEM...";
             }
             else if (loadingProgress < 75) {
-                loadingMessage =
-                    "LOADING ESCAPE PROTOCOL...";
+                loadingMessage ="LOADING ESCAPE PROTOCOL...";
             }
             else if (loadingProgress < 100) {
-                loadingMessage =
-                    "FINALIZING SYSTEM...";
+                loadingMessage ="FINALIZING SYSTEM...";
             }
             else {
-                loadingMessage =
-                    "SYSTEM READY";
+                loadingMessage ="SYSTEM READY";
             }
 
             constexpr int barWidth = 36;
 
-            const int filledWidth =
-                (loadingProgress * barWidth) / 100;
+            const int filledWidth =(loadingProgress * barWidth) / 100;
 
             std::string loadingBar = "[";
 
@@ -366,34 +341,34 @@ namespace {
             loadingBar += std::to_string(loadingProgress);
             loadingBar += "%";
 
-            titleLines.push_back(text(""));
+            titleLines.push_back(ftxui::text(""));
 
             titleLines.push_back(
-                text(loadingMessage) |
-                color(Color::CyanLight) |
-                center
+                ftxui::text(loadingMessage) |
+                ftxui::color(ftxui::Color::CyanLight) |
+                ftxui::center
             );
 
             titleLines.push_back(
-                text(loadingBar) |
-                color(
+                ftxui::text(loadingBar) |
+                ftxui::color(
                     loadingProgress == 100
-                        ? Color::GreenLight
-                        : Color::CyanLight
+                        ? ftxui::Color::GreenLight
+                        : ftxui::Color::CyanLight
                 ) |
-                bold |
-                center
+                ftxui::bold |
+                ftxui::center
             );
         }
 
         return CenterGameView(
-            vbox({
-                filler(),
-                vbox(titleLines) |
-                size(WIDTH, EQUAL, gameViewWidth),
-                filler()
+            ftxui::vbox({
+                ftxui::filler(),
+                ftxui::vbox(titleLines) |
+                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, gameViewWidth),
+                ftxui::filler()
             }) |
-            bgcolor(Color::Black)
+            ftxui::bgcolor(ftxui::Color::Black)
         );
     }
 }
@@ -441,163 +416,134 @@ Agent GameApplication::CreatePlayer(){
     return Agent({1,1}, 10,10);
 }
 
-ftxui::Component GameApplication::CreateGameComponent(
-    NavigationEnvironment<20,30>& environment,
-    ConsoleUI& ui,
-    std::vector<NavigationEvent>& recentEvents,
-    ftxui::ScreenInteractive& screen
-){
+ftxui::Component GameApplication::CreateGameComponent(NavigationEnvironment<20,30>& environment,ConsoleUI& ui,std::vector<NavigationEvent>& recentEvents,
+                                                    ftxui::ScreenInteractive& screen){
+    
     ftxui::Component renderer = ftxui::Renderer(
-        [&]{
-            return ftxui::vbox({
-                ftxui::filler(),
-                ftxui::hbox({
-                    ftxui::filler(),
-                    ui.render(environment, recentEvents),
-                    ftxui::filler()
-                }),
-                ftxui::filler()
-            });
-        }
+                [&]{
+                    return ftxui::vbox({
+                        ftxui::filler(),
+                        ftxui::hbox({
+                            ftxui::filler(),
+                            ui.render(environment, recentEvents),
+                            ftxui::filler()
+                        }),
+                        ftxui::filler()
+                    });
+                }
     );
 
-    ftxui::Component component = ftxui::CatchEvent(
-        renderer,
-        [&](const ftxui::Event& event){
-            std::optional<UICommand> command =
-                ui.KeyMapping(event);
+    ftxui::Component component = ftxui::CatchEvent(renderer,
+                [&](const ftxui::Event& event){
+                    std::optional<UICommand> command = ui.KeyMapping(event);
 
-            if (!command.has_value()){
-                return false;
-            }
+                    if (!command.has_value()){
+                        return false;
+                    }
 
-            if (command == UICommand::up){
-                StepResult result =
-                    environment.step(Action::up);
+                    if (command == UICommand::up){
+                        StepResult result =environment.step(Action::up);
+                        recentEvents = result.events;
+                    }
 
-                recentEvents = result.events;
-            }
+                    if (command == UICommand::down){
+                        StepResult result =environment.step(Action::down);
+                        recentEvents = result.events;
+                    }
 
-            if (command == UICommand::down){
-                StepResult result =
-                    environment.step(Action::down);
+                    if (command == UICommand::right){
+                        StepResult result =environment.step(Action::right);
+                        recentEvents = result.events;
+                    }
 
-                recentEvents = result.events;
-            }
+                    if (command == UICommand::left){
+                        StepResult result =environment.step(Action::left);
+                        recentEvents = result.events;
+                    }
 
-            if (command == UICommand::right){
-                StepResult result =
-                    environment.step(Action::right);
+                    if (command == UICommand::wait){
+                        StepResult result =environment.step(Action::wait);
+                        recentEvents = result.events;
+                    }
 
-                recentEvents = result.events;
-            }
+                    if (command == UICommand::quit){
+                        screen.Exit();
+                        return true;
+                    }
 
-            if (command == UICommand::left){
-                StepResult result =
-                    environment.step(Action::left);
-
-                recentEvents = result.events;
-            }
-
-            if (command == UICommand::wait){
-                StepResult result =
-                    environment.step(Action::wait);
-
-                recentEvents = result.events;
-            }
-
-            if (command == UICommand::quit){
-                screen.Exit();
-
-                return true;
-            }
-
-            return true;
-        }
+                    return true;
+                }
     );
 
     return component;
 }
 
 void GameApplication::Run(){
-    using namespace std::chrono_literals;
 
     auto grid = CreateScenario();
     Agent player = CreatePlayer();
     GameRules rules = rulesFor(Difficulty::standard);
 
-    NavigationEnvironment<20,30> environment(
-        grid,
-        player,
-        rules
-    );
+    NavigationEnvironment<20,30> environment( grid,player,rules);
 
     ConsoleUI ui(RenderMode::emoji);
 
     std::vector<NavigationEvent> recentEvents;
 
-    ftxui::ScreenInteractive screen =
-        ftxui::ScreenInteractive::Fullscreen();
+    ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
 
-    ftxui::Component gameComponent =
-        CreateGameComponent(
-            environment,
-            ui,
-            recentEvents,
-            screen
-        );
+    ftxui::Component gameComponent = CreateGameComponent(environment,ui,recentEvents,screen);
 
     std::atomic<bool> startupActive{true};
 
     int frame = 0;
 
-    ftxui::Component applicationRenderer =
-        ftxui::Renderer(
-            [&]{
-                if (startupActive) {
-                    return RenderStartupFrame(frame);
+    ftxui::Component applicationRenderer = ftxui::Renderer(
+                [&]{
+                    if (startupActive) {
+                        return RenderStartupFrame(frame);
+                    }
+
+                    return gameComponent->Render();
                 }
+    );
 
-                return gameComponent->Render();
-            }
-        );
+    ftxui::Component application = ftxui::CatchEvent( applicationRenderer,
+                [&](const ftxui::Event& event){
+                    if (startupActive) {
+                        if (event == ftxui::Event::Return) {
+                            startupActive = false;
+                            return true;
+                        }
 
-    ftxui::Component application =
-        ftxui::CatchEvent(
-            applicationRenderer,
-            [&](const ftxui::Event& event){
-                if (startupActive) {
-                    if (event == ftxui::Event::Return) {
-                        startupActive = false;
                         return true;
                     }
 
-                    return true;
+                    return gameComponent->OnEvent(event);
                 }
+    );
 
-                return gameComponent->OnEvent(event);
-            }
-        );
+    std::thread animationThread(
+                [&] {
+                    while (startupActive) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(110));
 
-    std::thread animationThread([&] {
-        while (startupActive) {
-            std::this_thread::sleep_for(110ms);
+                        if (!startupActive) {
+                            break;
+                        }
 
-            if (!startupActive) {
-                break;
-            }
+                        screen.Post([&] {
+                            ++frame;
 
-            screen.Post([&] {
-                ++frame;
+                            if (frame >= maxFrames) {
+                                startupActive = false;
+                            }
+                        });
 
-                if (frame >= maxFrames) {
-                    startupActive = false;
+                        screen.Post(ftxui::Event::Custom);
+                    }
                 }
-            });
-
-            screen.Post(ftxui::Event::Custom);
-        }
-    });
+    );
 
     screen.Loop(application);
 

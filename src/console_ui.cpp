@@ -147,3 +147,25 @@ ftxui::Element ConsoleUI::RenderCell(const Cell& cell, bool IsAgent) const{
 
 
 /*=========================*/
+
+
+
+/*      Center Game View configuration       */
+
+ftxui::Element ConsoleUI::CenterGameView(ftxui::Element content) const {
+
+    constexpr int gameViewWidth = 90;
+    constexpr int gameViewHeight = 20;
+    ftxui::Element fixedView =content |ftxui::size(ftxui::WIDTH, ftxui::EQUAL, gameViewWidth) |ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, gameViewHeight);
+    return ftxui::vbox({
+        ftxui::filler(),
+        ftxui::hbox({
+            ftxui::filler(),
+            fixedView,
+            ftxui::filler()
+        }),
+        ftxui::filler()
+    }) | ftxui::bgcolor(ftxui::Color::Black);
+}
+
+/*=========================*/

@@ -33,6 +33,6 @@ public:
     
     std::optional<UICommand> KeyMapping(const ftxui::Event& event) const;
 
-
+    ftxui::Element CenterGameView(ftxui::Element content) const;
 
 };
