@@ -6,6 +6,8 @@
 #include "circuit_escape/agent.h"
 #include "circuit_escape/console_ui.h"
 
+#include <functional>
+
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/component/event.hpp>
 #include <ftxui/component/component.hpp>
@@ -19,7 +21,8 @@ private:
         NavigationEnvironment<20,30>& environment,
         ConsoleUI& ui,
         std::vector<NavigationEvent>& recentEvents,
-        ftxui::ScreenInteractive& screen
+        ftxui::ScreenInteractive& screen,
+        std::function<void(const StepResult&)> onStepResult
     );
 
 public:

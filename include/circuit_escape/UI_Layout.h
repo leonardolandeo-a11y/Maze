@@ -4,12 +4,14 @@
 namespace UILayout{
     /*      Center Game View configuration       */
 
-    ftxui::Element CenterGameView(ftxui::Element content) {
+    inline ftxui::Element CenterGameView(ftxui::Element content) {
 
         constexpr int gameViewWidth = 90;
         constexpr int gameViewHeight = 20;
-        ftxui::Element fixedView =content |ftxui::size(ftxui::WIDTH, ftxui::EQUAL, gameViewWidth) |
-        ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, gameViewHeight);
+
+        ftxui::Element fixedView =content |
+            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, gameViewWidth) |
+                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, gameViewHeight);
         
 
         return ftxui::vbox({
