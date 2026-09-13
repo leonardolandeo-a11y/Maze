@@ -15,15 +15,21 @@ FetchContent_MakeAvailable(ftxui)
 
 # Include src files
 add_library(Maze_core
+    src/agent.cpp
     src/environment.cpp
     src/controllers.cpp
-        src/game_rules.cpp
+    src/game_rules.cpp
+    src/console_ui.cpp
+    src/types.cpp
 )
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
 
 # Create the executable game and add the libraries
-add_executable(Maze app/main.cpp)
+add_executable(Maze 
+    app/main.cpp
+    src/console_ui.cpp
+)
 target_link_libraries(Maze PRIVATE
     Maze_core
     ftxui::screen
