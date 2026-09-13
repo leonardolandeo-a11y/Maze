@@ -36,8 +36,33 @@ void test_random_simulation_completes_automatically() {
     assert(result.actions.size() == result.turns);
 }
 
+//Comprueba que la misma semilla produzca la misma secuencia de acciones
+void test_same_seed_produces_same_action_sequence() {
+    Grid<Cell, 2, 3> firstGrid;
+    Grid<Cell, 2, 3> secondGrid;
+
+    firstGrid.at({1, 2}) = Exit{};
+    secondGrid.at({1, 2}) = Exit{};
+
+    Agent firstAgent({0, 0}, 10, 10);
+    Agent secondAgent({0, 0}, 10, 10);
+
+    NavigationEnvironment<2, 3> firstEnvironment(firstGrid, firstAgent, simulationTestRules());
+    NavigationEnvironment<2, 3> secondEnvironment(secondGrid, secondAgent, simulationTestRules());
+
+    const std::uint32_t seed = 54321;
+
+    SimulationResult firstResult = runRandomSimulation(firstEnvironment, seed);
+    SimulationResult secondResult = runRandomSimulation(secondEnvironment, seed);
+
+    assert(!firstResult.actions.empty());
+    assert(!secondResult.actions.empty());
+    assert(firstResult.actions == secondResult.actions);
+}
+
 int main() {
     test_random_simulation_completes_automatically();
+    test_same_seed_produces_same_action_sequence();
 
     return 0;
 }
