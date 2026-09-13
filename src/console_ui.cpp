@@ -40,25 +40,40 @@ std::optional<UICommand> ConsoleUI::KeyMapping(const ftxui::Event& event)const{
 /*          Render             */
 
 /*  Render the environment  */
-ftxui::Element ConsoleUI::render(const NavigationEnvironment<20, 30>& environment,std::span<const NavigationEvent> recentEvents) const{
-    std::vector <ftxui::Element> rows;
+ftxui::Element ConsoleUI::render(
+    const NavigationEnvironment<20, 30>& environment,
+    std::span<const NavigationEvent> recentEvents
+) const {
+    constexpr int cellVisualWidth = 3;
+
+    std::vector<ftxui::Element> rows;
     Observation observation = environment.state();
-    for (std::size_t row = 0; row < 20 ; row++){
+
+    for (std::size_t row = 0; row < 20; row++){
         std::vector<ftxui::Element> columns;
-        for (std::size_t column = 0; column< 30; column++){
+
+        for (std::size_t column = 0; column < 30; column++){
             Position position{row,column};
-            
+
             const Cell& cell = environment.grid().at(position);
+
             bool isAgent = false;
+
             if (observation.agent == position){
                 isAgent = true;
             }
-            columns.push_back(RenderCell(cell, isAgent));
+
+            columns.push_back(
+                RenderCell(cell, isAgent) |
+                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, cellVisualWidth) |
+                ftxui::center
+            );
         }
+
         rows.push_back(ftxui::hbox(std::move(columns)));
     }
-    return ftxui::vbox(std::move(rows));
 
+    return ftxui::vbox(std::move(rows));
 }
 
 /*    Render the cells    */
