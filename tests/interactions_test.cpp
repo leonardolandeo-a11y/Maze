@@ -139,9 +139,72 @@ void test_battery_event_and_consumed_state() {
     assert(!secondRechargeEventFound);
 }
 
+//Comprueba los eventos generados por una trampa y que pueda activarse nuevamente
+void test_trap_events_on_repeated_entries() {
+    Grid<Cell, 1, 4> grid;
+
+    grid.at({0, 1}) = Trap{};
+    grid.at({0, 3}) = Exit{};
+
+    Agent agent({0, 0}, 10, 10);
+
+    NavigationEnvironment<1, 4> environment(grid, agent, interactionTestRules());
+
+    StepResult firstResult = environment.step(Action::right);
+
+    bool trapEnergyEventFound = false;
+    bool trapTriggeredEventFound = false;
+
+    const Position trapPosition{0, 1};
+
+    for (const auto& event : firstResult.events) {
+        if (const auto* energyEvent = std::get_if<EnergyChangedEvent>(&event)) {
+            //Despues del costo de movimiento la trampa reduce energia de 9 a 7
+            if (energyEvent->previous == 9 && energyEvent->current == 7) {
+                trapEnergyEventFound = true;
+            }
+        }
+
+        if (const auto* trapEvent = std::get_if<TrapTriggeredEvent>(&event)) {
+            trapTriggeredEventFound = true;
+            assert(trapEvent->at == trapPosition);
+        }
+    }
+
+    assert(trapEnergyEventFound);
+    assert(trapTriggeredEventFound);
+
+    //Salimos de la trampa
+    [[maybe_unused]] const StepResult moveAwayResult = environment.step(Action::right);
+
+    //Volvemos a entrar en la misma trampa
+    StepResult secondResult = environment.step(Action::left);
+
+    bool secondTrapEnergyEventFound = false;
+    bool secondTrapTriggeredEventFound = false;
+
+    for (const auto& event : secondResult.events) {
+        if (const auto* energyEvent = std::get_if<EnergyChangedEvent>(&event)) {
+            //Al volver la trampa vuelve a aplicar su penalizacion
+            if (energyEvent->previous == 5 && energyEvent->current == 3) {
+                secondTrapEnergyEventFound = true;
+            }
+        }
+
+        if (const auto* trapEvent = std::get_if<TrapTriggeredEvent>(&event)) {
+            secondTrapTriggeredEventFound = true;
+            assert(trapEvent->at == trapPosition);
+        }
+    }
+
+    assert(secondTrapEnergyEventFound);
+    assert(secondTrapTriggeredEventFound);
+}
+
 int main() {
     test_resource_event_and_collected_state();
     test_battery_event_and_consumed_state();
+    test_trap_events_on_repeated_entries();
 
     return 0;
 }
