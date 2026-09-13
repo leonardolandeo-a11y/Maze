@@ -516,3 +516,25 @@ void test_acciones_junto_a_muro() {
     assert(std::find(actions.begin(), actions.end(), Action::down) != actions.end());
     assert(std::find(actions.begin(), actions.end(), Action::wait) != actions.end());
 }
+
+// Comprueba las acciones disponibles en una esquina.
+void test_acciones_en_esquina() {
+    Grid<Cell, 2, 2> grid;
+
+    grid.at({1, 1}) = Exit{};
+
+    Agent agent({0, 0}, 10, 10);
+
+    NavigationEnvironment<2, 2> environment(
+        grid,
+        agent,
+        testRules()
+    );
+
+    auto actions = environment.availableActions();
+
+    assert(actions.size() == 3);
+    assert(std::find(actions.begin(), actions.end(), Action::down) != actions.end());
+    assert(std::find(actions.begin(), actions.end(), Action::right) != actions.end());
+    assert(std::find(actions.begin(), actions.end(), Action::wait) != actions.end());
+}
