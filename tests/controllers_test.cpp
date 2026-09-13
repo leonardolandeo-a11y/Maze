@@ -154,6 +154,69 @@ void test_heuristic_policy_empty_actions_throws() {
     assert(exceptionThrown);
 }
 
+// Comprobar que Policy delegue correcatmente la seleccion de acciones
+struct FixedActionPolicy {
+    Action action;
+
+    Action selectAction(const Observation&, std::span<const Action>) {
+            return action;
+    }
+};
+
+//Comprueba tiempo de compilacion y que cumpla con el contrato definido por Navigation
+static_assert(NavigationPolicy<RandomPolicy>);
+static_assert(NavigationPolicy<HeuristicPolicy>);
+static_assert(NavigationPolicy<FixedActionPolicy>);
+
+struct InvalidPolicy {};
+
+static_assert(!NavigationPolicy<InvalidPolicy>);
+
+// Compueba que Policy delegue la seleccion de la accion a la politica que lo contiene
+void test_policy_controller_delegates_to_policy() {
+    FixedActionPolicy policy{
+        Action::left,
+    };
+
+    PolicyController<FixedActionPolicy> controller{policy};
+
+    Observation observation{};
+
+    std::vector<Action> legalActions{
+        Action::left,
+        Action::right,
+        Action::wait
+    };
+
+    const Action selectedAction = controller.selectAction(observation, legalActions);
+
+    assert(selectedAction == Action::left);
+}
+
+// Comprueba que Policy pueda utilizarse mediante la interfaz IController
+void test_policy_controller_through_icontroller() {
+    PolicyController<FixedActionPolicy> controller{
+        FixedActionPolicy{Action::right}
+    };
+
+    IController& controllerInterface = controller;
+
+    Observation observation{};
+
+    std::vector<Action> legalActions{
+        Action::left,
+        Action::right
+    };
+
+    const Action selectedAction =
+        controllerInterface.selectAction(
+            observation,
+            legalActions
+        );
+
+    assert(selectedAction == Action::right);
+}
+
 int main() {
     test_random_policy_selects_legal_action();
     test_random_policy_single_legal_action();
@@ -163,6 +226,9 @@ int main() {
     test_heuristic_policy_moves_closer_to_goal();
     test_heuristic_policy_keeps_first_action_on_tie();
     test_heuristic_policy_empty_actions_throws();
+
+    test_policy_controller_delegates_to_policy();
+    test_policy_controller_through_icontroller();
 
     return 0;
 }
