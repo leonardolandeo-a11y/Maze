@@ -21,6 +21,7 @@ add_library(Maze_core
     src/game_rules.cpp
     src/console_ui.cpp
     src/types.cpp
+    src/GameApplication.cpp
 )
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
@@ -29,6 +30,7 @@ target_include_directories(Maze_core PUBLIC include)
 add_executable(Maze 
     app/main.cpp
     src/console_ui.cpp
+    src/GameApplication.cpp
 )
 target_link_libraries(Maze PRIVATE
     Maze_core
