@@ -509,4 +509,5 @@ void test_acciones_junto_a_muro() {
         testRules()
     );
 
-    auto actions = environment.
+    auto actions = environment.availableActions();
+}
