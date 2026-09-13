@@ -1,6 +1,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <variant>
+#include <algorithm>
 #include "circuit_escape/environment.h"
 
 // Reglas simples para poder controlar fácilmente los resultados de los tests.
@@ -510,4 +511,8 @@ void test_acciones_junto_a_muro() {
     );
 
     auto actions = environment.availableActions();
+
+    assert(actions.size() == 2);
+    assert(std::find(actions.begin(), actions.end(), Action::down) != actions.end());
+    assert(std::find(actions.begin(), actions.end(), Action::wait) != actions.end());
 }
