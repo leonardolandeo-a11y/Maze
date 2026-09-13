@@ -1,4 +1,6 @@
 #include "circuit_escape/console_ui.h"
+#include <variant>
+#include <type_traits>
 
 /*   Constructor of the console_ui   */
 ConsoleUI::ConsoleUI(RenderMode mode): mode_(mode){};
@@ -37,11 +39,96 @@ std::optional<UICommand> ConsoleUI::KeyMapping(const ftxui::Event& event)const{
 
 /*          Render             */
 
+/*  Render the environment  */
 ftxui::Element ConsoleUI::render(const NavigationEnvironment<20, 30>& environment,std::span<const NavigationEvent> recentEvents) const{
+    std::vector <ftxui::Element> rows;
+    Observation observation = environment.state();
+    for (std::size_t row = 0; row < 20 ; row++){
+        std::vector<ftxui::Element> columns;
+        for (std::size_t column = 0; column< 30; column++){
+            Position position{row,column};
+            
+            const Cell& cell = environment.grid().at(position);
+            bool isAgent = false;
+            if (observation.agent == position){
+                isAgent = true;
+            }
+            columns.push_back(RenderCell(cell, isAgent));
+        }
+        rows.push_back(ftxui::hbox(std::move(columns)));
+    }
+    return ftxui::vbox(std::move(rows));
 
-    return ftxui::vbox({
-        ftxui::text("Game")
-    });
 }
+
+/*    Render the cells    */
+ftxui::Element ConsoleUI::RenderCell(const Cell& cell, bool IsAgent) const{
+    if (IsAgent){
+        if (mode_ == RenderMode::emoji){
+            return ftxui::text("🤖");
+        }else{
+            return ftxui::text("@");
+        }
+    }
+
+    return std::visit(
+        [this] (const auto& CurrentCell ) ->ftxui::Element{
+            using CellType = std::remove_const_t<std::remove_reference_t<decltype(CurrentCell)>>;
+            
+            if constexpr(std::is_same_v<CellType, Empty>){
+                if (mode_ == RenderMode::emoji){
+                    return ftxui::text("⬜");
+                }else{
+                    return ftxui::text(".");
+                }
+            }
+            if constexpr(std::is_same_v<CellType,Wall>){
+                if (mode_ == RenderMode::emoji){
+                    return ftxui::text("⬛");
+                }else{
+                    return ftxui::text("#");
+                }
+            }
+            if constexpr(std::is_same_v<CellType,RoughTerrain>){
+                if (mode_ == RenderMode::emoji){
+                    return ftxui::text("🟫");
+                }else{
+                    return ftxui::text("~");
+                }
+            }
+            if constexpr(std::is_same_v<CellType,ResourceCell<int>>){
+                if (mode_ == RenderMode::emoji){
+                    return ftxui::text("💎");
+                }else{
+                    return ftxui::text("R");
+                }
+            }
+            if constexpr(std::is_same_v<CellType, Battery>){
+                if (mode_ == RenderMode::emoji){
+                    return ftxui::text("⚡");
+                }else{
+                    return ftxui::text("B");
+                }
+            }
+            if constexpr(std::is_same_v<CellType,Trap>){
+                if (mode_ == RenderMode::emoji){
+                    return ftxui::text("💥");
+                }else{
+                    return ftxui::text("T");
+                }
+            }
+            if constexpr(std::is_same_v<CellType,Exit>){
+                if (mode_ == RenderMode::emoji){
+                    return ftxui::text("🏁");
+                }else{
+                    return ftxui::text("S");
+                }
+            }   
+
+        }
+        
+        ,cell);
+}
+
 
 /*=========================*/

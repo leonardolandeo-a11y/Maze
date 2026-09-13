@@ -1,3 +1,0 @@
-/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/_deps/ftxui-subbuild/CMakeFiles/ftxui-populate.dir
-/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/_deps/ftxui-subbuild/CMakeFiles/edit_cache.dir
-/home/leonard/Documents/Projects_c++/ProjectProgra3/Maze/build/_deps/ftxui-subbuild/CMakeFiles/rebuild_cache.dir
