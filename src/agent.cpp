@@ -1,4 +1,4 @@
-#include "include/circuit_escape/agent.h"
+#include "circuit_escape/agent.h"
 
 Agent::Agent(Position start, int initialEnergy, int maximumEnergy)
 : position(start), energy(initialEnergy), maximumEnergy(maximumEnergy), score(0), collectedResources(0), active(true){}
