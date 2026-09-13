@@ -80,8 +80,68 @@ void test_resource_event_and_collected_state() {
     assert(!secondResourceEventFound);
 }
 
+//Comprueba eventos de energia por bateria y celda marcada como consumida
+void test_battery_event_and_consumed_state() {
+    Grid<Cell, 1, 4> grid;
+
+    grid.at({0, 1}) = Battery{};
+    grid.at({0, 3}) = Exit{};
+
+    Agent agent({0, 0}, 5, 10);
+
+    NavigationEnvironment<1, 4> environment(grid, agent, interactionTestRules());
+
+    StepResult firstResult = environment.step(Action::right);
+
+    bool movementEnergyEventFound = false;
+    bool rechargeEventFound = false;
+
+    for (const auto& event : firstResult.events) {
+        if (const auto* energyEvent = std::get_if<EnergyChangedEvent>(&event)) {
+
+            //Costo de movimiento
+            if (energyEvent->previous == 5 && energyEvent->current == 4) {
+                movementEnergyEventFound = true;
+            }
+
+            //Recarga de bateria
+            if (energyEvent->previous == 4 && energyEvent->current == 7) {
+                rechargeEventFound = true;
+            }
+        }
+    }
+
+    assert(movementEnergyEventFound);
+    assert(rechargeEventFound);
+
+    const auto& battery = std::get<Battery>(environment.grid().at({0, 1}));
+
+    assert(battery.consumed);
+
+    //Salimos de la bateria
+    [[maybe_unused]] const StepResult moveAwayResult = environment.step(Action::right);
+
+    //Volvemos a la bateria ya consumida
+    StepResult secondResult = environment.step(Action::left);
+
+    bool secondRechargeEventFound = false;
+
+    for (const auto& event : secondResult.events) {
+        if (const auto* energyEvent = std::get_if<EnergyChangedEvent>(&event)) {
+
+            //Si current > previous entonces hubo nueva recarga
+            if (energyEvent->current > energyEvent->previous) {
+                secondRechargeEventFound = true;
+            }
+        }
+    }
+
+    assert(!secondRechargeEventFound);
+}
+
 int main() {
     test_resource_event_and_collected_state();
+    test_battery_event_and_consumed_state();
 
     return 0;
 }
