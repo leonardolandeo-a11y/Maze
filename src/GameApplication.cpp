@@ -243,7 +243,7 @@ void GameApplication::Run(){
         [&]{
             while (applicationRunning){
                 std::this_thread::sleep_for(
-                    std::chrono::milliseconds(110)
+                    std::chrono::milliseconds(60)
                 );
 
                 if (!applicationRunning){
