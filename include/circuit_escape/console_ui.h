@@ -29,7 +29,7 @@ public:
         const NavigationEnvironment<20, 30>& environment,
         std::span<const NavigationEvent> recentEvents) const;
     
-    std::optional<UICommand> translate(const ftxui::Event& event) const;
+    std::optional<UICommand> KeyMapping(const ftxui::Event& event) const;
 
 
 

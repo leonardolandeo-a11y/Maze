@@ -1,2 +1,0 @@
-/usr/bin/ar qc libMaze_core.a CMakeFiles/Maze_core.dir/src/environment.cpp.o CMakeFiles/Maze_core.dir/src/controllers.cpp.o CMakeFiles/Maze_core.dir/src/game_rules.cpp.o
-/usr/bin/ranlib libMaze_core.a
