@@ -95,11 +95,74 @@ void test_random_policy_same_seed_same_sequence() {
     }
 }
 
+// Comprueba que HeuristicPolicy seleccione la accion que deja al agente mas cerca de la meta usando Manhattan
+void test_heuristic_policy_moves_closer_to_goal() {
+    HeuristicPolicy policy;
+
+    Observation observation{};
+    observation.agent = Position{2, 2};
+    observation.goal = Position{2, 4};
+
+    std::vector<Action> legalActions{
+        Action::up,
+        Action::left,
+        Action::right,
+        Action::wait
+    };
+
+    const Action selectedAction =
+        policy.selectAction(observation, legalActions);
+
+    assert(selectedAction == Action::right);
+}
+
+// Comprueba que, si dos acciones producen la misma distancia, Heuristic conserve la mejor accion recibida pero la primera
+void test_heuristic_policy_keeps_first_action_on_tie() {
+    HeuristicPolicy policy;
+
+    Observation observation{};
+    observation.agent = Position{1, 1};
+    observation.goal = Position{0, 0};
+
+    std::vector<Action> legalActions{
+        Action::up,
+        Action::left
+    };
+
+    const Action selectedAction =
+        policy.selectAction(observation, legalActions);
+
+    assert(selectedAction == Action::up);
+}
+
+//Comprueba que Heuristic rechace un conjunto vacio de acciones legales
+void test_heuristic_policy_empty_actions_throws() {
+    HeuristicPolicy policy;
+
+    Observation observation{};
+    std::vector<Action> legalActions;
+
+    bool exceptionThrown = false;
+
+    try {
+        policy.selectAction(observation, legalActions);
+    }
+    catch (const std::invalid_argument&) {
+        exceptionThrown = true;
+    }
+
+    assert(exceptionThrown);
+}
+
 int main() {
     test_random_policy_selects_legal_action();
     test_random_policy_single_legal_action();
     test_random_policy_empty_actions_throws();
     test_random_policy_same_seed_same_sequence();
+
+    test_heuristic_policy_moves_closer_to_goal();
+    test_heuristic_policy_keeps_first_action_on_tie();
+    test_heuristic_policy_empty_actions_throws();
 
     return 0;
 }
