@@ -23,6 +23,7 @@ add_library(Maze_core
     src/types.cpp
     src/GameApplication.cpp
     src/StartupAnimation.cpp
+    src/DeathAnimation.cpp
 )
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
