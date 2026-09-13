@@ -26,19 +26,20 @@ add_library(Maze_core
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
 
-# Create the executable game and add the libraries
-add_executable(Maze 
-    app/main.cpp
-    src/console_ui.cpp
-    src/GameApplication.cpp
-)
-target_link_libraries(Maze PRIVATE
-    Maze_core
-    ftxui::screen
-    ftxui::dom
-    ftxui::component
+target_link_libraries(Maze_core PUBLIC
+        ftxui::screen
+        ftxui::dom
+        ftxui::component
 )
 
+# Create the executable game
+add_executable(Maze
+        app/main.cpp
+)
+
+target_link_libraries(Maze PRIVATE
+        Maze_core
+)
 
 #Tests
 
