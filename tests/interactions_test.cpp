@@ -201,10 +201,35 @@ void test_trap_events_on_repeated_entries() {
     assert(secondTrapTriggeredEventFound);
 }
 
+//Comprueba que la observacion devuelta por StepResult coincida con el estado actual del environment
+void test_interaction_observation_matches_environment_state() {
+    Grid<Cell, 1, 3> grid;
+
+    grid.at({0, 1}) = Trap{};
+    grid.at({0, 2}) = Exit{};
+
+    Agent agent({0, 0}, 10, 10);
+
+    NavigationEnvironment<1, 3> environment(grid, agent, interactionTestRules());
+
+    StepResult result = environment.step(Action::right);
+    Observation currentState = environment.state();
+
+    assert(result.observation.agent == currentState.agent);
+    assert(result.observation.goal == currentState.goal);
+    assert(result.observation.energy == currentState.energy);
+    assert(result.observation.maximumEnergy == currentState.maximumEnergy);
+    assert(result.observation.score == currentState.score);
+    assert(result.observation.collectedResources == currentState.collectedResources);
+    assert(result.observation.turn == currentState.turn);
+    assert(result.observation.availableActions == currentState.availableActions);
+}
+
 int main() {
     test_resource_event_and_collected_state();
     test_battery_event_and_consumed_state();
     test_trap_events_on_repeated_entries();
+    test_interaction_observation_matches_environment_state();
 
     return 0;
 }
