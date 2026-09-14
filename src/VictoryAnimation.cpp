@@ -120,6 +120,36 @@ namespace {
         "..LL..LL........"
     };
 
+    const std::vector<std::string> agentDanceLeft = {
+        "..TT...........",
+        "...T.HHHH......",
+        "...THHHHHH.....",
+        "...THFFFFH.....",
+        "...THFEEFH.....",
+        "...THFFFFH.....",
+        "....HHHH...T...",
+        "....TTTT..TT...",
+        "...TTTTTTT.....",
+        "....TTTT.......",
+        "...LL..L.......",
+        "..LL....LL....."
+    };
+
+    const std::vector<std::string> agentDanceRight = {
+        "...........TT..",
+        "......HHHH.T...",
+        ".....HHHHHHT...",
+        ".....HFFFFHT...",
+        ".....HFEEFHT...",
+        ".....HFFFFHT...",
+        "...T..HHHH.....",
+        "...TT.TTTT.....",
+        ".....TTTTTTT...",
+        ".......TTTT....",
+        ".......L..LL...",
+        "......LL....LL."
+    };
+
     ftxui::Color PixelColor(char pixel){
         using namespace ftxui;
 
@@ -520,23 +550,27 @@ ftxui::Element VictoryAnimation::RenderRaiseArmSequence(int frame) const{
 }
 
 ftxui::Element VictoryAnimation::RenderCelebrationSequence(int frame) const{
-    PixelCanvas canvas =
-        CreateCanvas();
+    PixelCanvas canvas = CreateCanvas();
 
     DrawGround(canvas);
+    DrawCelebrationParticles(canvas,frame - raiseArmEndFrame);
 
-    DrawCelebrationParticles(
-        canvas,
-        frame - raiseArmEndFrame
-    );
+    const int danceFrame = frame - raiseArmEndFrame;
 
-    DrawSpriteCentered(
-        canvas,
-        agentArmRaised,
-        BottomAlignedTop(
-            agentArmRaised
-        )
-    );
+    if ((danceFrame / 4) % 2 == 0){
+        DrawSpriteCentered(
+            canvas,
+            agentDanceLeft,
+            BottomAlignedTop(agentDanceLeft)
+        );
+    }
+    else{
+        DrawSpriteCentered(
+            canvas,
+            agentDanceRight,
+            BottomAlignedTop(agentDanceRight)
+        );
+    }
 
     return RenderCanvas(canvas);
 }
@@ -586,7 +620,7 @@ ftxui::Element VictoryAnimation::RenderVictoryScreen(int frame) const{
 
         titleLines.push_back(
             ftxui::text(
-                "PRESS ENTER TO EXIT"
+                "ENTER - PLAY AGAIN    Q - EXIT"
             ) |
             ftxui::color(
                 ftxui::Color::GrayLight
