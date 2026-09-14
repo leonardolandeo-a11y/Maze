@@ -1039,13 +1039,9 @@ ftxui::Element DeathAnimation::RenderGameOver(
         );
 
         titleLines.push_back(
-            ftxui::text(
-                "PRESS ENTER TO EXIT"
-            ) |
-            ftxui::color(
-                ftxui::Color::GrayLight
-            ) |
-            ftxui::center
+            ftxui::text("ENTER - PLAY AGAIN    Q - EXIT")
+            |ftxui::color(ftxui::Color::GrayLight)
+            |ftxui::center
         );
     }
 
@@ -1067,10 +1063,6 @@ ftxui::Element DeathAnimation::RenderGameOver(
         )
     );
 }
-
-//=============================================================
-// CONTROL GENERAL DE LA ANIMACION
-//=============================================================
 
 ftxui::Element DeathAnimation::RenderDeathFrame(
     int frame,

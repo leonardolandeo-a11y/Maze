@@ -1,20 +1,17 @@
 #include "circuit_escape/GameApplication.h"
 
-#include <algorithm>
-#include <array>
 #include <atomic>
 #include <chrono>
 #include <optional>
-#include <string>
 #include <thread>
 #include <vector>
 
 #include "circuit_escape/console_ui.h"
 #include "circuit_escape/StartupAnimation.h"
 #include "circuit_escape/DeathAnimation.h"
+#include "circuit_escape/VictoryAnimation.h"
 
 #include <ftxui/dom/elements.hpp>
-#include <ftxui/screen/color.hpp>
 
 Grid<Cell, 20,30> GameApplication::CreateScenario(){
     Grid<Cell, 20,30> grid;
@@ -50,7 +47,7 @@ Grid<Cell, 20,30> GameApplication::CreateScenario(){
     grid.at({7, 10}) = Trap{};
 
     // Exit
-    grid.at({10, 15}) = Exit{};
+    grid.at({1, 2}) = Exit{};
 
     return grid;
 }
@@ -136,165 +133,223 @@ ftxui::Component GameApplication::CreateGameComponent(
 }
 
 void GameApplication::Run(){
-    auto grid = CreateScenario();
-    Agent player = CreatePlayer();
-    GameRules rules = rulesFor(Difficulty::standard);
+    bool playAgain = true;
+    bool firstGame = true;
 
-    NavigationEnvironment<20,30> environment(grid,player,rules);
+    while (playAgain){
+        playAgain = false;
 
-    ConsoleUI ui(RenderMode::emoji);
+        auto grid = CreateScenario();
+        Agent player = CreatePlayer();
+        GameRules rules = rulesFor(Difficulty::standard);
 
-    std::vector<NavigationEvent> recentEvents;
+        NavigationEnvironment<20,30> environment(grid,player,rules);
+        ConsoleUI ui(RenderMode::emoji);
 
-    ftxui::ScreenInteractive screen =
-        ftxui::ScreenInteractive::Fullscreen();
+        std::vector<NavigationEvent> recentEvents;
 
-    std::atomic<bool> startupActive{true};
-    std::atomic<bool> deathActive{false};
-    std::atomic<bool> deathAnimationComplete{false};
-    std::atomic<bool> applicationRunning{true};
+        ftxui::ScreenInteractive screen =
+            ftxui::ScreenInteractive::Fullscreen();
 
-    StartupAnimation startupAnimation;
-    DeathAnimation deathAnimation;
+        std::atomic<bool> startupActive{firstGame};
+        std::atomic<bool> deathActive{false};
+        std::atomic<bool> deathAnimationComplete{false};
+        std::atomic<bool> victoryActive{false};
+        std::atomic<bool> victoryAnimationComplete{false};
+        std::atomic<bool> applicationRunning{true};
 
-    int startupFrame = 0;
-    int deathFrame = 0;
+        firstGame = false;
 
-    EndReason deathReason = EndReason::none;
+        bool restartRequested = false;
 
-    auto handleStepResult = [&](const StepResult& result){
-        if (!result.finished){
-            return;
-        }
+        StartupAnimation startupAnimation;
+        DeathAnimation deathAnimation;
+        VictoryAnimation victoryAnimation;
 
-        if (
-            result.reason == EndReason::noEnergy ||
-            result.reason == EndReason::turnLimit
-        ){
-            deathReason = result.reason;
-            deathFrame = 0;
-            deathAnimationComplete = false;
-            deathActive = true;
-        }
-    };
+        int startupFrame = 0;
+        int deathFrame = 0;
+        int victoryFrame = 0;
 
-    ftxui::Component gameComponent = CreateGameComponent(
-        environment,
-        ui,
-        recentEvents,
-        screen,
-        handleStepResult
-    );
+        EndReason deathReason = EndReason::none;
 
-    ftxui::Component applicationRenderer = ftxui::Renderer(
-        [&]{
-            if (startupActive){
-                return startupAnimation.RenderStartupFrame(startupFrame);
+        auto handleStepResult = [&](const StepResult& result){
+            if (!result.finished){
+                return;
             }
 
-            if (deathActive){
-                return deathAnimation.RenderDeathFrame(
-                    deathFrame,
-                    deathReason
-                );
+            if (result.reason == EndReason::goalReached){
+                victoryFrame = 0;
+                victoryAnimationComplete = false;
+                victoryActive = true;
+                return;
             }
 
-            return gameComponent->Render();
-        }
-    );
-
-    ftxui::Component application = ftxui::CatchEvent(
-        applicationRenderer,
-        [&](const ftxui::Event& event){
-            if (startupActive){
-                if (event == ftxui::Event::Return){
-                    startupActive = false;
-                    return true;
-                }
-
-                return true;
+            if (
+                result.reason == EndReason::noEnergy ||
+                result.reason == EndReason::turnLimit
+            ){
+                deathReason = result.reason;
+                deathFrame = 0;
+                deathAnimationComplete = false;
+                deathActive = true;
             }
+        };
 
-            if (deathActive){
-                if (
-                    event == ftxui::Event::Character('q') ||
-                    event == ftxui::Event::Character('Q')
-                ){
-                    screen.Exit();
-                    return true;
-                }
+        ftxui::Component gameComponent = CreateGameComponent(
+            environment,
+            ui,
+            recentEvents,
+            screen,
+            handleStepResult
+        );
 
-                if (
-                    deathAnimationComplete &&
-                    event == ftxui::Event::Return
-                ){
-                    screen.Exit();
-                    return true;
-                }
-
-                return true;
-            }
-
-            return gameComponent->OnEvent(event);
-        }
-    );
-
-    std::thread animationThread(
-        [&]{
-            while (applicationRunning){
-                std::this_thread::sleep_for(
-                    std::chrono::milliseconds(60)
-                );
-
-                if (!applicationRunning){
-                    break;
-                }
-
+        ftxui::Component applicationRenderer = ftxui::Renderer(
+            [&]{
                 if (startupActive){
-                    screen.Post([&]{
-                        ++startupFrame;
-
-                        if (
-                            startupFrame >=
-                            StartupAnimation::maxFrames
-                        ){
-                            startupActive = false;
-                        }
-                    });
-
-                    screen.Post(ftxui::Event::Custom);
-
-                    continue;
+                    return startupAnimation.RenderStartupFrame(startupFrame);
                 }
 
-                if (
-                    deathActive &&
-                    !deathAnimationComplete
-                ){
-                    screen.Post([&]{
-                        ++deathFrame;
+                if (deathActive){
+                    return deathAnimation.RenderDeathFrame(deathFrame,deathReason);
+                }
 
-                        if (
-                            deathFrame >=
-                            DeathAnimation::maxFrames
-                        ){
-                            deathAnimationComplete = true;
-                        }
-                    });
+                if (victoryActive){
+                    return victoryAnimation.RenderVictoryFrame(victoryFrame);
+                }
 
-                    screen.Post(ftxui::Event::Custom);
+                return gameComponent->Render();
+            }
+        );
+
+        ftxui::Component application = ftxui::CatchEvent(
+            applicationRenderer,
+            [&](const ftxui::Event& event){
+                if (startupActive){
+                    if (event == ftxui::Event::Return){
+                        startupActive = false;
+                        return true;
+                    }
+
+                    return true;
+                }
+
+                if (deathActive){
+                    if (
+                        event == ftxui::Event::Character('q') ||
+                        event == ftxui::Event::Character('Q')
+                    ){
+                        screen.Exit();
+                        return true;
+                    }
+
+                    if (
+                        deathAnimationComplete &&
+                        event == ftxui::Event::Return
+                    ){
+                        restartRequested = true;
+                        screen.Exit();
+                        return true;
+                    }
+
+                    return true;
+                }
+
+                if (victoryActive){
+                    if (
+                        event == ftxui::Event::Character('q') ||
+                        event == ftxui::Event::Character('Q')
+                    ){
+                        screen.Exit();
+                        return true;
+                    }
+
+                    if (
+                        victoryAnimationComplete &&
+                        event == ftxui::Event::Return
+                    ){
+                        restartRequested = true;
+                        screen.Exit();
+                        return true;
+                    }
+
+                    return true;
+                }
+
+                return gameComponent->OnEvent(event);
+            }
+        );
+
+        std::thread animationThread(
+            [&]{
+                while (applicationRunning){
+                    std::this_thread::sleep_for(
+                        std::chrono::milliseconds(60)
+                    );
+
+                    if (!applicationRunning){
+                        break;
+                    }
+
+                    if (startupActive){
+                        screen.Post([&]{
+                            ++startupFrame;
+
+                            if (startupFrame >= StartupAnimation::maxFrames){
+                                startupActive = false;
+                            }
+                        });
+
+                        screen.Post(ftxui::Event::Custom);
+                        continue;
+                    }
+
+                    if (
+                        deathActive &&
+                        !deathAnimationComplete
+                    ){
+                        screen.Post([&]{
+                            ++deathFrame;
+
+                            if (deathFrame >= DeathAnimation::maxFrames){
+                                deathAnimationComplete = true;
+                            }
+                        });
+
+                        screen.Post(ftxui::Event::Custom);
+                        continue;
+                    }
+
+                    if (
+                        victoryActive &&
+                        !victoryAnimationComplete
+                    ){
+                        screen.Post([&]{
+                            ++victoryFrame;
+
+                            if (victoryFrame >= VictoryAnimation::maxFrames){
+                                victoryAnimationComplete = true;
+                            }
+                        });
+
+                        screen.Post(ftxui::Event::Custom);
+                    }
                 }
             }
+        );
+
+        screen.Loop(application);
+
+        applicationRunning = false;
+        startupActive = false;
+        deathActive = false;
+        victoryActive = false;
+
+        if (animationThread.joinable()){
+            animationThread.join();
         }
-    );
 
-    screen.Loop(application);
-
-    applicationRunning = false;
-    startupActive = false;
-    deathActive = false;
-
-    if (animationThread.joinable()){
-        animationThread.join();
+        if (restartRequested){
+            playAgain = true;
+        }
     }
 }
