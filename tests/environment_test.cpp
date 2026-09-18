@@ -35,7 +35,7 @@ void test_movimiento_libre() {
 
     StepResult result = environment.step(Action::right);
 
-    assert(result.observation.agent == Position{0, 1});
+    assert((result.observation.agent == Position{0, 1}));
     assert(result.observation.energy == 9);
     assert(result.observation.turn == 1);
     assert(!result.finished);
@@ -62,7 +62,7 @@ void test_movimiento_contra_muro() {
     StepResult result = environment.step(Action::right);
 
     // El agente no debe cambiar de posición.
-    assert(result.observation.agent == Position{0, 0});
+    assert((result.observation.agent == Position{0, 0}));
 
     // El intento inválido consume energía y un turno.
     assert(result.observation.energy == 9);
@@ -90,7 +90,7 @@ void test_movimiento_fuera_del_tablero() {
 
     StepResult result = environment.step(Action::up);
 
-    assert(result.observation.agent == Position{0, 0});
+    assert((result.observation.agent == Position{0, 0}));
     assert(result.observation.energy == 9);
     assert(result.observation.turn == 1);
     assert(!result.finished);
@@ -140,7 +140,7 @@ void test_costo_terreno_elevado() {
 
     StepResult result = environment.step(Action::right);
 
-    assert(result.observation.agent == Position{0, 1});
+    assert((result.observation.agent == Position{0, 1}));
     assert(result.observation.energy == 7);
 }
 
@@ -184,7 +184,7 @@ void test_costo_movimiento_invalido() {
 
     StepResult result = environment.step(Action::left);
 
-    assert(result.observation.agent == Position{0, 0});
+    assert((result.observation.agent == Position{0, 0}));
     assert(result.observation.energy == 6);
     assert(result.observation.turn == 1);
 }
