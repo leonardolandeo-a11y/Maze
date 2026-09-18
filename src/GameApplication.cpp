@@ -1,4 +1,5 @@
 #include "circuit_escape/GameApplication.h"
+#include "circuit_escape/scenarios/scenario_1.h"
 
 #include <atomic>
 #include <chrono>
@@ -14,46 +15,12 @@
 #include <ftxui/dom/elements.hpp>
 
 Grid<Cell, 20,30> GameApplication::CreateScenario(){
-    Grid<Cell, 20,30> grid;
-
-    // -------------------------
-    // Temporary test scenario
-    // -------------------------
-
-    // Walls
-    grid.at({0, 3}) = Wall{};
-    grid.at({0, 4}) = Wall{};
-    grid.at({0, 5}) = Wall{};
-
-    grid.at({1, 5}) = Wall{};
-    grid.at({2, 5}) = Wall{};
-    grid.at({3, 5}) = Wall{};
-
-    // Rough terrain
-    grid.at({2, 2}) = RoughTerrain{};
-    grid.at({2, 3}) = RoughTerrain{};
-    grid.at({3, 2}) = RoughTerrain{};
-
-    // Resources
-    grid.at({4, 4}) = ResourceCell<int>{10};
-    grid.at({6, 8}) = ResourceCell<int>{20};
-
-    // Batteries
-    grid.at({1, 8}) = Battery{};
-    grid.at({8, 12}) = Battery{};
-
-    // Traps
-    grid.at({5, 5}) = Trap{};
-    grid.at({7, 10}) = Trap{};
-
-    // Exit
-    grid.at({1, 2}) = Exit{};
-
-    return grid;
+    return createScenario1();
 }
 
+// Configurado para usar valores del perfil standard, pero se puede cambiar para usar otros perfiles de dificultad.
 Agent GameApplication::CreatePlayer(){
-    return Agent({1,1}, 10,10);
+    return Agent({1,1}, 60,60);
 }
 
 ftxui::Component GameApplication::CreateGameComponent(
