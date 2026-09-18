@@ -5,8 +5,9 @@ Grid<Cell, 20,30> GameApplication::CreateScenario(){
     return createScenario1();
 }
 
+// Configurado para usar valores del perfil standard, pero se puede cambiar para usar otros perfiles de dificultad.
 Agent GameApplication::CreatePlayer(){
-    return Agent({1,1}, 10,10);
+    return Agent({1,1}, 60,60);
 }
 
 
