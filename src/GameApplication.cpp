@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "circuit_escape/console_ui.h"
+#include "circuit_escape/menus.h"
 #include "circuit_escape/StartupAnimation.h"
 #include "circuit_escape/DeathAnimation.h"
 #include "circuit_escape/VictoryAnimation.h"
@@ -119,6 +120,7 @@ void GameApplication::Run(){
             ftxui::ScreenInteractive::Fullscreen();
 
         std::atomic<bool> startupActive{firstGame};
+        std::atomic<bool> menuActive{true};
         std::atomic<bool> deathActive{false};
         std::atomic<bool> deathAnimationComplete{false};
         std::atomic<bool> victoryActive{false};
@@ -132,6 +134,7 @@ void GameApplication::Run(){
         StartupAnimation startupAnimation;
         DeathAnimation deathAnimation;
         VictoryAnimation victoryAnimation;
+        Menus menus;
 
         int startupFrame = 0;
         int deathFrame = 0;
@@ -176,6 +179,10 @@ void GameApplication::Run(){
                     return startupAnimation.RenderStartupFrame(startupFrame);
                 }
 
+                if (menuActive){
+                    return menus.Render();
+                }
+
                 if (deathActive){
                     return deathAnimation.RenderDeathFrame(deathFrame,deathReason);
                 }
@@ -200,6 +207,10 @@ void GameApplication::Run(){
                     return true;
                 }
 
+                if (menuActive) {
+                    return menus.OnEvent(event);
+                }
+                
                 if (deathActive){
                     if (
                         event == ftxui::Event::Character('q') ||
