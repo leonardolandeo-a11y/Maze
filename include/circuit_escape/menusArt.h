@@ -43,4 +43,49 @@ namespace MenuArt {
 ┃┓┃┃ ┃┃ ┃
 ┗┻┛┗━┛╹ ╹
 )";
+ inline constexpr std::string_view SCENARIO_1 = R"(
+┏━┓┏━╸┏━╸┏┓╻┏━┓┏━┓╻┏━┓   ╺┓
+┗━┓┃  ┣╸ ┃┗┫┣━┫┣┳┛┃┃ ┃    ┃
+┗━┛┗━╸┗━╸╹ ╹╹ ╹╹┗╸╹┗━┛   ╺┻╸
+)";
+ inline constexpr std::string_view SCENARIO_2 = R"(
+┏━┓┏━╸┏━╸┏┓╻┏━┓┏━┓╻┏━┓   ┏━┓
+┗━┓┃  ┣╸ ┃┗┫┣━┫┣┳┛┃┃ ┃   ┏━┛
+┗━┛┗━╸┗━╸╹ ╹╹ ╹╹┗╸╹┗━┛   ┗━╸
+)";
+ inline constexpr std::string_view RANDOM = R"(
+┏━┓┏━┓┏┓╻╺┳┓┏━┓┏┳┓
+┣┳┛┣━┫┃┗┫ ┃┃┃ ┃┃┃┃
+╹┗╸╹ ╹╹ ╹╺┻┛┗━┛╹ ╹
+)";
+ inline constexpr std::string_view EASY = R"(
+┏━╸┏━┓┏━┓╻ ╻
+┣╸ ┣━┫┗━┓┗┳┛
+┗━╸╹ ╹┗━┛ ╹
+)";
+ inline constexpr std::string_view STANDARD = R"(
+┏━┓╺┳╸┏━┓┏┓╻╺┳┓┏━┓┏━┓╺┳╸
+┗━┓ ┃ ┣━┫┃┗┫ ┃┃┣━┫┣┳┛ ┃
+┗━┛ ╹ ╹ ╹╹ ╹╺┻┛╹ ╹╹┗╸ ╹
+)";
+ inline constexpr std::string_view HARD = R"(
+╻ ╻┏━┓┏━┓╺┳┓
+┣━┫┣━┫┣┳┛ ┃┃
+╹ ╹╹ ╹╹┗╸╺┻┛
+)";
+ inline constexpr std::string_view EMOJI = R"(
+┏━╸┏┳┓┏━┓ ┏┓╻
+┣╸ ┃┃┃┃ ┃  ┃┃
+┗━╸╹ ╹┗━┛┗━┛╹
+)";
+ inline constexpr std::string_view ASCII = R"(
+┏━┓┏━┓┏━╸╻╻
+┣━┫┗━┓┃  ┃┃
+╹ ╹┗━┛┗━╸╹╹
+)";
+ inline constexpr std::string_view BACK = R"(
+┏┓ ┏━┓┏━╸╻┏ 
+┣┻┓┣━┫┃  ┣┻┓
+┗━┛╹ ╹┗━╸╹ ╹
+)";
 }
