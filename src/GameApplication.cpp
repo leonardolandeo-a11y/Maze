@@ -207,6 +207,10 @@ void GameApplication::Run(){
                     return true;
                 }
 
+                if (menuActive) {
+                    return menus.OnEvent(event);
+                }
+                
                 if (deathActive){
                     if (
                         event == ftxui::Event::Character('q') ||
