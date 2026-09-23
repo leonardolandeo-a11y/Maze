@@ -249,13 +249,13 @@ class NavigationEnvironment {
                     }
 
                     // Se agrega la recompensa y se marca como recolectada
-                    agent.addScore(resource.reward);
+                    agent.addScore(rules.resourcePoints);
                     agent.addcollectedResources(1);
                     resource.collected = true;
 
                     events.push_back(
                         ResourceCollectedEvent{
-                            agent.getPosition(), resource.reward
+                            agent.getPosition(), rules.resourcePoints
                     }
                 );
 },

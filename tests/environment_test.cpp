@@ -212,7 +212,7 @@ void test_recurso_una_sola_vez() {
     assert(firstResult.observation.collectedResources == 1);
 
     // Salimos de la celda y luego volvemos a ella.
-    environment.step(Action::right);
+    (void)environment.step(Action::right);
     StepResult secondResult = environment.step(Action::left);
 
     // El recurso no debe volver a dar puntos.
@@ -280,7 +280,7 @@ void test_bateria_consumible() {
     assert(firstResult.observation.energy == 7);
 
     // Nos alejamos de la batería.
-    environment.step(Action::right);
+    (void)environment.step(Action::right);
 
     // Volvemos a la batería.
     StepResult secondResult = environment.step(Action::left);
@@ -310,7 +310,7 @@ void test_trampa_repetida() {
     assert(firstResult.observation.score == -1);
 
     // Salimos de la trampa.
-    environment.step(Action::right);
+    (void)environment.step(Action::right);
 
     // Volvemos a entrar en la trampa.
     StepResult secondResult = environment.step(Action::left);
@@ -553,11 +553,131 @@ void test_acciones_despues_del_termino() {
         testRules()
     );
 
-    environment.step(Action::right);
+    (void)environment.step(Action::right);
 
     assert(environment.isFinished());
 
     auto actions = environment.availableActions();
 
     assert(actions.empty());
+}
+
+void assert_resource_points(
+    const GameRules& rules,
+    int expectedPoints
+) {
+    Grid<Cell, 1, 3> grid;
+
+    // Ponemos un reward distinto a propósito.
+    // El puntaje debe salir de GameRules.
+    grid.at({0, 1}) = ResourceCell<int>{100};
+
+    // El Environment necesita una salida.
+    grid.at({0, 2}) = Exit{};
+
+    Agent agent(
+        {0, 0},
+        rules.initialEnergy,
+        rules.maximumEnergy
+    );
+
+    NavigationEnvironment<1, 3> environment(
+        grid,
+        agent,
+        rules
+    );
+
+    StepResult result =
+        environment.step(Action::right);
+
+    // Verifica el score del jugador.
+    assert(
+        result.observation.score == expectedPoints
+    );
+
+    // Verifica también ResourceCollectedEvent.
+    bool eventFound = false;
+
+    for (const auto& event : result.events) {
+
+        if (
+            const auto* resourceEvent =
+                std::get_if<ResourceCollectedEvent>(&event)
+        ) {
+            eventFound = true;
+
+            assert(
+                resourceEvent->points == expectedPoints
+            );
+        }
+    }
+
+    assert(eventFound);
+}
+
+void test_resource_points_by_difficulty() {
+
+    GameRules easyRules =
+        rulesFor(Difficulty::easy);
+
+    GameRules standardRules =
+        rulesFor(Difficulty::standard);
+
+    GameRules hardRules =
+        rulesFor(Difficulty::hard);
+
+
+    assert(easyRules.resourcePoints == 15);
+    assert(standardRules.resourcePoints == 10);
+    assert(hardRules.resourcePoints == 8);
+
+
+    assert_resource_points(
+        easyRules,
+        15
+    );
+
+    assert_resource_points(
+        standardRules,
+        10
+    );
+
+    assert_resource_points(
+        hardRules,
+        8
+    );
+}
+
+void run_environment_tests() {
+    test_movimiento_libre();
+    test_movimiento_contra_muro();
+    test_movimiento_fuera_del_tablero();
+
+    test_costo_movimiento_normal();
+    test_costo_terreno_elevado();
+    test_costo_wait();
+    test_costo_movimiento_invalido();
+
+    test_recurso_una_sola_vez();
+
+    test_bateria();
+    test_bateria_no_supera_maximo();
+    test_bateria_consumible();
+
+    test_trampa_repetida();
+    test_penalizaciones_trampa();
+
+    test_llegada_a_la_salida();
+    test_terminacion_por_energia();
+    test_terminacion_por_turnos();
+
+    test_precedencia_energia_y_turnos();
+    test_precedencia_llegada_a_salida();
+    test_salida_con_energia_cero();
+
+    test_acciones_junto_a_muro();
+    test_acciones_en_esquina();
+    test_acciones_despues_del_termino();
+    //test agregado para verificar si resource points es controlado por difficulty
+    test_resource_points_by_difficulty();
 }
