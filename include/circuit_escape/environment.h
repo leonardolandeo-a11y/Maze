@@ -4,7 +4,9 @@
 #include "circuit_escape/cells.h"
 #include "circuit_escape/game_rules.h"
 #include "circuit_escape/grid.h"
+#include "circuit_escape/generic_functions.h"
 
+#include <iterator> 
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -150,20 +152,18 @@ class NavigationEnvironment {
             );
         }
 
-        if (std::holds_alternative<Wall>(grid_.at(start))) {
+        if (!isTraversable(grid_.at(start))) {
             throw std::invalid_argument(
                 "Initial position is not traversable"
             );
         }
         //contador de salidas
         //una vez inicializao el tablero, se cuenta cuatnas salidas hay
-        std::size_t exitCount = 0;
-        
-        for (const Cell &cell: grid_) {
-            if (std::holds_alternative<Exit>(cell)) {
-                ++exitCount;
-            }
-        }
+        const std::size_t exitCount = countMatching(
+            grid_.cbegin(), //iterador
+            grid_.cend(), //iterador final
+            [](const Cell& cell) {return std::holds_alternative<Exit>(cell);} //f lambda
+        );
 
         if (exitCount != 1) {
             throw std::invalid_argument(
@@ -184,21 +184,34 @@ class NavigationEnvironment {
         }
     }
     //este metodo retorna la posicion de cell donde se encuentra la salida 
-    Position goalPosition() const {
-        for (std::size_t row = 0; row < Rows; ++row) {
-            for (std::size_t column = 0; column < Columns; ++column) {
-                Position position{row, column};
-
-                if (std::holds_alternative<Exit>(grid_.at(position))) {
-                    return position;
-                }
-            }
+Position goalPosition() const {
+    const auto exitIterator = LinearSearch(
+        grid_.cbegin(),
+        grid_.cend(),
+        [](const Cell& cell) {
+            return std::holds_alternative<Exit>(cell);
         }
+    );
 
+    if (exitIterator == grid_.cend()) {
         throw std::logic_error(
             "Environment invariant violated: exit not found"
         );
     }
+
+    const std::size_t index =
+        static_cast<std::size_t>(
+            std::distance(
+                grid_.cbegin(),
+                exitIterator
+            )
+        );
+
+    return Position{
+        index/Columns, //fila
+        index%Columns //columna
+    };
+}
     /*
     el metodo movcost usa el patron el struct Overloaded que guarda funciones lambda
     usa la misma logica que applyeffectcell para obtener el tipo de cell y aplicar 
@@ -244,7 +257,8 @@ class NavigationEnvironment {
         std::visit(Overloaded{
 
                     // Logica para celdas con recompensas
-                    [&](ResourceCell<int>& resource) {
+                    [&](auto& resource)
+                        requires CellTraits<std::remove_cvref_t<decltype(resource)>>::resource {
                         if (resource.collected) {
                         return;
                     }
@@ -407,7 +421,7 @@ public:
 
             const Cell &destination = grid_.at(candidate.value());
 
-            if (std::holds_alternative<Wall>(destination)) {
+            if (!isTraversable(destination)) {
                 continue;
             }
 
@@ -510,7 +524,7 @@ public:
         Cell &destination = grid_.at(candidate.value());
 
         // movimiento hacia un muro
-        if (std::holds_alternative<Wall>(destination)) {
+        if (!isTraversable(destination)) { 
             const int previousEnergy = agent.getEnergy();
 
             agent.setEnergy(
