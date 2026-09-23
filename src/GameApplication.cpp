@@ -1,5 +1,7 @@
 #include "circuit_escape/GameApplication.h"
 #include "circuit_escape/scenarios/scenario_1.h"
+#include "circuit_escape/scenarios/scenario_2.h"
+
 
 #include <atomic>
 #include <chrono>
@@ -15,13 +17,25 @@
 
 #include <ftxui/dom/elements.hpp>
 
-Grid<Cell, 20,30> GameApplication::CreateScenario(){
+Grid<Cell, 20,30> GameApplication::CreateScenario(ScenarioSelection scenario){
+    switch (scenario) {
+
+        case ScenarioSelection::scenario1:
+            return createScenario1();
+        case ScenarioSelection::scenario2:
+            return createScenario2();
+    }
+
     return createScenario1();
 }
 
-// Configurado para usar valores del perfil standard, pero se puede cambiar para usar otros perfiles de dificultad.
-Agent GameApplication::CreatePlayer(){
-    return Agent({1,1}, 60,60);
+// Configurado para usar valores del perfil standard, pero se puede cambiar para usar otros perfiles de dificultad ->Si, ya esta
+Agent GameApplication::CreatePlayer(const GameRules& rules) {
+    return Agent(
+        {1, 1},
+        rules.initialEnergy,
+        rules.maximumEnergy
+    );
 }
 
 ftxui::Component GameApplication::CreateGameComponent(
@@ -106,10 +120,10 @@ void GameApplication::Run(){
 
     while (playAgain){
         playAgain = false;
-
-        auto grid = CreateScenario();
-        Agent player = CreatePlayer();
+        //no se eliminan por ahora
+        auto grid = CreateScenario(ScenarioSelection::scenario1);
         GameRules rules = rulesFor(Difficulty::standard);
+        Agent player = CreatePlayer(rules);
 
         NavigationEnvironment<20,30> environment(grid,player,rules);
         ConsoleUI ui(RenderMode::emoji);
@@ -208,7 +222,29 @@ void GameApplication::Run(){
                 }
 
                 if (menuActive) {
-                    return menus.OnEvent(event);
+                    bool eventhandled = menus.OnEvent(event);
+                    MenuCommand command = menus.takeCommand();
+                    switch (command) {
+                        case MenuCommand::startGame:
+                            grid = CreateScenario( menus.selectedScenario() );
+                            rules = rulesFor(menus.selectedDifficulty());
+                            player = CreatePlayer(rules);
+                            environment = NavigationEnvironment<20, 30>(
+                                            grid,
+                                            player,
+                                            rules
+                                        );
+                            ui = ConsoleUI(menus.selectedRenderMode());
+                            recentEvents.clear();
+                            menuActive = false;
+                            return true;
+                        case MenuCommand::quit :
+                            screen.Exit();
+                            return true;
+                        case MenuCommand::none:
+                            break;
+                    }
+                    return eventhandled;
                 }
                 
                 if (deathActive){

@@ -89,6 +89,9 @@ bool Menus::OnEvent(ftxui::Event event) {
     if (event == Event::Return || event == Event::Character('\n')) {
         if (currentScreen_ == MenuScreen::Main) {
             switch (selectedOption_) {
+                case 0:
+                    pendingCommand_ = MenuCommand::startGame;
+                    return true;
                 case 1:
                     currentScreen_ = MenuScreen::Scenario;
                     break;
@@ -101,12 +104,92 @@ bool Menus::OnEvent(ftxui::Event event) {
                 case 4:
                     currentScreen_ = MenuScreen::Help;
                     break;
+                case 5:
+                    pendingCommand_ = MenuCommand::quit;
+                    return true;
                 default:
                     return false;
             }
 
             selectedOption_ = 0;
             return true;
+        }
+
+//logica similar a currentScreen::MenuScreen::Main aplicada a dificultad
+        if (currentScreen_ == MenuScreen::Difficulty) {
+            switch (selectedOption_) {
+                case 0:
+                    selectedDifficulty_ = Difficulty::easy;
+                    currentScreen_ = MenuScreen::Main;
+                    selectedOption_ = 0;
+                    return true;
+
+                case 1:
+                    selectedDifficulty_ = Difficulty::standard;
+                    currentScreen_ = MenuScreen::Main;
+                    selectedOption_ = 0;
+                    return true;
+
+                case 2:
+                    selectedDifficulty_ = Difficulty::hard;
+                    currentScreen_ = MenuScreen::Main;
+                    selectedOption_ = 0;
+                    return true;
+
+                case 3: 
+                    currentScreen_ = MenuScreen::Main;
+                    selectedOption_ = 0;
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        //logica similar a currentScreen::MenuScreen::Main aplicada a Escenario
+        if (currentScreen_ == MenuScreen::Scenario) {
+            switch(selectedOption_) {
+                case 0:
+                    selectedScenario_ = ScenarioSelection::scenario1;
+                    currentScreen_ = MenuScreen::Main;
+                    selectedOption_ = 0;
+                    return true;
+                case 1:
+                    selectedScenario_ = ScenarioSelection::scenario2;
+                    currentScreen_ = MenuScreen::Main;
+                    selectedOption_ = 0;
+                    return true;
+                case 2:
+                    currentScreen_ = MenuScreen::Main;
+                    selectedOption_ = 0;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        //lo mismo para renderizacion
+        if (currentScreen_ == MenuScreen::RenderMode) {
+            switch (selectedOption_) {
+                case 0:
+                    selectedRenderMode_ = RenderMode::emoji;
+                    currentScreen_ = MenuScreen::Main;
+                    selectedOption_ = 0;
+                    return true;
+
+                case 1:
+                    selectedRenderMode_ = RenderMode::ascii;
+                    currentScreen_ = MenuScreen::Main;
+                    selectedOption_ = 0;
+                    return true;
+
+                case 2: // este es BACK
+                    currentScreen_ = MenuScreen::Main;
+                    selectedOption_ = 0;
+                    return true;
+
+                default:
+                    return false;
+            }
         }
         if (selectedOption_ == OptionCount(currentScreen_) - 1) {
             currentScreen_ = MenuScreen::Main;
@@ -115,6 +198,27 @@ bool Menus::OnEvent(ftxui::Event event) {
         }
     }
     return false;
+}
+
+//Metodo agregado para que GameApplication pueda leer el comando recibido desde el menu
+MenuCommand Menus::takeCommand() {
+    MenuCommand command = pendingCommand_;
+    pendingCommand_ = MenuCommand::none;
+    return command;
+}
+
+//Metodo agregado para que desde el menu se pueda cambiar de escenario
+ScenarioSelection Menus::selectedScenario() const noexcept {
+    return selectedScenario_;
+}
+
+//Metodo agregado para que desde el menu se pueda cambiar de dificultad
+Difficulty Menus::selectedDifficulty() const noexcept {
+    return selectedDifficulty_;
+}
+//lo mismo que los otros para renderizar
+RenderMode Menus::selectedRenderMode() const noexcept {
+    return selectedRenderMode_;
 }
 
 ftxui::Element Menus::Render() const {

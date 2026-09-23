@@ -647,6 +647,50 @@ void test_resource_points_by_difficulty() {
         8
     );
 }
+//Test para probar la correcta carga de configuraciones por dificultad
+void test_difficulty_profiles() {
+
+    GameRules easy = rulesFor(Difficulty::easy);
+
+    assert(easy.initialEnergy == 80);
+    assert(easy.maximumEnergy == 80);
+    assert(easy.turnLimit == 240);
+    assert(easy.normalCellCost == 1);
+    assert(easy.roughTerrainCost == 2);
+    assert(easy.waitOrInvalidCost == 1);
+    assert(easy.resourcePoints == 15);
+    assert(easy.batteryRecharge == 5);
+    assert(easy.trapEnergyPenalty == 1);
+    assert(easy.trapScorePenalty == 0);
+
+
+    GameRules standard = rulesFor(Difficulty::standard);
+
+    assert(standard.initialEnergy == 60);
+    assert(standard.maximumEnergy == 60);
+    assert(standard.turnLimit == 180);
+    assert(standard.normalCellCost == 1);
+    assert(standard.roughTerrainCost == 2);
+    assert(standard.waitOrInvalidCost == 1);
+    assert(standard.resourcePoints == 10);
+    assert(standard.batteryRecharge == 3);
+    assert(standard.trapEnergyPenalty == 2);
+    assert(standard.trapScorePenalty == 1);
+
+
+    GameRules hard = rulesFor(Difficulty::hard);
+
+    assert(hard.initialEnergy == 40);
+    assert(hard.maximumEnergy == 40);
+    assert(hard.turnLimit == 140);
+    assert(hard.normalCellCost == 1);
+    assert(hard.roughTerrainCost == 3);
+    assert(hard.waitOrInvalidCost == 1);
+    assert(hard.resourcePoints == 8);
+    assert(hard.batteryRecharge == 2);
+    assert(hard.trapEnergyPenalty == 3);
+    assert(hard.trapScorePenalty == 2);
+}
 
 void run_environment_tests() {
     test_movimiento_libre();
@@ -680,4 +724,6 @@ void run_environment_tests() {
     test_acciones_despues_del_termino();
     //test agregado para verificar si resource points es controlado por difficulty
     test_resource_points_by_difficulty();
+    //otro test
+    test_difficulty_profiles();
 }
