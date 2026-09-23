@@ -118,11 +118,9 @@ void test_simulation_result_matches_final_environment_state() {
     assert(result.actions.size() == finalState.turn);
 }
 
-int main() {
+void run_simulation_tests() {
     test_random_simulation_completes_automatically();
     test_same_seed_produces_same_action_sequence();
     test_same_seed_produces_same_final_results();
     test_simulation_result_matches_final_environment_state();
-
-    return 0;
 }

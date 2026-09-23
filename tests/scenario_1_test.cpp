@@ -4,9 +4,10 @@
 
 void test_scenario1_tamano() {
     auto grid = createScenario1();
+    using ScenarioGrid = decltype(grid);
 
-    assert(Grid<Cell, 20, 30>::rows() == 20);
-    assert(Grid<Cell, 20, 30>::columns() == 30);
+    static_assert(ScenarioGrid::rows() == 20);
+    static_assert(ScenarioGrid::columns() == 30);
 }
 
 void test_scenario1_muros() {
@@ -62,4 +63,14 @@ void test_scenario1_salida() {
     auto grid = createScenario1();
 
     assert(std::holds_alternative<Exit>(grid.at({10, 15})));
+}
+
+void run_tests_scenario_1() {
+    test_scenario1_tamano();
+    test_scenario1_muros();
+    test_scenario1_rough_terrain();
+    test_scenario1_resources();
+    test_scenario1_baterias();
+    test_scenario1_trampas();
+    test_scenario1_salida();
 }

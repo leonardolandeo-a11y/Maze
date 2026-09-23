@@ -217,7 +217,7 @@ void test_policy_controller_through_icontroller() {
     assert(selectedAction == Action::right);
 }
 
-int main() {
+void run_controller_tests() {
     test_random_policy_selects_legal_action();
     test_random_policy_single_legal_action();
     test_random_policy_empty_actions_throws();
@@ -229,6 +229,4 @@ int main() {
 
     test_policy_controller_delegates_to_policy();
     test_policy_controller_through_icontroller();
-
-    return 0;
 }
