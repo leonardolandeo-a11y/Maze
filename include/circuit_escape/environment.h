@@ -45,6 +45,7 @@ struct Observation {
     int score{};
     std::size_t collectedResources{};
     std::size_t turn{};
+    std::size_t turnLimit{};
     std::vector<Action> availableActions;
 };
 /*structs eventos
@@ -427,6 +428,7 @@ public:
             agent.getScore(),
             agent.getCollectedResources(),
             turn,
+            rules.turnLimit,
             availableActions()
         };
     }
