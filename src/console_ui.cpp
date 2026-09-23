@@ -361,14 +361,32 @@ ftxui::Element ConsoleUI::RenderCell(const Cell& cell, bool IsAgent) const{
                     return ftxui::text("~");
                 }
             }
+            //Se verifica si resource ya ha sido recolectado para renderizar la celda como un Empty o no
             if constexpr(std::is_same_v<CellType,ResourceCell<int>>){
+                if (CurrentCell.collected){
+                    if (mode_ == RenderMode::emoji){
+                        return ftxui::text("⬜");
+                    }else{
+                        return ftxui::text(".");
+                    }
+                }
+
                 if (mode_ == RenderMode::emoji){
                     return ftxui::text("💎");
                 }else{
                     return ftxui::text("R");
                 }
             }
+            //la misma logica que resocurceCell, revisams si la bateria ya ha sido consumida para renderizarla o no
             if constexpr(std::is_same_v<CellType, Battery>){
+                if (CurrentCell.consumed){
+                    if (mode_ == RenderMode::emoji){
+                        return ftxui::text("⬜");
+                    }else{
+                        return ftxui::text(".");
+                    }
+                }
+
                 if (mode_ == RenderMode::emoji){
                     return ftxui::text("⚡");
                 }else{
