@@ -5,6 +5,7 @@
 #include "circuit_escape/grid.h"
 #include "circuit_escape/agent.h"
 #include "circuit_escape/console_ui.h"
+#include "circuit_escape/menus.h"
 
 #include <functional>
 
@@ -14,8 +15,8 @@
 
 class GameApplication{
 private:
-    Grid<Cell, 20,30> CreateScenario();
-    Agent CreatePlayer();
+    Grid<Cell, 20,30> CreateScenario(ScenarioSelection scenario);
+    Agent CreatePlayer(const GameRules& rules);
 
     ftxui::Component CreateGameComponent(
         NavigationEnvironment<20,30>& environment,

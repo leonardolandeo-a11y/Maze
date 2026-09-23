@@ -15,3 +15,12 @@ compile_commands.json
 *.so
 *.dll
 *.exe
+
+# IDEs
+.vscode/
+.idea/
+
+# Archivos temporales
+*.log
+*.tmp
+*~
