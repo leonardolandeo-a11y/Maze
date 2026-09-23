@@ -225,11 +225,10 @@ void test_interaction_observation_matches_environment_state() {
     assert(result.observation.availableActions == currentState.availableActions);
 }
 
-int main() {
+
+void run_interaction_tests() {
     test_resource_event_and_collected_state();
     test_battery_event_and_consumed_state();
     test_trap_events_on_repeated_entries();
     test_interaction_observation_matches_environment_state();
-
-    return 0;
 }
