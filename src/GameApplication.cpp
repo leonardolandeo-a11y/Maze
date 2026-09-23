@@ -72,7 +72,13 @@ ftxui::Component GameApplication::CreateGameComponent(
                 screen.Exit();
                 return true;
             }
-
+            if (command == UICommand::help) {
+                ui.setHelp();
+                return true;
+            }
+            if (ui.isHelpVisible()) {
+                return true;
+            }
             if (environment.isFinished()){
                 return true;
             }
