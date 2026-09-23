@@ -48,15 +48,16 @@ target_link_libraries(Maze PRIVATE
 
 #Tests
 
-# enable_testing()
+enable_testing()
 
-# add_executable(Maze_test
-#     tests/grid_test.cpp
-# #     tests/environment_test.cpp
-# #     tests/interactions_test.cpp
-# #     tests/controllers_test.cpp
-# )
+add_executable(Maze_test
+    tests/test_main.cpp
+    tests/grid_test.cpp 
+    tests/environment_test.cpp
+    tests/interactions_test.cpp
+    #tests/controllers_test.cpp
+)
 
-# target_link_libraries(Maze_test PRIVATE Maze_core)
+target_link_libraries(Maze_test PRIVATE Maze_core)
 
-# add_test(NAME Maze_test COMMAND Maze_test)
+add_test(NAME Maze_test COMMAND Maze_test)
