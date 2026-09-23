@@ -1,15 +1,15 @@
 #include <cassert>
 #include <queue>
-#include <set>
 #include <variant>
 
 #include "circuit_escape/scenarios/scenario_2.h"
 
 void test_scenario2_tamano() {
     auto grid = createScenario2();
+    using ScenarioGrid = decltype(grid);
 
-    assert(Grid<Cell, 20, 30>::rows() == 20);
-    assert(Grid<Cell, 20, 30>::columns() == 30);
+    static_assert(ScenarioGrid::rows() == 20);
+    static_assert(ScenarioGrid::columns() == 30);
 }
 
 void test_scenario2_muros() {
@@ -85,10 +85,10 @@ void test_scenario2_tiene_ruta() {
     Position exit{12, 18};
 
     std::queue<Position> pendientes;
-    std::set<Position> visitadas;
+    bool visitadas[20][30]{};
 
     pendientes.push(start);
-    visitadas.insert(start);
+    visitadas[start.row][start.column] = true;
 
     const int dr[] = {-1, 1, 0, 0};
     const int dc[] = {0, 0, -1, 1};
@@ -105,25 +105,47 @@ void test_scenario2_tiene_ruta() {
         }
 
         for (int i = 0; i < 4; ++i) {
-            Position siguiente{
-                actual.row + dr[i],
-                actual.column + dc[i]
-            };
 
-            if (siguiente.row < 0 || siguiente.row >= 20 ||
-                siguiente.column < 0 || siguiente.column >= 30) {
+            const int nextRow =
+                static_cast<int>(actual.row) + dr[i];
+
+            const int nextColumn =
+                static_cast<int>(actual.column) + dc[i];
+
+            if (nextRow < 0 || nextRow >= 20 ||
+                nextColumn < 0 || nextColumn >= 30) {
                 continue;
             }
+
+            Position siguiente{
+                static_cast<std::size_t>(nextRow),
+                static_cast<std::size_t>(nextColumn)
+            };
 
             if (std::holds_alternative<Wall>(grid.at(siguiente))) {
                 continue;
             }
 
-            if (visitadas.insert(siguiente).second) {
-                pendientes.push(siguiente);
+            if (visitadas[siguiente.row][siguiente.column]) {
+                continue;
             }
+
+            visitadas[siguiente.row][siguiente.column] = true;
+            pendientes.push(siguiente);
         }
     }
 
     assert(encontrada);
+}
+
+void run_tests_scenario_2() {
+    test_scenario2_tamano();
+    test_scenario2_muros();
+    test_scenario2_rough_terrain();
+    test_scenario2_resources();
+    test_scenario2_baterias();
+    test_scenario2_trampas();
+    test_scenario2_salida();
+    test_scenario2_tiene_ruta();
+
 }

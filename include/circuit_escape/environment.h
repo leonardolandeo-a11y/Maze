@@ -38,6 +38,31 @@ enum class EndReason {
     noEnergy,
     turnLimit
 };
+//Struct aux para implementar un fold expression
+struct TerminationCondition {
+    bool satisfied;
+    EndReason reason;
+};
+template<typename... Conditions>
+[[nodiscard]] EndReason firstSatisfiedTermination(
+    const Conditions&... conditions
+) noexcept {
+
+    EndReason result = EndReason::none;
+
+    auto evaluate = [&result](const auto& condition) {
+        if (
+            result == EndReason::none &&
+            condition.satisfied
+        ) {
+            result = condition.reason;
+        }
+    };
+
+    (evaluate(conditions), ...);
+
+    return result;
+}
 //struct que guarda toda la informacion del agent. necesario para el controller
 struct Observation {
     Position agent;

@@ -8,17 +8,21 @@ EndReason evaluateTermination(
     std::size_t turn,
     std::size_t turnLimit
 ) noexcept {
-    if (agentOnExit && energy > 0) {
-        return EndReason::goalReached;
-    }
 
-    if (energy == 0) {
-        return EndReason::noEnergy;
-    }
+    return firstSatisfiedTermination(
+        TerminationCondition{
+            agentOnExit && energy > 0,
+            EndReason::goalReached
+        },
 
-    if (turn >= turnLimit) {
-        return EndReason::turnLimit;
-    }
+        TerminationCondition{
+            energy == 0,
+            EndReason::noEnergy
+        },
 
-    return EndReason::none;
+        TerminationCondition{
+            turn >= turnLimit,
+            EndReason::turnLimit
+        }
+    );
 }

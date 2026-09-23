@@ -56,7 +56,14 @@ add_executable(Maze_test
     tests/grid_test.cpp 
     tests/environment_test.cpp
     tests/interactions_test.cpp
-    #tests/controllers_test.cpp
+    tests/controllers_test.cpp
+    tests/simulation_test.cpp
+    tests/scenario_1_test.cpp
+    tests/scenario_2_test.cpp
+    tests/generic_functions_test.cpp
+    tests/console_ui_test.cpp
+    tests/event_test.cpp
+    tests/console_render_test.cpp
 )
 
 target_link_libraries(Maze_test PRIVATE Maze_core)
