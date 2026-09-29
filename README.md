@@ -1,13 +1,10 @@
 # Circuito de Escape — Maze
 
-Motor de navegación por turnos desarrollado en **C++20** para el curso **CS2013 — Programación III**.  
-El proyecto utiliza **CMake**, **FTXUI** para la presentación en consola y una arquitectura que separa el motor de simulación de la entrada/salida.
-
-> Repositorio: https://github.com/leonardolandeo-a11y/Maze
+Motor de navegación por turnos desarrollado en **C++20** para el curso **CS2013 — Programación III**. El proyecto separa el motor de simulación de la interfaz de consola, utiliza **CMake** para la construcción y **FTXUI** para la presentación interactiva.
 
 ---
 
-## 1. Información de la entrega
+## 1. Información del proyecto
 
 | Campo | Información |
 |---|---|
@@ -15,87 +12,79 @@ El proyecto utiliza **CMake**, **FTXUI** para la presentación en consola y una 
 | Proyecto | Proyecto 1 — Circuito de Escape |
 | Semestre | 2026-2 |
 | Grupo | 5 |
-| Repositorio | https://github.com/leonardolandeo-a11y/Maze |
-| Rama evaluada | `main` |
+| Lenguaje | C++20 |
+| Construcción | CMake |
+| Interfaz | Consola con FTXUI |
+| Rama de entrega | `main` |
 | Tag de entrega | `proyecto-1-entrega` |
-| Commit evaluado | **[COMPLETAR: hash completo del commit]** |
 
 ### Integrantes
 
+| Integrante | Código UTEC | GitHub |
+|---|---:|---|
+| **Leonardo Landeo** | `202520151` | `@leonardolandeo-a11y` |
+| **Fabricio Nick** | `202520045` | `@SRHOUSE` |
+| **André Brando** | `202520185` | `@andremejia-hub` |
+| **Jared Chala** | `202520040` | `@jaredchala-bot` |
+| **Iker García** | `202520059` | `@iygt8-iterate` |
 
-| Integrante | Código UTEC | GitHub | Responsabilidad principal |
-|---|---|---|---|
-| **[Nombre 1]** | **[202520059]** | **[@leonardolandeo-a11y]** | **[Agent, grid ,celdas, game_rules,types , Environment, GameApplication y Controllers]** | 
-| **[Nombre 2]** | **[202520151]** | **[@FabricioNick]** | **[StartupAnimation, Environment, game_rules , Death Animation, Layout y VictoryAnimation]** |
-| **[Nombre 3]** | **[202520185]** | **[@andremejia-hub]** | **[Todos los escenarios,tests , game_rules y Simulation]** |
-| **[Nombre 4]** | **[202520040]** | **[@jaredchala-bot]** | **[Escenario, Arreglo de errores, Environment, console_ui y game_rules]** |
-| **[Nombre 5]** | **[202520045]** | **[@iygt8-iterate]** | **[Creacion de menu, dificultades y implementacion de controller]** |
+El detalle verificable de responsabilidades y aportes se mantiene en [`docs/contributions.md`](docs/contributions.md).
 
 ---
 
 ## 2. Descripción general
 
-**Circuito de Escape** es un juego de navegación por turnos sobre una cuadrícula rectangular.
+**Circuito de Escape** es un juego de navegación por turnos sobre una cuadrícula rectangular. El agente debe alcanzar la salida antes de quedarse sin energía o superar el límite máximo de turnos.
 
-El jugador controla un agente que debe:
+Durante el recorrido puede encontrar:
 
-- desplazarse por el tablero;
-- evitar muros;
-- administrar su energía;
-- atravesar terreno de costo elevado;
-- recoger recursos;
-- utilizar baterías;
-- evitar o asumir el costo de trampas;
-- alcanzar la salida antes de quedarse sin energía o superar el límite de turnos.
+- espacios libres;
+- muros;
+- terreno de costo elevado;
+- recursos;
+- baterías;
+- trampas;
+- una salida.
 
-El proyecto está centrado en el **motor de simulación**. La interfaz de consola es una capa separada que únicamente traduce entradas del usuario y representa el estado producido por el motor.
-
-El mismo `NavigationEnvironment` puede utilizarse sin consola mediante controladores automáticos y simulaciones reproducibles.
+El proyecto se concentra en el **motor de simulación**. La presentación se mantiene separada del estado y de las reglas para que el mismo `NavigationEnvironment` pueda utilizarse tanto en una partida humana como en simulaciones automáticas reproducibles.
 
 ---
 
-## 3. Objetivos del proyecto
+## 3. Características principales
 
-El proyecto busca aplicar de forma integrada conceptos de C++ moderno:
-
-- tipos abstractos e invariantes;
-- RAII y semántica de valores;
-- templates de funciones;
-- templates de clases;
-- parámetros de tipo y parámetros no-tipo;
-- especialización total y parcial;
-- templates variádicos;
-- fold expressions;
-- `concepts` de C++20;
-- polimorfismo dinámico;
-- iteradores;
-- algoritmos genéricos;
-- contenedores de la biblioteca estándar;
-- `std::variant` y `std::visit`;
-- `std::optional`;
-- `std::span`;
-- generación pseudoaleatoria reproducible;
-- separación entre estado, reglas, controladores e interfaz;
-- pruebas automáticas sin depender de entrada/salida por consola.
+- tablero genérico `Grid<Cell, Rows, Columns>`;
+- escenarios principales de **20 × 30**;
+- siete tipos de celda;
+- perfiles **Easy**, **Standard** y **Hard**;
+- renderizado **Emoji** y **ASCII**;
+- interfaz interactiva con FTXUI;
+- estado observable mediante `Observation`;
+- resultado de cada acción mediante `StepResult`;
+- eventos tipados con `std::variant`;
+- controlador aleatorio reproducible;
+- controlador heurístico basado en distancia Manhattan;
+- `concept NavigationPolicy`;
+- adaptador genérico `PolicyController<Policy>`;
+- polimorfismo dinámico mediante `IController`;
+- controladores polimórficos administrados mediante `std::unique_ptr<IController>`;
+- simulación automática reproducible con semilla controlable;
+- pruebas automáticas integradas con CMake y CTest.
 
 ---
 
-## 4. Alcance funcional
+## 4. Reglas de la partida
 
-Una partida se ejecuta sobre un tablero de **20 × 30** en los escenarios principales.
-
-El agente posee:
+El agente mantiene, como mínimo:
 
 - posición actual;
-- energía actual;
-- energía máxima;
-- puntaje;
+- energía actual y máxima;
+- puntaje acumulado;
 - cantidad de recursos recogidos;
-- estado activo/finalizado.
+- estado activo o finalizado.
 
 ### Condiciones de término
 
-El motor utiliza:
+Una partida puede terminar por:
 
 ```cpp
 enum class EndReason {
@@ -106,135 +95,36 @@ enum class EndReason {
 };
 ```
 
-Una partida termina cuando:
+La precedencia utilizada es:
 
-1. el agente alcanza la salida manteniendo energía positiva;
-2. la energía llega a cero;
-3. se alcanza el límite de turnos.
+1. `goalReached`, cuando el agente se encuentra en la salida y conserva energía;
+2. `noEnergy`;
+3. `turnLimit`.
 
-La precedencia aplicada por el motor es:
-
-```text
-goalReached
-    ↓
-noEnergy
-    ↓
-turnLimit
-```
-
-Por ello:
+Por tanto:
 
 - llegar a la salida con energía positiva produce victoria;
-- llegar a la salida con energía cero **no** produce victoria;
+- llegar a la salida con energía cero no produce victoria;
 - llegar con energía positiva exactamente en el último turno sí produce victoria.
 
----
+El estado final conserva la información necesaria para conocer el resultado de la partida, incluyendo turnos, energía restante, recursos recogidos y puntaje.
 
-## 5. Tipos de celda
+### Resolución de una acción
 
-Las celdas se representan mediante un `std::variant`:
+`NavigationEnvironment::step(Action)` concentra la lógica de cada turno.
 
-```cpp
-using Cell = std::variant<
-    Empty,
-    Wall,
-    RoughTerrain,
-    ResourceCell<int>,
-    Battery,
-    Trap,
-    Exit
->;
-```
-
-| Celda | Emoji | ASCII | Comportamiento |
-|---|:---:|:---:|---|
-| Agente | 🤖 | `@` | Posición actual del jugador |
-| Espacio libre | ⬜ | `.` | Movimiento normal |
-| Muro | ⬛ | `#` | Bloquea el movimiento |
-| Terreno elevado | 🟫 | `~` | Consume energía adicional |
-| Recurso | 💎 | `R` | Suma puntaje una sola vez |
-| Batería | ⚡ | `B` | Recupera energía una sola vez |
-| Trampa | 💥 | `T` | Penaliza energía y puntaje en cada entrada |
-| Salida | 🏁 | `S` | Objetivo del escenario |
-
-### Consumibles
-
-Los recursos y las baterías son consumibles:
-
-- `ResourceCell` mantiene `collected`;
-- `Battery` mantiene `consumed`;
-- después de activarse, visualmente se comportan como espacio vacío;
-- una segunda entrada no vuelve a aplicar su beneficio.
-
-Las trampas **no** son consumibles y vuelven a aplicar su penalización cada vez que el agente entra en ellas.
-
----
-
-## 6. Reglas y dificultades
-
-Las reglas variables se centralizan en:
-
-```cpp
-struct GameRules {
-    int initialEnergy;
-    int maximumEnergy;
-    std::size_t turnLimit;
-
-    int normalCellCost;
-    int roughTerrainCost;
-    int waitOrInvalidCost;
-
-    int resourcePoints;
-    int batteryRecharge;
-    int trapEnergyPenalty;
-    int trapScorePenalty;
-};
-```
-
-La función:
-
-```cpp
-GameRules rulesFor(Difficulty difficulty);
-```
-
-produce uno de los tres perfiles disponibles.
-
-| Parámetro | Easy | Standard | Hard |
-|---|---:|---:|---:|
-| Energía inicial | 80 | 60 | 40 |
-| Energía máxima | 80 | 60 | 40 |
-| Límite de turnos | 240 | 180 | 140 |
-| Costo de celda normal | 1 | 1 | 1 |
-| Costo de terreno elevado | 2 | 2 | 3 |
-| Costo de `wait` o intento inválido | 1 | 1 | 1 |
-| Puntos por recurso | +15 | +10 | +8 |
-| Recarga de batería | +5 | +3 | +2 |
-| Penalización de energía por trampa | -1 | -2 | -3 |
-| Penalización de puntaje por trampa | 0 | -1 | -2 |
-
-El perfil predeterminado de la aplicación es **Standard**.
-
-La ventaja de este diseño es que `NavigationEnvironment` aplica un objeto `GameRules` y no necesita contener condicionales dispersos según el nombre de la dificultad.
-
----
-
-## 7. Orden de resolución de un turno
-
-`NavigationEnvironment::step(Action)` concentra la lógica de una acción.
-
-El orden utilizado es:
+El orden general es:
 
 1. incrementar el turno;
-2. procesar `wait` o una acción inválida;
-3. para un movimiento válido, calcular la celda destino;
-4. actualizar la posición;
-5. registrar `MovedEvent`;
+2. procesar una acción inválida o `wait`;
+3. calcular la posición candidata para un movimiento;
+4. rechazar movimientos fuera del tablero o contra un muro;
+5. actualizar la posición cuando el movimiento es válido;
 6. descontar el costo de entrada;
-7. registrar el cambio de energía;
-8. aplicar el efecto de la celda destino;
-9. producir los eventos correspondientes;
-10. comprobar las condiciones de término;
-11. devolver un `StepResult`.
+7. aplicar el efecto de la celda destino;
+8. generar los eventos correspondientes;
+9. comprobar las condiciones de término;
+10. devolver un `StepResult`.
 
 Un movimiento hacia un muro o fuera del tablero:
 
@@ -252,20 +142,155 @@ La acción `wait`:
 
 ---
 
-## 8. Arquitectura
+## 5. Tipos de celda
 
-El diseño separa el dominio de la presentación:
+Las celdas se representan mediante `std::variant`:
+
+```cpp
+using Cell = std::variant<
+    Empty,
+    Wall,
+    RoughTerrain,
+    ResourceCell<int>,
+    Battery,
+    Trap,
+    Exit
+>;
+```
+
+| Celda | Emoji | ASCII | Comportamiento |
+|---|:---:|:---:|---|
+| Agente | 🤖 | `@` | posición actual del jugador |
+| Espacio libre | ⬜ | `.` | movimiento normal |
+| Muro | ⬛ | `#` | bloquea el movimiento |
+| Terreno elevado | 🟫 | `~` | consume energía adicional |
+| Recurso | 💎 | `R` | suma puntaje una sola vez |
+| Batería | ⚡ | `B` | recupera energía una sola vez |
+| Trampa | 💥 | `T` | penaliza energía y puntaje en cada entrada |
+| Salida | 🏁 | `S` | objetivo del escenario |
+
+Los recursos y las baterías son consumibles. Después de activarse no vuelven a aplicar su beneficio. Las trampas no son consumibles y vuelven a aplicar su penalización cada vez que el agente entra en ellas.
+
+---
+
+## 6. Perfiles de dificultad
+
+Las reglas variables se centralizan en `GameRules` y se obtienen mediante:
+
+```cpp
+GameRules rulesFor(Difficulty difficulty);
+```
+
+| Parámetro | Easy | Standard | Hard |
+|---|---:|---:|---:|
+| Energía inicial | 80 | 60 | 40 |
+| Energía máxima | 80 | 60 | 40 |
+| Límite de turnos | 240 | 180 | 140 |
+| Costo de celda normal | 1 | 1 | 1 |
+| Costo de terreno elevado | 2 | 2 | 3 |
+| Costo de `wait` o intento inválido | 1 | 1 | 1 |
+| Puntos por recurso | +15 | +10 | +8 |
+| Recarga de batería | +5 | +3 | +2 |
+| Penalización de energía por trampa | -1 | -2 | -3 |
+| Penalización de puntaje por trampa | 0 | -1 | -2 |
+
+El perfil predeterminado es **Standard**.
+
+`NavigationEnvironment` recibe un objeto `GameRules`, por lo que las diferencias entre dificultades se mantienen como datos configurables en lugar de condicionales dispersos por el motor.
+
+---
+
+## 7. Interfaz de consola
+
+La capa de presentación utiliza **FTXUI v7.0.3**.
+
+### Menú principal
+
+Desde el menú principal se puede:
+
+- iniciar la partida;
+- seleccionar escenario;
+- seleccionar dificultad;
+- seleccionar modo de renderizado;
+- abrir la ayuda;
+- salir.
+
+La navegación de menús utiliza `W` / `S` o las flechas verticales y `Enter` para seleccionar.
+
+### Controles durante la partida
+
+| Tecla | Alternativa | Acción |
+|---|---|---|
+| `W` | `↑` | mover arriba |
+| `S` | `↓` | mover abajo |
+| `A` | `←` | mover izquierda |
+| `D` | `→` | mover derecha |
+| `E` | — | esperar un turno |
+| `H` | — | abrir/cerrar ayuda |
+| `Q` | — | salir |
+
+Las letras se aceptan en mayúsculas y minúsculas.
+
+Una entrada no reconocida muestra un aviso y vuelve a esperar una entrada válida **sin ejecutar `step()`**.
+
+### Modos de renderizado
+
+El menú ofrece:
+
+- **Emoji**, modo predeterminado;
+- **ASCII**, como alternativa para terminales que no representen correctamente Unicode o emojis de ancho completo.
+
+Durante la partida se mantienen visibles el tablero y el estado relevante: turno, energía, puntaje, recursos y el último resultado o evento.
+
+---
+
+## 8. Escenarios
+
+El proyecto incluye dos escenarios principales de **20 × 30**:
+
+- **Scenario 1**;
+- **Scenario 2**.
+
+Sus implementaciones se encuentran en:
+
+```text
+src/scenarios/scenario_1.cpp
+src/scenarios/scenario_2.cpp
+```
+
+con interfaces en:
+
+```text
+include/circuit_escape/scenarios/scenario_1.h
+include/circuit_escape/scenarios/scenario_2.h
+```
+
+Ambos escenarios cuentan con una ruta alcanzable desde la posición inicial hasta la salida y se validan mediante pruebas.
+
+La posición inicial utilizada por `GameApplication` es:
+
+```cpp
+Position{1, 1}
+```
+
+La generación procedural compleja de mapas no forma parte del alcance del proyecto.
+
+---
+
+## 9. Arquitectura
+
+El diseño separa la presentación, la coordinación de la aplicación y el motor:
 
 ```text
 ┌──────────────────────────┐
 │        ConsoleUI         │
-│ FTXUI + teclado + render │
+│  FTXUI + input + render  │
 └────────────┬─────────────┘
              │ UICommand
              ▼
 ┌──────────────────────────┐
 │     GameApplication      │
-│ coordina el ciclo        │
+│   coordina la partida    │
 └────────────┬─────────────┘
              │ Action
              ▼
@@ -274,85 +299,35 @@ El diseño separa el dominio de la presentación:
 │ estado + reglas + step() │
 └──────────┬───────┬───────┘
            │       │
-           │       └──────────────┐
-           ▼                      ▼
-┌──────────────────┐      ┌───────────────────┐
-│ Grid<Cell,R,C>   │      │ NavigationEvent   │
-│ tablero genérico │      │ eventos del turno │
-└──────────────────┘      └───────────────────┘
-
-             Observation
-                  │
-                  ▼
-        ┌─────────────────┐
-        │   IController   │
-        │ Random/Heuristic│
-        └─────────────────┘
+           ▼       ▼
+  Grid<Cell,R,C>   NavigationEvent
+           │
+           ▼
+      Observation
+           │
+           ▼
+     IController
+           ▲
+           │
+ PolicyController<Policy>
+      /            \
+RandomPolicy   HeuristicPolicy
 ```
 
-### Responsabilidades
+### Responsabilidades principales
 
-| Componente | Responsabilidad | No debe hacer |
-|---|---|---|
-| `ConsoleUI` | Traducir teclas y renderizar con FTXUI | Aplicar reglas de energía o modificar el tablero |
-| `GameApplication` | Coordinar menús, partida, animaciones y llamadas a `step()` | Duplicar reglas del entorno |
-| `NavigationEnvironment` | Mantener y modificar el estado; validar y ejecutar acciones | Leer teclado o depender de FTXUI |
-| `Grid<Cell, Rows, Columns>` | Almacenar celdas, validar límites y exponer iteradores | Conocer energía, turnos o victoria |
-| `IController` | Contrato virtual para elegir acciones | Modificar directamente el entorno |
-| `PolicyController<Policy>` | Adaptar una policy genérica a `IController` | Decidir mediante `typeid` o `dynamic_cast` |
+| Componente | Responsabilidad |
+|---|---|
+| `ConsoleUI` | traducir eventos del teclado y renderizar con FTXUI |
+| `GameApplication` | coordinar menús, partida, animaciones y llamadas a `step()` |
+| `NavigationEnvironment` | mantener el estado, validar y ejecutar acciones, aplicar reglas y producir resultados |
+| `Grid<Cell, Rows, Columns>` | almacenar celdas, validar posiciones y exponer iteradores |
+| `IController` | interfaz virtual común para controladores automáticos |
+| `PolicyController<Policy>` | adaptar una policy genérica a `IController` |
+| `RandomPolicy` | seleccionar una acción legal con aleatoriedad reproducible |
+| `HeuristicPolicy` | escoger una acción legal usando distancia Manhattan |
 
----
-
-## 9. Flujo de ejecución
-
-El `main` es deliberadamente pequeño:
-
-```cpp
-int main() {
-    GameApplication game;
-    game.Run();
-    return 0;
-}
-```
-
-Flujo general:
-
-```text
-main()
-  │
-  ▼
-GameApplication::Run()
-  │
-  ├── StartupAnimation
-  │
-  ├── Menus
-  │     ├── Scenario
-  │     ├── Difficulty
-  │     └── RenderMode
-  │
-  ├── CreateScenario()
-  ├── rulesFor(...)
-  ├── CreatePlayer(...)
-  │
-  ▼
-NavigationEnvironment<20,30>
-  │
-  ▼
-ConsoleUI / FTXUI
-  │
-  ├── W/A/S/D o flechas
-  ├── E → wait
-  ├── H → ayuda
-  └── Q → salir
-  │
-  ▼
-environment.step(Action)
-  │
-  ├── Observation
-  ├── NavigationEvent[]
-  ├── finished
-  └── EndReason
-```
+Para una partida humana no se necesita una clase `HumanController`: `ConsoleUI` traduce la entrada del jugador y `GameApplication` entrega la acción directamente a `NavigationEnvironment::step()`.
 
 ---
 
@@ -360,7 +335,7 @@ environment.step(Action)
 
 ### `Observation`
 
-Los controladores reciben una copia del estado observable:
+Los controladores reciben una copia del estado observable, sin referencias modificables al estado interno:
 
 ```cpp
 struct Observation {
@@ -376,11 +351,9 @@ struct Observation {
 };
 ```
 
-Esto evita entregar referencias modificables al estado interno.
-
 ### `StepResult`
 
-Cada acción retorna:
+Cada acción produce información equivalente a:
 
 ```cpp
 struct StepResult {
@@ -391,13 +364,13 @@ struct StepResult {
 };
 ```
 
-Así, la interfaz puede conocer el nuevo estado y lo ocurrido durante el turno sin inspeccionar texto de consola.
+Así, la UI y los controladores trabajan con datos del motor sin interpretar texto de consola.
 
 ---
 
 ## 11. Sistema de eventos
 
-Los eventos se modelan mediante tipos pequeños:
+Los eventos se modelan mediante tipos pequeños y `std::variant`:
 
 ```cpp
 using NavigationEvent = std::variant<
@@ -410,31 +383,16 @@ using NavigationEvent = std::variant<
 >;
 ```
 
-| Evento | Significado |
-|---|---|
-| `MovedEvent` | El movimiento fue aceptado |
-| `MovementRejectedEvent` | El movimiento fue rechazado |
-| `ResourceCollectedEvent` | Se recogió un recurso |
-| `EnergyChangedEvent` | La energía cambió |
-| `TrapTriggeredEvent` | Se activó una trampa |
-| `GoalReachedEvent` | Se alcanzó la salida |
+Entre los eventos se encuentran:
 
-La UI procesa estos eventos con `std::visit`.
+- movimiento realizado;
+- movimiento rechazado;
+- recurso recogido;
+- cambio de energía;
+- trampa activada;
+- llegada a la salida.
 
-Esto mantiene la separación:
-
-```text
-motor
-  │
-  │ datos tipados
-  ▼
-NavigationEvent
-  │
-  ▼
-interfaz
-```
-
-El motor no imprime mensajes directamente.
+La interfaz procesa estos valores con `std::visit`; el motor no imprime directamente en consola.
 
 ---
 
@@ -442,7 +400,7 @@ El motor no imprime mensajes directamente.
 
 ### `IController`
 
-El polimorfismo dinámico se implementa mediante:
+`IController` define el contrato común para decisiones automáticas:
 
 ```cpp
 class IController {
@@ -456,46 +414,67 @@ public:
 };
 ```
 
-### `RandomPolicy`
+Los controladores polimórficos se administran mediante `std::unique_ptr<IController>`, lo que permite intercambiar implementaciones a través de la misma interfaz sin almacenar objetos polimórficos por valor.
 
-- utiliza `std::mt19937`;
-- recibe una semilla controlable;
-- selecciona únicamente una acción legal;
-- dos ejecuciones equivalentes con la misma semilla producen la misma secuencia pseudoaleatoria.
+### `NavigationPolicy`
 
-### `HeuristicPolicy`
+El contrato de las policies se valida en compilación:
 
-Selecciona la acción legal que reduce la **distancia Manhattan** respecto de la salida:
-
-```text
-|row1 - row2| + |column1 - column2|
+```cpp
+template<typename Policy>
+concept NavigationPolicy = requires(
+    Policy& policy,
+    const Observation& observation,
+    std::span<const Action> actions
+) {
+    { policy.selectAction(observation, actions) } -> std::same_as<Action>;
+};
 ```
 
-No pretende encontrar un camino global óptimo; es una heurística local simple.
-
-### `PolicyController`
+### `PolicyController<Policy>`
 
 ```cpp
 template<typename Policy>
 requires NavigationPolicy<Policy>
 class PolicyController : public IController {
-    ...
+    // ...
 };
 ```
 
-Funciona como adaptador entre policies genéricas y la interfaz polimórfica.
+Este adaptador combina:
+
+- validación estática mediante `NavigationPolicy`;
+- implementación genérica mediante templates;
+- despacho dinámico mediante `IController`.
+
+### `RandomPolicy`
+
+- utiliza `std::mt19937`;
+- recibe una semilla controlable;
+- selecciona una acción legal;
+- permite reproducir secuencias de decisiones en las pruebas.
+
+### `HeuristicPolicy`
+
+Selecciona la acción legal que reduce la distancia Manhattan respecto de la salida:
+
+```text
+|row1 - row2| + |column1 - column2|
+```
+
+Es una estrategia heurística local: no pretende encontrar siempre una ruta global óptima.
+
+### Intercambio de controladores
+
+La simulación utiliza la interfaz común `IController`, de modo que un controlador basado en `RandomPolicy` puede sustituirse por otro basado en `HeuristicPolicy` sin modificar `NavigationEnvironment`.
 
 ---
 
 ## 13. Simulación automática reproducible
 
-El archivo:
+El proyecto permite ejecutar una simulación sin interacción humana.
 
-```text
-include/circuit_escape/simulation.h
-```
-
-define:
+La API existente incluye:
 
 ```cpp
 template<std::size_t Rows, std::size_t Columns>
@@ -508,173 +487,64 @@ SimulationResult runRandomSimulation(
 La simulación:
 
 1. reinicia el entorno;
-2. crea una `RandomPolicy` con la semilla recibida;
-3. obtiene el estado y las acciones legales;
+2. utiliza una policy con semilla controlable;
+3. obtiene `Observation` y acciones legales;
 4. selecciona una acción;
-5. llama a `step()`;
-6. repite hasta terminar;
-7. devuelve acciones, motivo de término, turnos, score y energía restante.
+5. ejecuta `step()`;
+6. repite hasta finalizar;
+7. conserva acciones, motivo de término, turnos, puntaje y energía restante.
 
-Los tests utilizan semillas fijas para verificar reproducibilidad.
-
----
-
-# 14. Aplicación de los temas obligatorios de C++20
-
-Esta sección indica **dónde se encuentra cada requisito**.
-
-## 14.1 Templates de funciones
-
-### `countMatching`
-
-Archivo:
-
-```text
-include/circuit_escape/generic_functions.h
-```
-
-```cpp
-template<typename Iterator, typename Predicado>
-std::size_t countMatching(
-    Iterator first,
-    Iterator last,
-    Predicado predicado
-);
-```
-
-Recorre un rango mediante iteradores y cuenta los elementos que satisfacen un predicado.
-
-Se utiliza, por ejemplo, para verificar que el entorno tenga exactamente una salida.
-
-### `LinearSearch`
-
-Archivo:
-
-```text
-include/circuit_escape/generic_functions.h
-```
-
-```cpp
-template<typename Iterator, typename Predicado>
-Iterator LinearSearch(
-    Iterator first,
-    Iterator last,
-    Predicado predicado
-);
-```
-
-Busca el primer elemento que satisface un predicado.
-
-Se utiliza para localizar la salida dentro del grid.
-
-### `runRandomSimulation`
-
-Archivo:
-
-```text
-include/circuit_escape/simulation.h
-```
-
-Es un template de función parametrizado por `Rows` y `Columns`.
-
-### Uso con distintos contenedores
-
-Los algoritmos genéricos se prueban con:
-
-- `std::vector`;
-- `std::array`;
-- rangos vacíos.
-
-Archivo:
-
-```text
-tests/generic_functions_test.cpp
-```
+Las pruebas utilizan semillas fijas para verificar reproducibilidad.
 
 ---
 
-## 14.2 Templates de clases
+## 14. Aplicación de C++20 y temas del curso
 
-### `Grid`
+La ubicación detallada de cada decisión se documenta en [`docs/design.md`](docs/design.md).
+
+### Templates de funciones
+
+`include/circuit_escape/generic_functions.h` contiene algoritmos genéricos basados en iteradores, entre ellos operaciones equivalentes a conteo y búsqueda sobre rangos.
+
+Estos algoritmos se utilizan con más de un tipo de contenedor y también se prueban con rangos vacíos.
+
+La simulación automática añade otro uso de templates parametrizado por las dimensiones del entorno.
+
+### Template de clase
 
 ```cpp
-template<
-    typename CellType,
-    std::size_t Rows,
-    std::size_t Columns
->
+template<typename CellType, std::size_t Rows, std::size_t Columns>
 class Grid;
 ```
 
-Archivo:
-
-```text
-include/circuit_escape/grid.h
-```
-
-Utiliza:
+`Grid` utiliza:
 
 - un parámetro de tipo;
 - dos parámetros no-tipo;
-- `std::array<CellType, Rows * Columns>`;
+- almacenamiento mediante `std::array<CellType, Rows * Columns>`;
+- acceso validado;
 - iteradores const y no const;
-- `static_assert` para impedir dimensiones cero.
+- comprobación de dimensiones válidas en compilación.
 
-### Otros templates de clase
+### Especialización total y parcial
 
-También aparecen:
+`CellTraits` expresa diferencias reales del dominio.
 
-```cpp
-ResourceCell<Reward>
-NavigationEnvironment<Rows, Columns>
-PolicyController<Policy>
-CellTraits<CellType>
-```
-
----
-
-## 14.3 Especialización total y parcial
-
-Archivo:
-
-```text
-include/circuit_escape/cells.h
-```
-
-Caso general:
-
-```cpp
-template<typename CellType>
-struct CellTraits;
-```
-
-### Especialización total
+Especialización total para `Wall`:
 
 ```cpp
 template<>
 struct CellTraits<Wall>;
 ```
 
-El muro no es transitable.
-
-### Especialización parcial
+Especialización parcial para recursos:
 
 ```cpp
 template<typename Reward>
 struct CellTraits<ResourceCell<Reward>>;
 ```
 
-Reconoce cualquier `ResourceCell<Reward>` independientemente del tipo de recompensa.
-
----
-
-## 14.4 Templates variádicos
-
-Archivo:
-
-```text
-include/circuit_escape/environment.h
-```
+### Template variádico
 
 ```cpp
 template<class... FLambda>
@@ -683,299 +553,85 @@ struct Overloaded : FLambda... {
 };
 ```
 
-El parameter pack `FLambda...` permite agrupar distintas lambdas y utilizarlas como visitor para `std::visit`.
+`Overloaded` permite agrupar lambdas utilizadas por `std::visit`.
 
----
+### Fold expression
 
-## 14.5 Fold expression
-
-Archivo:
-
-```text
-include/circuit_escape/environment.h
-```
+Las condiciones de término utilizan una fold expression dentro de la lógica que evalúa la primera condición satisfecha:
 
 ```cpp
 (evaluate(conditions), ...);
 ```
 
-Se utiliza dentro de:
+### Concepts y polimorfismo dinámico
 
-```cpp
-firstSatisfiedTermination(...)
-```
+- `NavigationPolicy` comprueba el contrato de una policy en compilación;
+- `PolicyController<Policy>` adapta una policy válida;
+- `IController` proporciona despacho dinámico en ejecución.
 
-para evaluar condiciones de término en un orden definido.
-
----
-
-## 14.6 Concepts
-
-Archivo:
-
-```text
-include/circuit_escape/controllers.h
-```
-
-```cpp
-template<typename Policy>
-concept NavigationPolicy = requires(...) {
-    {
-        policy.selectAction(observation, actions)
-    } -> std::same_as<Action>;
-};
-```
-
-El concept comprueba en compilación que una policy posea la operación correcta y retorne exactamente `Action`.
+La evidencia de una compilación intencionalmente inválida para una policy que no satisface `NavigationPolicy` se documenta en `docs/negative_concept_test.md`. Ese ejemplo se mantiene fuera del build normal.
 
 ---
 
-## 14.7 Polimorfismo dinámico
+## 15. Biblioteca estándar y elección de contenedores
 
-Archivo:
-
-```text
-include/circuit_escape/controllers.h
-```
-
-```cpp
-class IController
-```
-
-define la interfaz virtual común.
-
-`PolicyController<Policy>` implementa esa interfaz y delega la decisión a la policy almacenada.
-
-De esta forma:
-
-- el `concept` valida la policy en compilación;
-- `IController` permite despacho dinámico en ejecución.
-
----
-
-## 14.8 `std::variant` y `std::visit`
-
-Se utilizan para:
-
-### Celdas
-
-```cpp
-using Cell = std::variant<...>;
-```
-
-Archivo:
-
-```text
-include/circuit_escape/cells.h
-```
-
-### Eventos
-
-```cpp
-using NavigationEvent = std::variant<...>;
-```
-
-Archivo:
-
-```text
-include/circuit_escape/environment.h
-```
-
-### Procesamiento
-
-`std::visit` aparece en:
-
-- `isTraversable`;
-- `movementCost`;
-- `applyEffectCell`;
-- `ConsoleUI::RenderCell`;
-- `ConsoleUI::EventMessage`.
-
----
-
-## 14.9 `std::optional`
-
-Archivo:
-
-```text
-include/circuit_escape/types.h
-src/types.cpp
-```
-
-```cpp
-std::optional<Position> neighbor(...);
-```
-
-Evita representar posiciones negativas con valores inválidos.
-
----
-
-## 14.10 Iteradores
-
-`Grid` expone:
-
-```cpp
-begin()
-end()
-cbegin()
-cend()
-```
-
-Los algoritmos genéricos trabajan sobre iteradores en lugar de depender de un contenedor concreto.
-
----
-
-## 14.11 Biblioteca estándar utilizada
-
-| Elemento | Uso |
+| Elemento | Uso principal |
 |---|---|
 | `std::array` | almacenamiento contiguo y de tamaño fijo del grid |
-| `std::vector` | eventos, acciones disponibles y resultados de simulación |
-| `std::variant` | celdas y eventos |
-| `std::visit` | despacho según alternativa activa del `variant` |
-| `std::optional` | posición vecina potencialmente inexistente |
-| `std::span` | vista no propietaria de acciones y eventos |
+| `std::vector` | acciones, eventos y resultados de simulación |
+| `std::variant` | representación de celdas y eventos |
+| `std::visit` | procesamiento de alternativas de un `variant` |
+| `std::optional` | resultados que pueden no existir, como posiciones o comandos válidos |
+| `std::span` | vistas no propietarias sobre acciones o eventos |
+| `std::unique_ptr` | propiedad de controladores polimórficos |
 | `std::mt19937` | decisiones pseudoaleatorias reproducibles |
-| `std::uniform_int_distribution` | selección de acción aleatoria |
-| `std::thread` | actualización de animaciones de la aplicación |
-| `std::atomic` | coordinación de estados de animación |
-| `std::function` | callback usado por `GameApplication` |
-| `std::algorithm` | búsquedas/comprobaciones en tests y lógica auxiliar |
-
-No se utiliza `new` ni `delete` directamente en el diseño principal.
-
----
-
-## 15. Elección de contenedores
+| `std::uniform_int_distribution` | selección aleatoria de acciones |
+| algoritmos de `<algorithm>` | operaciones genéricas y pruebas |
 
 ### `std::array`
 
 El tamaño del grid se conoce en compilación:
 
 ```cpp
-std::array<CellType, Rows * Columns>
+Grid<Cell, 20, 30>
 ```
 
-Ventajas:
-
-- almacenamiento contiguo;
-- no requiere reserva dinámica del tablero;
-- las dimensiones forman parte del tipo;
-- funciona bien con iteradores.
+`std::array` ofrece almacenamiento contiguo, no requiere redimensionamiento durante la ejecución y permite exponer iteradores directamente.
 
 ### `std::vector`
 
-Se utiliza cuando la cantidad de elementos depende de la ejecución:
+Se utiliza cuando el número de elementos depende de la ejecución, como en:
 
 - acciones disponibles;
-- eventos producidos en un turno;
-- historial de acciones de una simulación.
+- eventos de un turno;
+- secuencias producidas por una simulación.
 
 ### `std::variant`
 
-Las alternativas de celdas y eventos se conocen en compilación, por lo que `variant` evita una jerarquía polimórfica innecesaria para estos objetos.
+Los posibles tipos de celda y evento se conocen en compilación. `std::variant` permite representarlos de forma segura sin crear una jerarquía polimórfica separada para cada caso.
 
 ### `std::span`
 
-Permite pasar una vista ligera y no propietaria de un rango contiguo sin copiar el contenedor.
+Permite entregar una vista ligera de una secuencia contigua sin copiar el contenedor ni transferir su propiedad.
+
+### `std::unique_ptr`
+
+Se utiliza para expresar propiedad exclusiva de controladores polimórficos y permitir su intercambio mediante `IController` sin recurrir a `new` o `delete` directamente.
 
 ---
 
-## 16. Interfaz de consola
-
-La presentación utiliza **FTXUI v7.0.3**.
-
-FTXUI queda restringido a la capa de presentación y coordinación de la aplicación; el núcleo de `Grid`, celdas, reglas, eventos y `NavigationEnvironment` no depende de entrada estándar.
-
-### Controles
-
-| Tecla | Alternativa | Acción |
-|---|---|---|
-| `W` | `↑` | mover arriba |
-| `S` | `↓` | mover abajo |
-| `A` | `←` | mover izquierda |
-| `D` | `→` | mover derecha |
-| `E` | — | esperar un turno |
-| `H` | — | abrir/cerrar ayuda |
-| `Q` | — | salir |
-
-Las letras aceptan mayúsculas y minúsculas.
-
-### Render modes
-
-El menú permite seleccionar:
-
-- **Emoji**
-- **ASCII**
-
-El modo ASCII existe para terminales que no representan correctamente Unicode o emojis de ancho completo.
-
----
-
-## 17. Escenarios
-
-El proyecto contiene dos constructores de escenarios de **20 × 30**:
-
-```text
-src/scenarios/scenario_1.cpp
-src/scenarios/scenario_2.cpp
-```
-
-y sus interfaces:
-
-```text
-include/circuit_escape/scenarios/scenario_1.h
-include/circuit_escape/scenarios/scenario_2.h
-```
-
-La posición inicial utilizada por `GameApplication` es:
-
-```cpp
-Position{1, 1}
-```
-
-### Scenario 1
-
-Incluye:
-
-- muros;
-- terreno elevado;
-- 2 recursos;
-- 2 baterías;
-- 2 trampas;
-- salida en `{10, 15}`.
-
-### Scenario 2
-
-Incluye:
-
-- muros;
-- terreno elevado;
-- 3 recursos;
-- 2 baterías;
-- 3 trampas;
-- salida en `{12, 18}`.
-
-### Opción `Random`
-
-La interfaz gráfica del menú contiene una opción visual denominada **Random**, pero en la versión actual revisada no existe todavía un generador procedural asociado a esa opción.
-
----
-
-# 18. Estructura del repositorio
+## 16. Estructura del repositorio
 
 ```text
 Maze/
 ├── app/
 │   └── main.cpp
-│
 ├── assets/
 │   └── maps/
-│
 ├── docs/
 │   ├── design.md
-│   └── contributions.md
-│
+│   ├── contributions.md
+│   └── negative_concept_test.md
 ├── include/
 │   └── circuit_escape/
 │       ├── agent.h
@@ -990,11 +646,9 @@ Maze/
 │       ├── menus.h
 │       ├── simulation.h
 │       ├── types.h
-│       ├── scenarios/
-│       │   ├── scenario_1.h
-│       │   └── scenario_2.h
-│       └── [headers de animaciones/UI]
-│
+│       └── scenarios/
+│           ├── scenario_1.h
+│           └── scenario_2.h
 ├── src/
 │   ├── agent.cpp
 │   ├── console_ui.cpp
@@ -1004,53 +658,42 @@ Maze/
 │   ├── GameApplication.cpp
 │   ├── menus.cpp
 │   ├── types.cpp
-│   ├── scenarios/
-│   │   ├── scenario_1.cpp
-│   │   └── scenario_2.cpp
-│   └── [implementaciones de animaciones]
-│
+│   └── scenarios/
+│       ├── scenario_1.cpp
+│       └── scenario_2.cpp
 ├── tests/
-│   ├── test_main.cpp
-│   ├── grid_test.cpp
-│   ├── environment_test.cpp
-│   ├── interactions_test.cpp
-│   ├── controllers_test.cpp
-│   ├── simulation_test.cpp
-│   ├── scenario_1_test.cpp
-│   ├── scenario_2_test.cpp
-│   ├── generic_functions_test.cpp
-│   ├── console_ui_test.cpp
-│   ├── event_test.cpp
-│   └── console_render_test.cpp
-│
 ├── .gitignore
 ├── CMakeLists.txt
 └── README.md
 ```
 
+Los archivos de animaciones y arte de la interfaz se mantienen junto a la capa de presentación.
+
 ---
 
-# 19. Requisitos
+## 17. Requisitos y dependencias
 
-## Software
+Se necesita:
 
 - compilador compatible con **C++20**;
 - **CMake 3.20** o superior;
 - **Git**;
-- terminal moderna;
-- conexión a Internet durante la primera configuración de CMake para descargar FTXUI.
+- una terminal moderna;
+- conexión a Internet durante la primera configuración de CMake para descargar FTXUI mediante `FetchContent`.
 
-Compiladores recomendados:
+Compiladores habituales:
 
 - GCC;
-- Clang;
+- Clang / Apple Clang;
 - MSVC.
+
+FTXUI está fijado en la versión **v7.0.3**.
 
 ---
 
-# 20. Compilación
+## 18. Compilación y ejecución
 
-## Linux
+### Linux
 
 ```bash
 git clone https://github.com/leonardolandeo-a11y/Maze.git
@@ -1058,17 +701,11 @@ cd Maze
 
 cmake -S . -B build
 cmake --build build --parallel
-```
 
-Ejecución:
-
-```bash
 ./build/Maze
 ```
 
----
-
-## macOS
+### macOS
 
 Con Xcode Command Line Tools y CMake instalados:
 
@@ -1082,65 +719,47 @@ cmake --build build --parallel
 ./build/Maze
 ```
 
----
-
-## Windows — PowerShell
+### Windows — PowerShell
 
 ```powershell
 git clone https://github.com/leonardolandeo-a11y/Maze.git
 cd Maze
 
 cmake -S . -B build
-cmake --build build --config Debug
+cmake --build build --config Release
 ```
 
-Con Visual Studio como generador, el ejecutable normalmente estará en:
+Con un generador multi-config, el ejecutable normalmente estará en:
 
 ```powershell
-.\build\Debug\Maze.exe
+.\build\Release\Maze.exe
 ```
 
----
-
-## Windows — Command Prompt
+### Windows — Command Prompt
 
 ```cmd
 git clone https://github.com/leonardolandeo-a11y/Maze.git
 cd Maze
 
 cmake -S . -B build
-cmake --build build --config Debug
+cmake --build build --config Release
 ```
 
-Luego:
+Con Visual Studio como generador:
 
 ```cmd
-build\Debug\Maze.exe
+build\Release\Maze.exe
 ```
+
+> La ubicación exacta del ejecutable en Windows puede variar según el generador de CMake utilizado.
 
 ---
 
-# 21. Pruebas automáticas
+## 19. Pruebas automáticas
 
-Las suites se encuentran en `tests/` y utilizan principalmente `assert`.
+CMake define el ejecutable de pruebas `Maze_test` y lo registra mediante CTest.
 
-El ejecutable agregado por `tests/test_main.cpp` llama a las suites de:
-
-- Grid;
-- Environment;
-- interacciones;
-- controllers;
-- simulación;
-- escenario 1;
-- escenario 2;
-- algoritmos genéricos;
-- ConsoleUI;
-- eventos;
-- renderizado.
-
-## Ejecución esperada mediante CTest
-
-Una vez habilitado el target de pruebas en `CMakeLists.txt`:
+### Linux / macOS
 
 ```bash
 cmake -S . -B build
@@ -1148,269 +767,106 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-En Windows con un generador multi-config:
+### Windows
 
 ```powershell
 cmake -S . -B build
-cmake --build build --config Debug
-ctest --test-dir build -C Debug --output-on-failure
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
 ```
 
----
+Las pruebas cubren, entre otros aspectos:
 
-## 22. Cobertura funcional de las pruebas
-
-El código de pruebas del repositorio cubre, entre otros:
-
-- acceso válido e inválido al grid;
-- dimensiones del grid;
-- movimiento normal;
-- movimiento contra muro;
+- acceso válido e inválido a `Grid`;
+- bordes y esquinas;
+- movimiento libre;
+- movimiento contra obstáculos;
 - movimiento fuera del tablero;
-- `wait`;
-- costos configurables;
-- terreno elevado;
-- recurso de un solo uso;
-- batería consumible;
-- límite de recarga por energía máxima;
+- costos de movimiento, terreno elevado, `wait` e intentos inválidos;
+- recursos de un solo uso;
+- baterías consumibles y límite de recarga;
 - trampas repetibles;
-- penalizaciones de trampas;
-- victoria;
-- fin por energía;
-- fin por turnos;
-- precedencia de condiciones;
-- acciones disponibles;
 - perfiles `easy`, `standard` y `hard`;
+- precedencia entre condiciones de término;
+- acciones disponibles;
 - `RandomPolicy`;
-- reproducibilidad con la misma semilla;
 - `HeuristicPolicy`;
 - `NavigationPolicy`;
-- `PolicyController`;
-- simulación automática;
-- algoritmos genéricos con `vector`, `array` y rangos vacíos;
-- traducción de teclado;
-- eventos;
-- representación ASCII;
-- representación emoji;
-- dimensiones 20 × 30 del render.
+- `PolicyController` a través de `IController`;
+- simulaciones reproducibles con la misma semilla;
+- procesamiento de eventos;
+- algoritmos genéricos con distintos contenedores y rangos vacíos;
+- traducción de comandos válidos;
+- renderizado Emoji y ASCII;
+- dimensiones 20 × 30 del renderizado;
+- solucionabilidad de los escenarios de demostración.
+
+La lógica del entorno puede probarse sin leer desde `std::cin` ni escribir en `std::cout`.
 
 ---
 
-# 23. Prueba negativa del `concept`
+## 20. Ejemplos de uso
 
-En `controllers_test.cpp` existe una comprobación positiva/negativa en compilación:
+### Partida interactiva
+
+1. ejecutar `Maze`;
+2. seleccionar **Scenario 1** o **Scenario 2**;
+3. seleccionar **Easy**, **Standard** o **Hard**;
+4. elegir **Emoji** o **ASCII**;
+5. seleccionar **Start Game**;
+6. desplazarse con `WASD` o las flechas;
+7. usar `E` para esperar;
+8. consultar la ayuda con `H`;
+9. alcanzar la salida antes de agotar la energía o el límite de turnos.
+
+### Simulación reproducible
+
+Una simulación aleatoria puede ejecutarse sin interfaz usando una semilla explícita:
 
 ```cpp
-static_assert(NavigationPolicy<RandomPolicy>);
-static_assert(NavigationPolicy<HeuristicPolicy>);
-
-struct InvalidPolicy {};
-static_assert(!NavigationPolicy<InvalidPolicy>);
+auto result = runRandomSimulation(environment, 2026);
 ```
 
-Esto comprueba que `InvalidPolicy` **no** satisface el concept.
+Con la misma configuración inicial y la misma semilla, la secuencia pseudoaleatoria puede reproducirse en pruebas.
 
-Sin embargo, para cumplir literalmente el requisito de **documentar el diagnóstico de una compilación fallida**, se recomienda mantener además un archivo/documento separado con un ejemplo intencionalmente inválido, por ejemplo:
-
-```cpp
-struct InvalidPolicy {};
-
-PolicyController<InvalidPolicy> controller{
-    InvalidPolicy{}
-};
-```
-
-Ese archivo no debe formar parte de la compilación normal. Su objetivo es mostrar el mensaje del compilador indicando que `InvalidPolicy` no satisface `NavigationPolicy`.
+La arquitectura permite utilizar el mismo entorno con una estrategia aleatoria o heurística a través de `IController`.
 
 ---
 
-# 24. Decisiones de diseño
+## 21. Documentación complementaria
 
-## 24.1 Motor independiente de la UI
+La documentación técnica de la entrega se encuentra en `docs/`:
 
-`NavigationEnvironment` no utiliza `std::cin`, `std::cout` ni FTXUI.
+- [`docs/design.md`](docs/design.md): decisiones de diseño y ubicación de los temas obligatorios del curso;
+- [`docs/contributions.md`](docs/contributions.md): responsabilidades y contribuciones verificables de cada integrante;
+- [`docs/negative_concept_test.md`](docs/negative_concept_test.md): evidencia del diagnóstico producido al intentar instanciar un controlador con una policy que no satisface `NavigationPolicy`.
 
-Esto permite:
-
-- pruebas automáticas;
-- controladores automáticos;
-- simulación reproducible;
-- futura incorporación de otro controlador sin modificar el motor.
+El README concentra la información necesaria para compilar, ejecutar, probar y entender el proyecto; `docs/design.md` contiene el detalle técnico adicional.
 
 ---
 
-## 24.2 Reglas como datos
+## 22. Alcance y exclusiones
 
-Los perfiles de dificultad se representan mediante `GameRules`.
+No forman parte del alcance de esta etapa:
 
-Esto evita una lógica del tipo:
+- interfaz gráfica;
+- juego en red;
+- persistencia en base de datos;
+- dimensiones de tablero elegidas durante la ejecución;
+- movimiento en tiempo real;
+- enemigos móviles o múltiples agentes;
+- visión parcial compleja;
+- generación procedural compleja;
+- A*, Dijkstra u otros algoritmos avanzados de búsqueda;
+- reinforcement learning.
 
-```cpp
-if (difficulty == ...)
-```
-
-dispersa por todo el motor.
-
----
-
-## 24.3 `std::variant` para celdas
-
-Los siete tipos de celda son conocidos en compilación.
-
-`std::variant` permite almacenar cualquiera de ellos manteniendo type safety sin una jerarquía de herencia para cada celda.
+La arquitectura mantiene el motor separado del controlador para facilitar futuras extensiones sin acoplarlas a la interfaz.
 
 ---
 
-## 24.4 Eventos tipados
+## 23. Verificación previa a la entrega
 
-Los cambios del juego se comunican mediante `NavigationEvent`, no mediante strings.
-
-La UI decide posteriormente cómo representarlos.
-
----
-
-## 24.5 `Observation` como frontera
-
-Los controllers no reciben acceso modificable al environment.
-
-Reciben un estado observable y proponen una acción.
-
----
-
-## 24.6 Templates para dimensiones
-
-```cpp
-Grid<Cell, 20, 30>
-```
-
-hace que las dimensiones formen parte del tipo.
-
-Los tests pueden crear:
-
-```cpp
-Grid<Cell, 1, 3>
-Grid<Cell, 2, 2>
-Grid<Cell, 3, 4>
-```
-
-sin cambiar el motor.
-
----
-
-## 24.7 Semilla controlable
-
-`RandomPolicy` utiliza un `std::mt19937` inicializado con una semilla explícita.
-
-Esto permite reproducir las simulaciones automáticas en tests.
-
----
-
-# 25. Demostración sugerida
-
-Para una demostración reproducible del proyecto:
-
-1. iniciar la aplicación;
-2. mostrar el menú;
-3. seleccionar `Standard`;
-4. mostrar los modos Emoji y ASCII;
-5. iniciar Scenario 1;
-6. demostrar movimiento normal;
-7. intentar entrar a un muro;
-8. atravesar terreno elevado;
-9. recoger un recurso;
-10. utilizar una batería;
-11. activar una trampa;
-12. abrir la ayuda con `H`;
-13. alcanzar la salida o mostrar una condición de derrota;
-14. ejecutar las pruebas mediante CTest;
-15. explicar una simulación automática con semilla fija.
-
----
-
-# 26. Limitaciones conocidas
-
-- Los escenarios tienen dimensiones fijas en tiempo de compilación.
-- No existe movimiento diagonal.
-- No hay enemigos móviles.
-- No hay juego en red.
-- No existe persistencia en base de datos.
-- No se implementa reinforcement learning en esta etapa.
-- `HeuristicPolicy` usa una heurística local y no garantiza la ruta global óptima.
-- No se implementa A*, Dijkstra ni búsqueda avanzada.
-- La opción visual `Random` del menú todavía no genera un escenario procedural.
-- El modo Emoji depende de que la terminal represente correctamente Unicode de ancho completo.
-
----
-
-# 27. Estado de la versión de `main` revisada
-
-> **Importante antes de crear el tag `proyecto-1-entrega`:** esta sección describe el estado observado del repositorio durante la preparación de este README. Debe resolverse y actualizarse antes de la entrega final.
-
-### CMake
-
-En el `CMakeLists.txt` revisado:
-
-- `src/scenarios/scenario_2.cpp` existe, pero no está agregado actualmente a `Maze_core`;
-- `src/menus.cpp` existe, pero no está agregado actualmente a `Maze_core`;
-- el bloque de tests (`enable_testing`, `Maze_test` y `add_test`) está comentado.
-
-Por lo tanto, antes de la entrega se debe verificar que `CMakeLists.txt` incluya **todas** las unidades de traducción necesarias y que CTest esté habilitado.
-
-### Documentación adicional
-
-Los archivos:
-
-```text
-docs/design.md
-docs/contributions.md
-```
-
-existen en el repositorio revisado pero actualmente no contienen documentación.
-
-El enunciado solicita que ambos formen parte de la entrega final.
-
-### README
-
-Antes de entregar:
-
-- completar grupo;
-- completar nombres;
-- completar códigos UTEC;
-- completar usuarios GitHub;
-- completar contribuciones;
-- registrar el hash completo;
-- crear y verificar el tag `proyecto-1-entrega`;
-- actualizar esta sección una vez corregidos los pendientes.
-
----
-
-# 28. Checklist previo a la entrega
-
-## Repositorio
-
-- [ ] `main` compila desde un clon limpio.
-- [ ] `CMakeLists.txt` incluye `src/menus.cpp`.
-- [ ] `CMakeLists.txt` incluye `src/scenarios/scenario_2.cpp`.
-- [ ] `Maze` ejecuta correctamente.
-- [ ] Se habilitó el target de pruebas.
-- [ ] `ctest` ejecuta y finaliza correctamente.
-- [ ] Scenario 1 funciona.
-- [ ] Scenario 2 funciona.
-- [ ] `easy`, `standard` y `hard` funcionan.
-- [ ] Emoji funciona.
-- [ ] ASCII funciona.
-- [ ] La simulación con semilla fija es reproducible.
-- [ ] Se documentó la prueba negativa del concept.
-- [ ] `docs/design.md` está completo.
-- [ ] `docs/contributions.md` está completo.
-- [ ] El README contiene integrantes y códigos.
-- [ ] Se documentaron aportes individuales.
-- [ ] Se registró el hash completo del commit.
-- [ ] Se creó el tag anotado `proyecto-1-entrega`.
-
-## Validación desde cero
-
-Antes de etiquetar la entrega:
+Antes de crear el tag final, la versión evaluada debe comprobarse desde un clon limpio siguiendo únicamente las instrucciones de este README:
 
 ```bash
 git clone https://github.com/leonardolandeo-a11y/Maze.git Maze-verificacion
@@ -1422,119 +878,17 @@ ctest --test-dir build --output-on-failure
 ./build/Maze
 ```
 
-La entrega solo debería etiquetarse después de comprobar este flujo desde una carpeta limpia.
+La entrega se identifica mediante el tag anotado:
 
----
-
-# 29. Creación del tag de entrega
-
-Cuando la versión final ya esté verificada:
-
-```bash
-git switch main
-git pull --ff-only
-git status
+```text
+proyecto-1-entrega
 ```
 
-Comprobar el commit:
-
-```bash
-git rev-parse HEAD
-```
-
-Crear el tag anotado:
-
-```bash
-git tag -a proyecto-1-entrega -m "Entrega Proyecto 1 - Circuito de Escape"
-```
-
-Publicarlo:
-
-```bash
-git push origin proyecto-1-entrega
-```
-
-Verificar:
-
-```bash
-git show proyecto-1-entrega
-```
-
-El hash completo mostrado debe coincidir con el commit registrado en Canvas.
+El hash completo del commit etiquetado debe coincidir con el registrado en el medio de entrega del curso.
 
 ---
 
-# 30. Contribuciones individuales
-
-> Completar esta tabla con información verificable mediante commits, issues y pull requests.
-
-| Integrante | Implementación | Pruebas | Documentación / integración | PRs o issues relevantes |
-|---|---|---|---|---|
-| **[Integrante 1]** | [detalle] | [detalle] | [detalle] | [#...] |
-| **[Integrante 2]** | [detalle] | [detalle] | [detalle] | [#...] |
-| **[Integrante 3]** | [detalle] | [detalle] | [detalle] | [#...] |
-| **[Integrante 4]** | [detalle] | [detalle] | [detalle] | [#...] |
-| **[Integrante 5]** | [detalle] | [detalle] | [detalle] | [#...] |
-
-Cada integrante debe poder explicar:
-
-- su contribución;
-- el flujo general del motor;
-- las decisiones principales de diseño;
-- cómo ejecutar las pruebas;
-- dónde aparecen los temas obligatorios de C++20.
-
----
-
-# 31. Uso de herramientas de IA
-
-> Completar únicamente de acuerdo con la política comunicada por el docente.
-
-Si el uso de IA generativa está autorizado, documentar:
-
-| Herramienta | Uso | Cómo se verificó |
-|---|---|---|
-| **[Herramienta]** | **[tarea para la que se utilizó]** | **[pruebas/revisión realizada]** |
-
-La responsabilidad sobre el código, pruebas y documentación entregados corresponde al grupo.
-
----
-
-# 32. Dependencias y referencias
-
-## FTXUI
-
-El proyecto utiliza:
-
-**FTXUI v7.0.3**
-
-Repositorio oficial:
-
-https://github.com/ArthurSonzogni/FTXUI
-
-La dependencia se obtiene mediante CMake `FetchContent`.
-
-## C++20
-
-Referencia general:
-
-https://en.cppreference.com/
-
-## CMake
-
-https://cmake.org/documentation/
-
----
-
-# 33. Licencia
-
-En la versión revisada del repositorio no se observa un archivo `LICENSE` en la raíz.
-
-Si el grupo desea publicar el proyecto con una licencia open source, debe agregar una licencia explícita y actualizar esta sección.
-
----
-
-# 34. Resumen rápido
+## 24. Resumen rápido
 
 ```bash
 git clone https://github.com/leonardolandeo-a11y/Maze.git
@@ -1542,16 +896,9 @@ cd Maze
 
 cmake -S . -B build
 cmake --build build --parallel
+ctest --test-dir build --output-on-failure
 
 ./build/Maze
 ```
 
-Pruebas, después de habilitar correctamente el target en CMake:
-
-```bash
-ctest --test-dir build --output-on-failure
-```
-
----
-
-**Circuito de Escape** demuestra un motor de navegación por turnos desacoplado de la interfaz, con reglas configurables, tipos genéricos, eventos tipados, controladores intercambiables y simulación reproducible, aplicando de manera integrada los principales contenidos de C++20 exigidos en el Proyecto 1 de CS2013.
+**Circuito de Escape** integra un motor de navegación por turnos desacoplado de la interfaz, reglas configurables, templates, especializaciones, concepts, eventos tipados, polimorfismo dinámico, controladores intercambiables y simulaciones reproducibles dentro de una aplicación de consola construida con C++20.
