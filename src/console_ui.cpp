@@ -254,8 +254,9 @@ ftxui::Element ConsoleUI::RenderBoard(
 //Barra Inferior
 ftxui::Element ConsoleUI::RenderInfBar(std::span<const NavigationEvent> recentEvents) const {
     std::string message;
-
-    if (!recentEvents.empty()) {
+    if (!inputMessage_.empty()) {
+        message = inputMessage_ + " | ";
+    }else if (!recentEvents.empty()) {
         message =EventMessage(recentEvents.back()) + " | ";
     }
     message += "WASD move | E wait | H help | Q exit";

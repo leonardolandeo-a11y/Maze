@@ -25,7 +25,7 @@ El proyecto utiliza **CMake**, **FTXUI** para la presentación en consola y una 
 
 | Integrante | Código UTEC | GitHub | Responsabilidad principal |
 |---|---|---|---|
-| **[Nombre 1]** | **[202520059]** | **[@leonardolandeo-a11y]** | **[Agent, grid ,celdas, game_rules,types , Environment, GameApplication y Controllers]** |
+| **[Nombre 1]** | **[202520059]** | **[@leonardolandeo-a11y]** | **[Agent, grid ,celdas, game_rules,types , Environment, GameApplication y Controllers]** | 
 | **[Nombre 2]** | **[202520151]** | **[@FabricioNick]** | **[StartupAnimation, Environment, game_rules , Death Animation, Layout y VictoryAnimation]** |
 | **[Nombre 3]** | **[202520185]** | **[@andremejia-hub]** | **[Todos los escenarios,tests , game_rules y Simulation]** |
 | **[Nombre 4]** | **[202520040]** | **[@jaredchala-bot]** | **[Escenario, Arreglo de errores, Environment, console_ui y game_rules]** |

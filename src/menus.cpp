@@ -245,8 +245,7 @@ ftxui::Element Menus::Render() const {
             options = {
             RenderOption(MenuArt::SCENARIO_1, selectedOption_ == 0),
             RenderOption(MenuArt::SCENARIO_2, selectedOption_ == 1),
-            RenderOption(MenuArt::RANDOM,     selectedOption_ == 2),
-            RenderOption(MenuArt::BACK,       selectedOption_ == 3),
+            RenderOption(MenuArt::BACK,       selectedOption_ == 2),
         };
             break;
 
