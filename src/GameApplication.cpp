@@ -161,12 +161,13 @@ void GameApplication::Run(){
         int victoryFrame = 0;
 
         EndReason deathReason = EndReason::none;
+        std::optional<Observation> finalObservation;
 
         auto handleStepResult = [&](const StepResult& result){
             if (!result.finished){
                 return;
             }
-
+            finalObservation = result.observation;
             if (result.reason == EndReason::goalReached){
                 victoryFrame = 0;
                 victoryAnimationComplete = false;
@@ -204,11 +205,11 @@ void GameApplication::Run(){
                 }
 
                 if (deathActive){
-                    return deathAnimation.RenderDeathFrame(deathFrame,deathReason);
+                    return deathAnimation.RenderDeathFrame(deathFrame,deathReason,*finalObservation);
                 }
 
                 if (victoryActive){
-                    return victoryAnimation.RenderVictoryFrame(victoryFrame);
+                    return victoryAnimation.RenderVictoryFrame(victoryFrame,*finalObservation);
                 }
 
                 return gameComponent->Render();

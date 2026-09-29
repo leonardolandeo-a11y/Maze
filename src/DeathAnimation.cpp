@@ -964,11 +964,11 @@ ftxui::Element DeathAnimation::RenderDebrisSequence(int frame) const{
 //=============================================================
 // GAME OVER
 //=============================================================
-
 ftxui::Element DeathAnimation::RenderGameOver(
     int frame,
-    EndReason reason
-) const{
+    EndReason reason,
+    const Observation& observation
+) const {
     const std::array<std::string, 6> gameOverTitle = {
         " ██████╗  █████╗ ███╗   ███╗███████╗     ██████╗ ██╗   ██╗███████╗██████╗ ",
         "██╔════╝ ██╔══██╗████╗ ████║██╔════╝    ██╔═══██╗██║   ██║██╔════╝██╔══██╗",
@@ -980,93 +980,157 @@ ftxui::Element DeathAnimation::RenderGameOver(
 
     std::string reasonText;
 
-    if (reason == EndReason::noEnergy){
-        reasonText =
-            "ENERGY DEPLETED";
+    if (reason == EndReason::noEnergy) {
+        reasonText = "ENERGY DEPLETED";
     }
-    else if (reason == EndReason::turnLimit){
-        reasonText =
-            "TURN LIMIT EXCEEDED";
+    else if (reason == EndReason::turnLimit) {
+        reasonText = "TURN LIMIT EXCEEDED";
     }
-    else{
-        reasonText =
-            "SYSTEM FAILURE";
+    else {
+        reasonText = "SYSTEM FAILURE";
     }
 
     ftxui::Elements titleLines;
 
-    for (const auto& line : gameOverTitle){
+    for (const auto& line : gameOverTitle) {
         titleLines.push_back(
-            ftxui::text(line) |
-            ftxui::color(
-                ftxui::Color::RedLight
-            ) |
-            ftxui::bold |
-            ftxui::center
+            ftxui::text(line)
+            | ftxui::color(ftxui::Color::RedLight)
+            | ftxui::bold
+            | ftxui::center
         );
     }
 
-    titleLines.push_back(
-        ftxui::text("")
-    );
+    titleLines.push_back(ftxui::text(""));
 
     titleLines.push_back(
-        ftxui::text(reasonText) |
-        ftxui::color(
-            ftxui::Color::White
-        ) |
-        ftxui::bold |
-        ftxui::center
+        ftxui::text(reasonText)
+        | ftxui::color(ftxui::Color::White)
+        | ftxui::bold
+        | ftxui::center
     );
+
+    titleLines.push_back(ftxui::text(""));
 
     titleLines.push_back(
-        ftxui::text("")
+        ftxui::text("ESCAPE PROTOCOL TERMINATED")
+        | ftxui::color(ftxui::Color::Red)
+        | ftxui::center
     );
 
-    titleLines.push_back(
-        ftxui::text(
-            "ESCAPE PROTOCOL TERMINATED"
-        ) |
-        ftxui::color(
-            ftxui::Color::Red
-        ) |
-        ftxui::center
-    );
+    titleLines.push_back(ftxui::text(""));
 
-    if (frame >= maxFrames - 1){
-        titleLines.push_back(
-            ftxui::text("")
+
+
+    ftxui::Color energyColor =
+        observation.energy > observation.maximumEnergy / 2
+            ? ftxui::Color::GreenLight
+            : observation.energy > observation.maximumEnergy / 4
+                ? ftxui::Color::YellowLight
+                : ftxui::Color::RedLight;
+
+    auto statLine = [](
+        const std::string& label,
+        const std::string& value,
+        ftxui::Color valueColor
+    ) {
+        return ftxui::hbox({
+            ftxui::text(label)
+                | ftxui::bold
+                | ftxui::size(
+                    ftxui::WIDTH,
+                    ftxui::EQUAL,
+                    14
+                ),
+
+            ftxui::text(value)
+                | ftxui::color(valueColor)
+                | ftxui::bold
+        });
+    };
+
+    ftxui::Element statsBox =
+        ftxui::vbox({
+
+            ftxui::text(" FINAL STATS ")
+                | ftxui::bold
+                | ftxui::color(ftxui::Color::RedLight)
+                | ftxui::center,
+
+            ftxui::separator(),
+
+            statLine(
+                "Turns",
+                std::to_string(observation.turn),
+                ftxui::Color::White
+            ),
+
+            statLine(
+                "Energy",
+                std::to_string(observation.energy) +
+                " / " +
+                std::to_string(observation.maximumEnergy),
+                energyColor
+            ),
+
+            statLine(
+                "Resources",
+                std::to_string(
+                    observation.collectedResources
+                ),
+                ftxui::Color::YellowLight
+            ),
+
+            statLine(
+                "Score",
+                std::to_string(observation.score),
+                ftxui::Color::CyanLight
+            )
+        })
+        | ftxui::border
+        | ftxui::size(
+            ftxui::WIDTH,
+            ftxui::EQUAL,
+            34
         );
+
+    titleLines.push_back(
+        ftxui::hbox({
+            ftxui::filler(),
+            statsBox,
+            ftxui::filler()
+        })
+    );
+
+    if (frame >= maxFrames - 1) {
+        titleLines.push_back(ftxui::text(""));
 
         titleLines.push_back(
             ftxui::text("ENTER - PLAY AGAIN    Q - EXIT")
-            |ftxui::color(ftxui::Color::GrayLight)
-            |ftxui::center
+            | ftxui::color(ftxui::Color::GrayLight)
+            | ftxui::center
         );
     }
 
     return UILayout::CenterGameView(
         ftxui::vbox({
             ftxui::filler(),
-            ftxui::vbox(
-                titleLines
-            ) |
-            ftxui::size(
+            ftxui::vbox(titleLines)
+            | ftxui::size(
                 ftxui::WIDTH,
                 ftxui::EQUAL,
                 canvasWidth
             ),
             ftxui::filler()
-        }) |
-        ftxui::bgcolor(
-            ftxui::Color::Black
-        )
+        })
+        | ftxui::bgcolor(ftxui::Color::Black)
     );
 }
 
 ftxui::Element DeathAnimation::RenderDeathFrame(
     int frame,
-    EndReason reason
+    EndReason reason,
+    const Observation& observation
 ) const{
     if (frame < fallEndFrame){
         return RenderFallingSequence(
@@ -1110,6 +1174,7 @@ ftxui::Element DeathAnimation::RenderDeathFrame(
 
     return RenderGameOver(
         frame,
-        reason
+        reason,
+        observation
     );
 }

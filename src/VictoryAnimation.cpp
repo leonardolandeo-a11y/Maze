@@ -574,8 +574,10 @@ ftxui::Element VictoryAnimation::RenderCelebrationSequence(int frame) const{
 
     return RenderCanvas(canvas);
 }
-
-ftxui::Element VictoryAnimation::RenderVictoryScreen(int frame) const{
+ftxui::Element VictoryAnimation::RenderVictoryScreen(
+    int frame,
+    const Observation& observation
+) const {
     const std::array<std::string, 6> victoryTitle = {
         "██╗   ██╗██╗ ██████╗████████╗ ██████╗ ██████╗ ██╗   ██╗",
         "██║   ██║██║██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗╚██╗ ██╔╝",
@@ -587,14 +589,12 @@ ftxui::Element VictoryAnimation::RenderVictoryScreen(int frame) const{
 
     ftxui::Elements titleLines;
 
-    for (const auto& line : victoryTitle){
+    for (const auto& line : victoryTitle) {
         titleLines.push_back(
-            ftxui::text(line) |
-            ftxui::color(
-                ftxui::Color::GreenLight
-            ) |
-            ftxui::bold |
-            ftxui::center
+            ftxui::text(line)
+            | ftxui::color(ftxui::Color::GreenLight)
+            | ftxui::bold
+            | ftxui::center
         );
     }
 
@@ -602,18 +602,90 @@ ftxui::Element VictoryAnimation::RenderVictoryScreen(int frame) const{
         ftxui::text("")
     );
 
+
+
+    ftxui::Color energyColor =
+        observation.energy > observation.maximumEnergy / 2
+            ? ftxui::Color::GreenLight
+            : observation.energy > observation.maximumEnergy / 4
+                ? ftxui::Color::YellowLight
+                : ftxui::Color::RedLight;
+
+    auto statLine = [](
+        const std::string& label,
+        const std::string& value,
+        ftxui::Color valueColor
+    ) {
+        return ftxui::hbox({
+            ftxui::text(label)
+                | ftxui::bold
+                | ftxui::size(
+                    ftxui::WIDTH,
+                    ftxui::EQUAL,
+                    14
+                ),
+
+            ftxui::text(value)
+                | ftxui::color(valueColor)
+                | ftxui::bold
+        });
+    };
+
+    ftxui::Element statsBox =
+        ftxui::vbox({
+
+            ftxui::text(" FINAL STATS ")
+                | ftxui::bold
+                | ftxui::color(ftxui::Color::RedLight)
+                | ftxui::center,
+
+            ftxui::separator(),
+
+            statLine(
+                "Turns",
+                std::to_string(observation.turn),
+                ftxui::Color::White
+            ),
+
+            statLine(
+                "Energy",
+                std::to_string(observation.energy) +
+                " / " +
+                std::to_string(observation.maximumEnergy),
+                energyColor
+            ),
+
+            statLine(
+                "Resources",
+                std::to_string(
+                    observation.collectedResources
+                ),
+                ftxui::Color::YellowLight
+            ),
+
+            statLine(
+                "Score",
+                std::to_string(observation.score),
+                ftxui::Color::CyanLight
+            )
+        })
+        | ftxui::border
+        | ftxui::size(
+            ftxui::WIDTH,
+            ftxui::EQUAL,
+            34
+        );
+
     titleLines.push_back(
-        ftxui::text(
-            "ESCAPE PROTOCOL COMPLETE"
-        ) |
-        ftxui::color(
-            ftxui::Color::White
-        ) |
-        ftxui::bold |
-        ftxui::center
+        ftxui::hbox({
+            ftxui::filler(),
+            statsBox,
+            ftxui::filler()
+        })
     );
 
-    if (frame >= maxFrames - 1){
+
+    if (frame >= maxFrames - 1) {
         titleLines.push_back(
             ftxui::text("")
         );
@@ -621,11 +693,9 @@ ftxui::Element VictoryAnimation::RenderVictoryScreen(int frame) const{
         titleLines.push_back(
             ftxui::text(
                 "ENTER - PLAY AGAIN    Q - EXIT"
-            ) |
-            ftxui::color(
-                ftxui::Color::GrayLight
-            ) |
-            ftxui::center
+            )
+            | ftxui::color(ftxui::Color::GrayLight)
+            | ftxui::center
         );
     }
 
@@ -636,14 +706,14 @@ ftxui::Element VictoryAnimation::RenderVictoryScreen(int frame) const{
                 titleLines
             ),
             ftxui::filler()
-        }) |
-        ftxui::bgcolor(
+        })
+        | ftxui::bgcolor(
             ftxui::Color::Black
         )
     );
 }
 
-ftxui::Element VictoryAnimation::RenderVictoryFrame(int frame) const{
+ftxui::Element VictoryAnimation::RenderVictoryFrame(int frame, const Observation& observation) const{
     if (frame < walkEndFrame){
         return RenderWalkingSequence(
             frame
@@ -669,6 +739,7 @@ ftxui::Element VictoryAnimation::RenderVictoryFrame(int frame) const{
     }
 
     return RenderVictoryScreen(
-        frame
+        frame,
+        observation
     );
 }
