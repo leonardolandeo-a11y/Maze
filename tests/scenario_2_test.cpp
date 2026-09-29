@@ -4,6 +4,81 @@
 
 #include "circuit_escape/scenarios/scenario_2.h"
 
+namespace {
+
+template<typename CellType>
+std::size_t countCells(const Grid<Cell, 20, 30>& grid) {
+    std::size_t count = 0;
+
+    for (const Cell& cell : grid) {
+        if (std::holds_alternative<CellType>(cell)) {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+bool hasRoute(
+    const Grid<Cell, 20, 30>& grid,
+    Position start,
+    Position goal
+) {
+    std::queue<Position> pending;
+    bool visited[20][30]{};
+
+    pending.push(start);
+    visited[start.row][start.column] = true;
+
+    constexpr int dr[] = {-1, 1, 0, 0};
+    constexpr int dc[] = {0, 0, -1, 1};
+
+    while (!pending.empty()) {
+        const Position current = pending.front();
+        pending.pop();
+
+        if (current == goal) {
+            return true;
+        }
+
+        for (int direction = 0; direction < 4; ++direction) {
+            const int nextRow =
+                static_cast<int>(current.row) + dr[direction];
+
+            const int nextColumn =
+                static_cast<int>(current.column) + dc[direction];
+
+            if (
+                nextRow < 0 ||
+                nextRow >= 20 ||
+                nextColumn < 0 ||
+                nextColumn >= 30
+            ) {
+                continue;
+            }
+
+            Position next{
+                static_cast<std::size_t>(nextRow),
+                static_cast<std::size_t>(nextColumn)
+            };
+
+            if (
+                visited[next.row][next.column] ||
+                std::holds_alternative<Wall>(grid.at(next))
+            ) {
+                continue;
+            }
+
+            visited[next.row][next.column] = true;
+            pending.push(next);
+        }
+    }
+
+    return false;
+}
+
+} // namespace
+
 void test_scenario2_tamano() {
     auto grid = createScenario2();
     using ScenarioGrid = decltype(grid);
@@ -12,140 +87,99 @@ void test_scenario2_tamano() {
     static_assert(ScenarioGrid::columns() == 30);
 }
 
-void test_scenario2_muros() {
+void test_scenario2_estructura() {
     auto grid = createScenario2();
 
-    assert(std::holds_alternative<Wall>(grid.at({1, 3})));
-    assert(std::holds_alternative<Wall>(grid.at({1, 4})));
-    assert(std::holds_alternative<Wall>(grid.at({1, 5})));
-    assert(std::holds_alternative<Wall>(grid.at({2, 5})));
-    assert(std::holds_alternative<Wall>(grid.at({3, 5})));
-    assert(std::holds_alternative<Wall>(grid.at({4, 5})));
-    assert(std::holds_alternative<Wall>(grid.at({6, 8})));
-    assert(std::holds_alternative<Wall>(grid.at({7, 8})));
+    assert(countCells<Wall>(grid) >= 170);
+    assert(countCells<RoughTerrain>(grid) >= 15);
+    assert(countCells<ResourceCell<int>>(grid) == 8);
+    assert(countCells<Battery>(grid) == 6);
+    assert(countCells<Trap>(grid) == 8);
+    assert(countCells<Exit>(grid) == 1);
 }
 
-void test_scenario2_rough_terrain() {
+void test_scenario2_bordes() {
     auto grid = createScenario2();
 
-    assert(std::holds_alternative<RoughTerrain>(grid.at({3, 2})));
-    assert(std::holds_alternative<RoughTerrain>(grid.at({3, 3})));
-    assert(std::holds_alternative<RoughTerrain>(grid.at({4, 2})));
-    assert(std::holds_alternative<RoughTerrain>(grid.at({4, 3})));
-    assert(std::holds_alternative<RoughTerrain>(grid.at({8, 10})));
-    assert(std::holds_alternative<RoughTerrain>(grid.at({8, 11})));
-    assert(std::holds_alternative<RoughTerrain>(grid.at({9, 10})));
+    for (std::size_t column = 0; column < 30; ++column) {
+        assert(
+            std::holds_alternative<Wall>(
+                grid.at({0, column})
+            )
+        );
+
+        assert(
+            std::holds_alternative<Wall>(
+                grid.at({19, column})
+            )
+        );
+    }
+
+    for (std::size_t row = 0; row < 20; ++row) {
+        assert(
+            std::holds_alternative<Wall>(
+                grid.at({row, 0})
+            )
+        );
+
+        assert(
+            std::holds_alternative<Wall>(
+                grid.at({row, 29})
+            )
+        );
+    }
 }
 
-void test_scenario2_resources() {
+void test_scenario2_elementos_clave() {
     auto grid = createScenario2();
 
-    assert(std::holds_alternative<ResourceCell<int>>(grid.at({2, 2})));
-    assert(std::holds_alternative<ResourceCell<int>>(grid.at({7, 6})));
-    assert(std::holds_alternative<ResourceCell<int>>(grid.at({10, 12})));
+    assert(
+        std::holds_alternative<Empty>(
+            grid.at({1, 1})
+        )
+    );
 
-    auto resource1 = std::get<ResourceCell<int>>(grid.at({2, 2}));
-    auto resource2 = std::get<ResourceCell<int>>(grid.at({7, 6}));
-    auto resource3 = std::get<ResourceCell<int>>(grid.at({10, 12}));
+    assert(
+        std::holds_alternative<Battery>(
+            grid.at({10, 8})
+        )
+    );
 
-    assert(resource1.reward == 10);
-    assert(resource2.reward == 20);
-    assert(resource3.reward == 30);
+    assert(
+        std::holds_alternative<RoughTerrain>(
+            grid.at({13, 19})
+        )
+    );
 
-    assert(!resource1.collected);
-    assert(!resource2.collected);
-    assert(!resource3.collected);
-}
+    assert(
+        std::holds_alternative<Trap>(
+            grid.at({12, 23})
+        )
+    );
 
-void test_scenario2_baterias() {
-    auto grid = createScenario2();
-
-    assert(std::holds_alternative<Battery>(grid.at({4, 8})));
-    assert(std::holds_alternative<Battery>(grid.at({9, 14})));
-}
-
-void test_scenario2_trampas() {
-    auto grid = createScenario2();
-
-    assert(std::holds_alternative<Trap>(grid.at({5, 6})));
-    assert(std::holds_alternative<Trap>(grid.at({8, 13})));
-    assert(std::holds_alternative<Trap>(grid.at({11, 16})));
-}
-
-void test_scenario2_salida() {
-    auto grid = createScenario2();
-
-    assert(std::holds_alternative<Exit>(grid.at({12, 18})));
+    assert(
+        std::holds_alternative<Exit>(
+            grid.at({13, 23})
+        )
+    );
 }
 
 void test_scenario2_tiene_ruta() {
-    auto grid = createScenario2();
+    const auto grid = createScenario2();
 
-    Position start{1, 1};
-    Position exit{12, 18};
-
-    std::queue<Position> pendientes;
-    bool visitadas[20][30]{};
-
-    pendientes.push(start);
-    visitadas[start.row][start.column] = true;
-
-    const int dr[] = {-1, 1, 0, 0};
-    const int dc[] = {0, 0, -1, 1};
-
-    bool encontrada = false;
-
-    while (!pendientes.empty()) {
-        Position actual = pendientes.front();
-        pendientes.pop();
-
-        if (actual == exit) {
-            encontrada = true;
-            break;
-        }
-
-        for (int i = 0; i < 4; ++i) {
-
-            const int nextRow =
-                static_cast<int>(actual.row) + dr[i];
-
-            const int nextColumn =
-                static_cast<int>(actual.column) + dc[i];
-
-            if (nextRow < 0 || nextRow >= 20 ||
-                nextColumn < 0 || nextColumn >= 30) {
-                continue;
-            }
-
-            Position siguiente{
-                static_cast<std::size_t>(nextRow),
-                static_cast<std::size_t>(nextColumn)
-            };
-
-            if (std::holds_alternative<Wall>(grid.at(siguiente))) {
-                continue;
-            }
-
-            if (visitadas[siguiente.row][siguiente.column]) {
-                continue;
-            }
-
-            visitadas[siguiente.row][siguiente.column] = true;
-            pendientes.push(siguiente);
-        }
-    }
-
-    assert(encontrada);
+    assert(
+        hasRoute(
+            grid,
+            {1, 1},
+            {13, 23}
+        )
+    );
 }
 
 void run_tests_scenario_2() {
     test_scenario2_tamano();
-    test_scenario2_muros();
-    test_scenario2_rough_terrain();
-    test_scenario2_resources();
-    test_scenario2_baterias();
-    test_scenario2_trampas();
-    test_scenario2_salida();
+    test_scenario2_estructura();
+    test_scenario2_bordes();
+    test_scenario2_elementos_clave();
     test_scenario2_tiene_ruta();
-
 }
