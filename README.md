@@ -23,7 +23,7 @@ Motor de navegación por turnos desarrollado en **C++20** para el curso **CS2013
 | Integrante | Código UTEC | GitHub |
 |---|---:|---|
 | **Leonardo Landeo** | `202520151` | `@leonardolandeo-a11y` |
-| **Fabricio Nick** | `202520045` | `@FabricioNick` |
+| **Fabricio Nick** | `202520045` | `@SRHOUSE` |
 | **André Brando** | `202520185` | `@andremejia-hub` |
 | **Jared Chala** | `202520040` | `@jaredchala-bot` |
 | **Iker García** | `202520059` | `@iygt8-iterate` |
