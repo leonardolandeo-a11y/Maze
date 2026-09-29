@@ -28,10 +28,10 @@ class DeathAnimation{
     ftxui::Element RenderBombSequence(int frame) const;
     ftxui::Element RenderExplosionSequence(int frame) const;
     ftxui::Element RenderDebrisSequence(int frame) const;
-    ftxui::Element RenderGameOver(int frame, EndReason reason) const;
-
+    ftxui::Element RenderGameOver(int frame, EndReason reason,const Observation& observation) const;
+    
 public:
     static constexpr int maxFrames = 160;
 
-    ftxui::Element RenderDeathFrame(int frame, EndReason reason) const;
+    ftxui::Element RenderDeathFrame(int frame, EndReason reason,const Observation& observation) const;
 };
