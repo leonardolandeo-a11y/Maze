@@ -24,6 +24,7 @@ class ConsoleUI {
 private:
     RenderMode mode_;
     bool help_{false};
+    std::string inputMessage_;
 
     ftxui::Element RenderCell(const Cell& cell, bool IsAgent) const;
     //metodos aux agregados para mantener limpio el codigo
@@ -53,5 +54,12 @@ public:
     }
     [[nodiscard]]bool isHelpVisible() const noexcept {
         return help_;
+    }
+    void setInputMessage(const std::string& message) {
+        inputMessage_ = message;
+    }
+
+    void clearInputMessage() {
+        inputMessage_.clear();
     }
 };
