@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
+#include <memory>
 
 struct SimulationResult {
     std::vector<Action> actions;
@@ -22,10 +23,12 @@ SimulationResult runRandomSimulation(
     std::uint32_t seed
 ) {
     environment.reset(seed);
-
-    PolicyController<RandomPolicy> controller{
+//El objeto PolicyController<RandomPolicy> se manjea ahora usando interfaz polimorfica IController
+// evitamos usar punteros crudos y menajear la memoria manualmente con new y delete
+std::unique_ptr<IController> controller =
+    std::make_unique<PolicyController<RandomPolicy>>(
         RandomPolicy{seed}
-    };
+    );
 
     SimulationResult result;
 
@@ -41,7 +44,7 @@ SimulationResult runRandomSimulation(
         }
 
         const Action selectedAction =
-            controller.selectAction(observation, legalActions);
+            controller->selectAction(observation, legalActions);
 
         result.actions.push_back(selectedAction);
 

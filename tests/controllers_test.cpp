@@ -2,6 +2,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <vector>
+#include <memory>
 
 #include "circuit_escape/controllers.h"
 
@@ -217,6 +218,32 @@ void test_policy_controller_through_icontroller() {
     assert(selectedAction == Action::right);
 }
 
+//Comprueba la implementación de std::unique_ptr con la interfaz polimorfica IController
+void test_policy_controller_through_unique_ptr() {
+    std::unique_ptr<IController> controller =
+        std::make_unique<PolicyController<FixedActionPolicy>>(
+            FixedActionPolicy{
+                Action::right
+            }
+        );
+
+    Observation observation{};
+
+    std::vector<Action> legalActions{
+        Action::left,
+        Action::right
+    };
+
+    const Action selectedAction =
+        controller->selectAction(
+            observation,
+            legalActions
+        );
+
+    assert(selectedAction == Action::right);
+}
+
+
 void run_controller_tests() {
     test_random_policy_selects_legal_action();
     test_random_policy_single_legal_action();
@@ -229,4 +256,5 @@ void run_controller_tests() {
 
     test_policy_controller_delegates_to_policy();
     test_policy_controller_through_icontroller();
+    test_policy_controller_through_unique_ptr();    
 }
