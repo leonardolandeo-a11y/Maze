@@ -25,12 +25,7 @@ struct Trap {
 };
 struct Exit {};
 
-/*
-Agregamos lo siguiente:
-    - Especialización total y parcial a traves CellTraits
-    - Este struct es usado para verificar si la celda es atravesable/tiene recursos 
-    y evitar codigo repeitivo
-*/
+
 template<typename CellType>
 struct CellTraits {
     static constexpr bool traversable = true;

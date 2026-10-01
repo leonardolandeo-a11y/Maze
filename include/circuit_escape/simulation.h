@@ -17,14 +17,21 @@ struct SimulationResult {
     int remainingEnergy{};
 };
 
+/*---------------------------------------------------------------------
+runRandomSimulation() -> Ejecuta automáticamente una partida utilizando RandomPolicy.
+
+El controlador concreto se administra mediante std::unique_ptr<IController>,
+permitiendo usar la interfaz polimórfica sin gestionar memoria manualmente.
+La semilla controla la secuencia pseudoaleatoria para obtener simulaciones
+reproducibles.
+---------------------------------------------------------------------*/
 template<std::size_t Rows, std::size_t Columns>
 SimulationResult runRandomSimulation(
     NavigationEnvironment<Rows, Columns>& environment,
     std::uint32_t seed
 ) {
     environment.reset(seed);
-//El objeto PolicyController<RandomPolicy> se manjea ahora usando interfaz polimorfica IController
-// evitamos usar punteros crudos y menajear la memoria manualmente con new y delete
+
 std::unique_ptr<IController> controller =
     std::make_unique<PolicyController<RandomPolicy>>(
         RandomPolicy{seed}

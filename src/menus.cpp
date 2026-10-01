@@ -53,7 +53,7 @@ namespace {
             case MenuScreen::Main:
                 return 6;
             case MenuScreen::Scenario:
-                return 4;
+                return 3;
             case MenuScreen::Difficulty:
                 return 4;
             case MenuScreen::RenderMode:
@@ -67,6 +67,13 @@ namespace {
 
 }
 
+/*---------------------------------------------------------------------
+OnEvent() -> Procesa la navegación entre pantallas del menú.
+
+W/S y las flechas cambian la opción seleccionada. Enter confirma
+la selección y puede cambiar la pantalla actual, configurar una
+opción de la partida o producir un MenuCommand para GameApplication.
+---------------------------------------------------------------------*/
 bool Menus::OnEvent(ftxui::Event event) {
     using namespace ftxui;
 
@@ -115,7 +122,6 @@ bool Menus::OnEvent(ftxui::Event event) {
             return true;
         }
 
-//logica similar a currentScreen::MenuScreen::Main aplicada a dificultad
         if (currentScreen_ == MenuScreen::Difficulty) {
             switch (selectedOption_) {
                 case 0:
@@ -146,7 +152,6 @@ bool Menus::OnEvent(ftxui::Event event) {
             }
         }
 
-        //logica similar a currentScreen::MenuScreen::Main aplicada a Escenario
         if (currentScreen_ == MenuScreen::Scenario) {
             switch(selectedOption_) {
                 case 0:
@@ -167,7 +172,7 @@ bool Menus::OnEvent(ftxui::Event event) {
                     return false;
             }
         }
-        //lo mismo para renderizacion
+
         if (currentScreen_ == MenuScreen::RenderMode) {
             switch (selectedOption_) {
                 case 0:
@@ -182,7 +187,7 @@ bool Menus::OnEvent(ftxui::Event event) {
                     selectedOption_ = 0;
                     return true;
 
-                case 2: // este es BACK
+                case 2: 
                     currentScreen_ = MenuScreen::Main;
                     selectedOption_ = 0;
                     return true;
@@ -200,23 +205,24 @@ bool Menus::OnEvent(ftxui::Event event) {
     return false;
 }
 
-//Metodo agregado para que GameApplication pueda leer el comando recibido desde el menu
+/*---------------------------------------------------------------------
+Entrega a GameApplication el comando pendiente y lo consume,
+evitando procesarlo nuevamente en el siguiente evento.
+---------------------------------------------------------------------*/
 MenuCommand Menus::takeCommand() {
     MenuCommand command = pendingCommand_;
     pendingCommand_ = MenuCommand::none;
     return command;
 }
 
-//Metodo agregado para que desde el menu se pueda cambiar de escenario
 ScenarioSelection Menus::selectedScenario() const noexcept {
     return selectedScenario_;
 }
 
-//Metodo agregado para que desde el menu se pueda cambiar de dificultad
 Difficulty Menus::selectedDifficulty() const noexcept {
     return selectedDifficulty_;
 }
-//lo mismo que los otros para renderizar
+
 RenderMode Menus::selectedRenderMode() const noexcept {
     return selectedRenderMode_;
 }

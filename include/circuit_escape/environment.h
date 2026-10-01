@@ -13,36 +13,43 @@
 #include <variant>
 #include <vector>
 
-/*---------------------------------------------------------------------*/
-/*Patron de C++ para trabajar con std::visit (necesario por la rubrica)
-Overloaded es un struct que guarda funciones lambda.
-FLambda es el variadic template
-{ using FLambda::operator()...; }: es un pack expansion que trae las
-sobrecargas de () de cada funcion lambda
-*/
+/*---------------------------------------------------------------------
+Helper variádico utilizado junto con std::visit.
+
+Hereda de varias lambdas y expone todos sus operator(), permitiendo
+definir una operación diferente para cada alternativa de un std::variant.
+---------------------------------------------------------------------*/
 template<class... FLambda>
 struct Overloaded : FLambda... {
     using FLambda::operator()...;
 };
 
-/*Le indica al compilador que deduzca automaticamente los tipos de template*/
+// Deduction guide para construir Overloaded sin indicar explícitamente
+// los tipos de las lambdas.
 template<class... FLambda>
 Overloaded(FLambda...) -> Overloaded<FLambda...>;
 
-/*---------------------------------------------------------------------*/
 
-//struct que indica por que acabo el juego
 enum class EndReason {
     none,
     goalReached,
     noEnergy,
     turnLimit
 };
-//Struct aux para implementar un fold expression
+
+// Representa una posible condición de término y el motivo asociado.
 struct TerminationCondition {
     bool satisfied;
     EndReason reason;
 };
+
+/*---------------------------------------------------------------------
+Evalúa un conjunto de condiciones en el orden recibido.
+
+La fold expression aplica evaluate() sobre cada condición y conserva
+únicamente la primera que se satisface. De esta forma el orden de los
+argumentos define la precedencia de las condiciones de término.
+---------------------------------------------------------------------*/
 template<typename... Conditions>
 [[nodiscard]] EndReason firstSatisfiedTermination(
     const Conditions&... conditions
@@ -63,7 +70,13 @@ template<typename... Conditions>
 
     return result;
 }
-//struct que guarda toda la informacion del agent. necesario para el controller
+
+/*---------------------------------------------------------------------
+Snapshot del estado observable del entorno.
+
+Los controladores reciben este struct para tomar decisiones
+sin obtener acceso directo al estado interno de NavigationEnvironment.
+---------------------------------------------------------------------*/
 struct Observation {
     Position agent;
     Position goal;
@@ -75,12 +88,15 @@ struct Observation {
     std::size_t turnLimit{};
     std::vector<Action> availableActions;
 };
-/*structs eventos
-Guardan los detalles de lo que ocurrio en un turno
-Se agrupan en std::variant NavigationEvent
-Estos structs son guardados en std::variant NavigationEvent
-Seran pasados a std::visit para el motor grafico
-*/
+
+/*---------------------------------------------------------------------
+Los eventos describen los cambios producidos durante un turno.
+
+NavigationEnvironment los genera, mientras que otras capas, como
+ConsoleUI, pueden procesarlos sin conocer ni modificar la lógica interna
+del entorno.
+---------------------------------------------------------------------*/
+
 struct MovedEvent {
     Position from;
     Position to;
@@ -109,7 +125,10 @@ struct TrapTriggeredEvent {
 struct GoalReachedEvent {
     Position at;
 };
-//navigationevent es un tipo que represente cualquier tipo de evento
+/*---------------------------------------------------------------------
+Un NavigationEvent puede representar cualquiera de los eventos
+producidos por el entorno durante la ejecución de una acción.
+---------------------------------------------------------------------*/
 using NavigationEvent = std::variant<
     MovedEvent,
     MovementRejectedEvent,
@@ -118,22 +137,20 @@ using NavigationEvent = std::variant<
     TrapTriggeredEvent,
     GoalReachedEvent
 >;
-/*
-strcut stepresult guarda:
-- la informacion de observation (estado del agente) 
-- el vector de eventos
-- un flag para ver si termino
-- un endreason,  si termino
 
-En resumen. informacion tras realizar un paso
-*/
+/*---------------------------------------------------------------------
+Resultado completo de ejecutar una acción.
+
+Contiene el nuevo estado observable, los eventos producidos durante
+el turno y la información de término de la partida.
+---------------------------------------------------------------------*/
 struct StepResult {
     Observation observation;
     std::vector<NavigationEvent> events;
     bool finished{false};
     EndReason reason{EndReason::none};
 };
-//funcion que evalua si ya termino el juego, retorna un endreason
+
 [[nodiscard]] EndReason evaluateTermination(
     bool agentOnExit,
     int energy,
@@ -141,16 +158,19 @@ struct StepResult {
     std::size_t turnLimit
 ) noexcept;
 
+/*---------------------------------------------------------------------
+NavigationEnvironment -> Motor principal de la simulación.
 
-// NavigationEnvironment for movement costs.
-/*
-Esta clase se encarga de lo siguiente:
-- Proceso la accion solicita mediante step()
-- Calcula los costos de mov y efectos de celda
-- Evalua la condicion en que termino el juego
-- Genera el registro de eventos vector<NavigationEvent> events
-- Crear un OBservation inofensivo que se pasara a los controllers para que sepan que pasa en cada turno
-*/
+NavigationEnvironment mantiene el tablero y el agente, procesa cada
+Action mediante step(), aplica los costos y efectos de las celdas,
+genera NavigationEvent y determina cuándo termina la partida.
+
+La clase no realiza entrada/salida de consola. La interfaz gráfica
+solamente consulta su estado y le entrega acciones.
+
+initialGrid_ e initialAgent_ conservan el estado inicial para que
+reset() pueda reproducir una nueva simulación.
+---------------------------------------------------------------------*/
 template<std::size_t Rows, std::size_t Columns>
 class NavigationEnvironment {
     Grid<Cell, Rows, Columns> initialGrid_;
@@ -158,16 +178,14 @@ class NavigationEnvironment {
 
     Agent initialAgent_;
     Agent agent;
-    /*
-    Se tiene un obj inicial para agente y tablero para guarda la informacion del inicio del juego
-    Los otros obj se modifican durante el juego
-    se instancian las reglas y el turno=0
-    */
     GameRules rules;
     std::size_t turn{0};
 
-    //condiciones lo validamos
-    //metodo para que se verifica que la posicion de inicializacion sea correcta
+    /*---------------------------------------------------------------------
+    Verifica las invariantes necesarias para crear un entorno válido:
+    posición inicial dentro del tablero y transitable, exactamente una
+    salida, energía inicial positiva y límite de turnos válido.
+    ---------------------------------------------------------------------*/
     void validateInitialState() const {
         const Position start = agent.getPosition();
         
@@ -182,12 +200,10 @@ class NavigationEnvironment {
                 "Initial position is not traversable"
             );
         }
-        //contador de salidas
-        //una vez inicializao el tablero, se cuenta cuatnas salidas hay
         const std::size_t exitCount = countMatching(
-            grid_.cbegin(), //iterador
-            grid_.cend(), //iterador final
-            [](const Cell& cell) {return std::holds_alternative<Exit>(cell);} //f lambda
+            grid_.cbegin(), 
+            grid_.cend(), 
+            [](const Cell& cell) {return std::holds_alternative<Exit>(cell);} 
         );
 
         if (exitCount != 1) {
@@ -195,7 +211,7 @@ class NavigationEnvironment {
                 "Environment must contain exactly one exit"
             );
         }
-        //tirar errores si algo falla
+
         if (agent.getEnergy() <= 0) {
             throw std::invalid_argument(
                 "Initial energy must be positive"
@@ -208,40 +224,45 @@ class NavigationEnvironment {
             );
         }
     }
-    //este metodo retorna la posicion de cell donde se encuentra la salida 
-Position goalPosition() const {
-    const auto exitIterator = LinearSearch(
-        grid_.cbegin(),
-        grid_.cend(),
-        [](const Cell& cell) {
-            return std::holds_alternative<Exit>(cell);
+
+    /*---------------------------------------------------------------------
+    Localiza la única salida del tablero mediante LinearSearch y convierte
+    la posición lineal del iterador en coordenadas fila-columna. 
+    ---------------------------------------------------------------------*/
+    Position goalPosition() const {
+        const auto exitIterator = LinearSearch(
+            grid_.cbegin(),
+            grid_.cend(),
+            [](const Cell& cell) {
+                return std::holds_alternative<Exit>(cell);
+            }
+        );
+
+        if (exitIterator == grid_.cend()) {
+            throw std::logic_error(
+                "Environment invariant violated: exit not found"
+            );
         }
-    );
 
-    if (exitIterator == grid_.cend()) {
-        throw std::logic_error(
-            "Environment invariant violated: exit not found"
-        );
+        const std::size_t index =
+            static_cast<std::size_t>(
+                std::distance(
+                    grid_.cbegin(),
+                    exitIterator
+                )
+            );
+
+        return Position{
+            index/Columns, 
+            index%Columns 
+        };
     }
+    /*---------------------------------------------------------------------
+    Obtiene el costo de entrada de una celda.
 
-    const std::size_t index =
-        static_cast<std::size_t>(
-            std::distance(
-                grid_.cbegin(),
-                exitIterator
-            )
-        );
-
-    return Position{
-        index/Columns, //fila
-        index%Columns //columna
-    };
-}
-    /*
-    el metodo movcost usa el patron el struct Overloaded que guarda funciones lambda
-    usa la misma logica que applyeffectcell para obtener el tipo de cell y aplicar 
-    el costo de moviemiento
-    */
+    std::visit despacha según el tipo almacenado en Cell y obtiene el
+    costo correspondiente desde GameRules.
+    ---------------------------------------------------------------------*/
     int movementCost(const Cell &cell) const {
         return std::visit(Overloaded{
                               [&](const Empty &) {
@@ -274,21 +295,27 @@ Position goalPosition() const {
 
                           }, cell);
     }
+    /*---------------------------------------------------------------------
+    Aplica el efecto específico de la celda después de pagar su costo
+    de entrada.
 
-    // funcion auxiliar para aplicar los efectos de la celda
+    std::visit selecciona la lógica correspondiente:
+    - ResourceCell suma puntaje y se consume una sola vez.
+    - Battery recupera energía y se consume una sola vez.
+    - Trap aplica sus penalizaciones cada vez que se activa.
+    - Las demás celdas no producen un efecto adicional.
+
+    Los cambios relevantes se registran como NavigationEvent.
+    ---------------------------------------------------------------------*/
     void applyEffectCell(Cell &target_cell, std::vector<NavigationEvent> &events) {
-        // std::visit permite revisar el tipo de celda y escoger
-        // la funcion lambda correspondiente
         std::visit(Overloaded{
 
-                    // Logica para celdas con recompensas
                     [&](auto& resource)
                         requires CellTraits<std::remove_cvref_t<decltype(resource)>>::resource {
                         if (resource.collected) {
                         return;
                     }
 
-                    // Se agrega la recompensa y se marca como recolectada
                     agent.addScore(rules.resourcePoints);
                     agent.addcollectedResources(1);
                     resource.collected = true;
@@ -298,14 +325,13 @@ Position goalPosition() const {
                             agent.getPosition(), rules.resourcePoints
                     }
                 );
-},
+    },
 
-                       // logica para recarga de bateria
                        [&](Battery &battery) {
                            if (battery.consumed) {
                                return;
                            }
-                           //se guarda la bateria actual, se recarga, y si la energia cambia (no es max) se registra el evento
+
                            const int previousEnergy = agent.getEnergy();
                            
                            agent.addEnergy(rules.batteryRecharge);
@@ -321,7 +347,7 @@ Position goalPosition() const {
                            }
                        },
 
-                       // logica para trampas
+                       
                        [&](Trap &) {
                            const int previousEnergy = agent.getEnergy();
                            agent.setEnergy(agent.getEnergy() - rules.trapEnergyPenalty);
@@ -343,30 +369,35 @@ Position goalPosition() const {
                            );
                        },
 
-                       // caso generico
                        [&](auto &) {
-                           // nada
+                           
                        }
 
                    }, target_cell);
     }
-    //Al final de cada turno, evalua si ya termino, los eventos y retorna un stepresult con la informacion
+    /*---------------------------------------------------------------------
+    Finaliza un turno después de procesar la acción.
+
+    Evalúa las condiciones de término, genera GoalReachedEvent cuando
+    corresponde, marca al agente como inactivo y construye el StepResult
+    que será entregado al resto del programa.
+    ---------------------------------------------------------------------*/
     [[nodiscard]] StepResult finalizeStep(
         std::vector<NavigationEvent> events
     ) {
-        //verifica si el agente esta en la salida
+        
         const bool agentOnExit =
                 std::holds_alternative<Exit>(
                     grid_.at(agent.getPosition())
                 );
-        //llama a la funcion evaluateTermination para corrobar si ya llego al final
+        
         const EndReason reason = evaluateTermination(
             agentOnExit,
             agent.getEnergy(),
             turn,
             rules.turnLimit
         );
-        //VERIFICA SI SE LLEGA A LA META
+
         if (reason == EndReason::goalReached) {
             events.push_back(
                 GoalReachedEvent{
@@ -374,11 +405,9 @@ Position goalPosition() const {
                 }
             );
         }
-        //VERIFICA SI TERMINO EL JUEGO
         if (reason != EndReason::none) {
             agent.finish();
         }
-        //
         return StepResult{
             state(),
             events,
@@ -402,24 +431,29 @@ public:
           rules(rules_) {
         validateInitialState();
     }
-
+    /*---------------------------------------------------------------------
+    Restaura el tablero, el agente y el contador de turnos al estado inicial.
+    
+    NavigationEnvironment no toma decisiones aleatorias, por lo que la
+    semilla se recibe únicamente para mantener una interfaz reproducible
+    compatible con las simulaciones.
+    ---------------------------------------------------------------------*/
     void reset(std::uint32_t seed) {
-        // entorno no realiza decisiones aleatorias
-        // semilla para reproducciones
         (void) seed;
 
         grid_ = initialGrid_;
         agent = initialAgent_;
         turn = 0;
     }
-    /*
-    Realiza lo sgiguiente:
-    - Filtra mov invalidos
-    - Registra acciones invalidas
-    - 
-    */
+    /*---------------------------------------------------------------------
+    Construye las acciones legales desde la posición actual.
+
+    Se descartan movimientos fuera del tablero o hacia celdas no
+    transitables. Action::wait permanece disponible mientras la partida
+    siga activa.
+    ---------------------------------------------------------------------*/
     [[nodiscard]] std::vector<Action> availableActions() const {
-        if (isFinished()) {//verifica si ya acabo la partida
+        if (isFinished()) {
             return {};
         }
 
@@ -431,9 +465,8 @@ public:
             Action::left,
             Action::right
         };
-        //mediante un for verifica que acciones son validas para agregarlas al vector actions
+
         for (Action action: movementActions) {
-            //instancia cada posicion de casilla
             auto candidate = neighbor(agent.getPosition(), action);
 
             if (!candidate.has_value()) {
@@ -452,12 +485,16 @@ public:
 
             actions.push_back(action);
         }
-        //wait siempre es valido
+
         actions.push_back(Action::wait);
 
         return actions;
     }
-    //funcion que retirna un bjeto observation con toda la informacion del momento
+    /*---------------------------------------------------------------------
+    Construye una copia del estado observable actual.
+    Los controladores pueden usarla para decidir sin acceder directamente
+    a los miembros internos del entorno.
+    ---------------------------------------------------------------------*/
     [[nodiscard]] Observation state() const {
         return Observation{
             agent.getPosition(),
@@ -471,15 +508,30 @@ public:
             availableActions()
         };
     }
-    //se explica solo
+
     [[nodiscard]] bool isFinished() const noexcept {
         return !agent.isActive();
     }
-    //retorna el tableroS
     [[nodiscard]] const grid_type &grid() const noexcept {
         return grid_;
     }
 
+    
+    /*---------------------------------------------------------------------
+    Step() -> Ejecuta un turno completo del entorno.
+
+    Flujo:
+    1. Incrementa el turno.
+    2. Procesa wait o movimientos inválidos aplicando su costo.
+    3. Para un movimiento válido, actualiza la posición y paga el costo
+    de entrada de la celda destino.
+    4. Aplica el efecto de la celda mediante applyEffectCell().
+    5. Registra los eventos producidos en el orden en que ocurren.
+    6. Llama a finalizeStep() para evaluar el término y construir
+    el StepResult.
+
+    Una llamada después de finalizar la partida produce std::logic_error.
+    ---------------------------------------------------------------------*/
     [[nodiscard]] StepResult step(Action action) {
         if (isFinished()) {
             throw std::logic_error(
@@ -493,7 +545,7 @@ public:
 
         const Position previousPosition = agent.getPosition();
 
-        // accion wait
+        
         if (action == Action::wait) {
             const int previousEnergy = agent.getEnergy();
 
@@ -517,8 +569,6 @@ public:
             agent.getPosition(),
             action
         );
-        //verifica y rechaza mov fueras del tablerp (inncesario)
-        // movimiento fuera del tablero
         if (!candidate.has_value() ||
             !grid_.contains(candidate.value())) {
             const int previousEnergy = agent.getEnergy();
@@ -526,7 +576,6 @@ public:
             agent.setEnergy(
                 agent.getEnergy() - rules.waitOrInvalidCost
             );
-            //guarda evento cambio de energia
             if (agent.getEnergy() != previousEnergy) {
                 events.push_back(
                     EnergyChangedEvent{
@@ -535,7 +584,6 @@ public:
                     }
                 );
             }
-            //gaurda evento movimeinto rechazados
             events.push_back(
                 MovementRejectedEvent{
                     previousPosition,
@@ -548,7 +596,6 @@ public:
 
         Cell &destination = grid_.at(candidate.value());
 
-        // movimiento hacia un muro
         if (!isTraversable(destination)) { 
             const int previousEnergy = agent.getEnergy();
 
@@ -575,7 +622,6 @@ public:
             return finalizeStep(events);
         }
 
-        // movimiento valido
         const int cost = movementCost(destination);
 
         agent.setPosition(candidate.value());
@@ -603,7 +649,6 @@ public:
             );
         }
 
-        // aplicar el efecto despues del costo de entrada
         applyEffectCell(destination, events);
 
         return finalizeStep(events);

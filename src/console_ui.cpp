@@ -4,13 +4,15 @@
 #include <array>
 
 
-/*   Constructor of the console_ui   */
+
 ConsoleUI::ConsoleUI(RenderMode mode): mode_(mode){};
 
-/*=========================*/
+/*---------------------------------------------------------------------
+KeyMapping() -> Traduce eventos de teclado de FTXUI a comandos independientes de la UI.
 
-/*   Translate keys    */
-
+Las teclas no reconocidas producen std::nullopt y no ejecutan acciones
+sobre el entorno.
+---------------------------------------------------------------------*/
 std::optional<UICommand> ConsoleUI::KeyMapping(const ftxui::Event& event)const{
     if (event == ftxui::Event::Character('w') || event == ftxui::Event::Character('W')||
         event == ftxui::Event::ArrowUp){
@@ -41,7 +43,12 @@ std::optional<UICommand> ConsoleUI::KeyMapping(const ftxui::Event& event)const{
 
 }
 
-//Renderizacion de Help
+/*---------------------------------------------------------------------
+help() -> Construye la pantalla de ayuda con los controles disponibles.
+
+Mientras help_ esté activo, render() muestra esta vista en lugar
+del tablero principal.
+---------------------------------------------------------------------*/
 ftxui::Element ConsoleUI::help() const {
     using namespace ftxui;
 
@@ -158,7 +165,10 @@ ftxui::Element ConsoleUI::help() const {
     })
     | bgcolor(Color::Black);
 }
-//Barra Superior
+/*---------------------------------------------------------------------
+RenderSupBar() -> Construye la barra de estado con turno, energía, puntaje y recursos.
+
+---------------------------------------------------------------------*/
 ftxui::Element ConsoleUI::RenderSupBar(const Observation& observation) const {
 
     return ftxui::text(
@@ -174,7 +184,13 @@ ftxui::Element ConsoleUI::CoordinateCell(const std::string& label) const {
     return ftxui::text(label) | ftxui::size(ftxui::WIDTH,ftxui::EQUAL, 2);
 }
 
-//Tablero
+/*---------------------------------------------------------------------
+RenderBoard() -> Construye visualmente el tablero 20x30.
+
+Cada posición se transforma en un elemento FTXUI mediante RenderCell().
+También se agregan las coordenadas de filas y columnas y se mantiene
+un ancho fijo por celda para conservar la forma de la cuadrícula.
+---------------------------------------------------------------------*/
 ftxui::Element ConsoleUI::RenderBoard(
     const NavigationEnvironment<20, 30>& environment, 
     const Observation& observation) const {
@@ -251,7 +267,13 @@ ftxui::Element ConsoleUI::RenderBoard(
         std::move(rows)
     );
 }
-//Barra Inferior
+/*---------------------------------------------------------------------
+RenderInfBar() -> Construye el footer de la partida.
+
+Un mensaje temporal de entrada, como "Unknown command", tiene prioridad
+sobre el último NavigationEvent. Al final siempre se muestran los
+controles básicos.
+---------------------------------------------------------------------*/
 ftxui::Element ConsoleUI::RenderInfBar(std::span<const NavigationEvent> recentEvents) const {
     std::string message;
     if (!inputMessage_.empty()) {
@@ -263,14 +285,14 @@ ftxui::Element ConsoleUI::RenderInfBar(std::span<const NavigationEvent> recentEv
     return ftxui::text(message);
 }
 
+/*---------------------------------------------------------------------
+render() -> Construye la vista principal de la partida.
 
-/*=========================*/
+Obtiene el estado actual del entorno y ensambla la barra de estado,
+el tablero y el footer de eventos/controles.
 
-
-/*          Render             */
-
-
-/*  Render the environment  */
+Si la ayuda está activa, muestra help() en lugar de la vista principal.
+---------------------------------------------------------------------*/
 ftxui::Element ConsoleUI::render(
     const NavigationEnvironment<20, 30>& environment,
     std::span<const NavigationEvent> recentEvents
@@ -327,7 +349,14 @@ ftxui::Element ConsoleUI::render(
 }
 
 
-/*    Render the cells    */
+/*---------------------------------------------------------------------
+RenderCell() -> Convierte una Cell en su representación ASCII o emoji.
+
+El agente tiene prioridad visual sobre la celda que ocupa.
+Para el resto de casos, std::visit identifica el tipo almacenado
+en Cell y selecciona su símbolo. Recursos y baterías consumidos
+se muestran como celdas vacías.
+---------------------------------------------------------------------*/
 ftxui::Element ConsoleUI::RenderCell(const Cell& cell, bool IsAgent) const{
     if (IsAgent){
         if (mode_ == RenderMode::emoji){
@@ -362,7 +391,7 @@ ftxui::Element ConsoleUI::RenderCell(const Cell& cell, bool IsAgent) const{
                     return ftxui::text("~");
                 }
             }
-            //Se verifica si resource ya ha sido recolectado para renderizar la celda como un Empty o no
+            // Los recursos recolectados se representan visualmente como celdas vacías.
             if constexpr(std::is_same_v<CellType,ResourceCell<int>>){
                 if (CurrentCell.collected){
                     if (mode_ == RenderMode::emoji){
@@ -378,7 +407,7 @@ ftxui::Element ConsoleUI::RenderCell(const Cell& cell, bool IsAgent) const{
                     return ftxui::text("R");
                 }
             }
-            //la misma logica que resocurceCell, revisams si la bateria ya ha sido consumida para renderizarla o no
+            // Las baterías consumidas se representan visualmente como celdas vacías.
             if constexpr(std::is_same_v<CellType, Battery>){
                 if (CurrentCell.consumed){
                     if (mode_ == RenderMode::emoji){
@@ -413,7 +442,13 @@ ftxui::Element ConsoleUI::RenderCell(const Cell& cell, bool IsAgent) const{
         
         ,cell);
 }
-//Evento
+
+/*---------------------------------------------------------------------
+EventMessage() -> Convierte un NavigationEvent en un mensaje legible para el footer.
+
+std::visit selecciona el texto correspondiente al tipo concreto
+de evento almacenado en el variant.
+---------------------------------------------------------------------*/
 std::string ConsoleUI::EventMessage(
     const NavigationEvent& event
 ) const {
@@ -465,9 +500,4 @@ std::string ConsoleUI::EventMessage(
         event
     );
 }
-
-/*=========================*/
-
-
-
 

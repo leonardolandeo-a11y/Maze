@@ -11,10 +11,7 @@
 #include <utility>
 #include <vector>
 
-/*
-- clase abstracta de la que heredan todos los controllers
-- destructor virtual necesario y todas las funciones abtractas
-*/
+
 class IController {
 public:
     virtual ~IController() = default;
@@ -50,12 +47,7 @@ public:
     }
 };
 
-/*
-Concept que verifica que el tipo de dato Policy tenga un metodo un metodo llamada selectAction
-y verifica que este bien implementado: seleciona una accion que sea
-std::span() objeto ligero hacia una lista contigua de elementos
-std::same_As() verifica si los 2 tipos son exacatamente iguales
-*/
+
 template<typename Policy>
 concept NavigationPolicy = requires(
     Policy& policy,
@@ -72,9 +64,7 @@ class PolicyController : public IController {
     Policy policy_;
 
 public:
-    //explicit es una buena practica para eivtar conversiones impliucitas
-    // se usa la asignacion por movimiento por eficiencia (una copia seria innecesaria pues no necesitamos mantener el parametro policy despues del contructor)
-    //PolicyController posee su propia politica (policy)
+    
     explicit PolicyController(Policy policy)
         : policy_(std::move(policy)) {}
 

@@ -7,7 +7,7 @@
 
 template<typename CellType, std::size_t Rows, std::size_t Columns>
 class Grid {
-    //La rubrica exige que se verifique que la instancion de filas/colms sea diferente de 0
+
     static_assert(Rows > 0, "Grid must have at least one row");
     static_assert(Columns > 0, "Grid must have at least one column");
 private:
@@ -39,7 +39,7 @@ public:
     }
 
     CellType& at(Position position) {
-        //La rubrica exige explicitamente que que se validen ambas coordenadas
+
         if (!contains(position)) {
             throw std::out_of_range("Grid position out of range");
         }
@@ -47,7 +47,7 @@ public:
     }
 
     const CellType& at(Position position) const {
-        //La rubrica exige explicitamente que que se validen ambas coordenadas
+
         if (!contains(position)) {
             throw std::out_of_range("Grid position out of range");
         }

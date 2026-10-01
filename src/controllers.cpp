@@ -2,8 +2,12 @@
 
 #include <stdexcept>
 
-/*         HeuristicPolicy          */
+/*---------------------------------------------------------------------
+ManhattanDistance() -> Calcula la distancia Manhattan entre dos posiciones.
 
+La política heurística utiliza esta distancia como criterio simple
+para elegir movimientos que acerquen al agente a la salida.
+---------------------------------------------------------------------*/
 std::size_t ManhattanDistance(Position first, Position second){
     std::size_t RowDistance ;
     std::size_t ColumnDistance ;
@@ -21,6 +25,16 @@ std::size_t ManhattanDistance(Position first, Position second){
     return RowDistance + ColumnDistance;
 }
 
+/*---------------------------------------------------------------------
+selectAction() -> Selecciona, entre las acciones legales, aquella que deja al agente
+más cerca de la salida según la distancia Manhattan.
+
+La policy trabaja únicamente con Observation y las acciones legales:
+no modifica directamente el entorno.
+
+Si varias acciones producen la misma distancia, se conserva la
+primera encontrada.
+---------------------------------------------------------------------*/
 Action HeuristicPolicy::selectAction(const Observation& observation,std::span<const Action> legalActions){
     if (legalActions.empty()) {
         throw std::invalid_argument("Require an action");
@@ -51,5 +65,3 @@ Action HeuristicPolicy::selectAction(const Observation& observation,std::span<co
     return BestAction;
 
 }
-
-/*==============================================*/

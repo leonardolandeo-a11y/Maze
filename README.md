@@ -662,6 +662,19 @@ Maze/
 │       ├── scenario_1.cpp
 │       └── scenario_2.cpp
 ├── tests/
+│   ├── test_main.cpp
+│   ├── grid_test.cpp
+│   ├── environment_test.cpp
+│   ├── interactions_test.cpp
+│   ├── controllers_test.cpp
+│   ├── simulation_test.cpp
+│   ├── scenario_1_test.cpp
+│   ├── scenario_2_test.cpp
+│   ├── generic_functions_test.cpp
+│   ├── console_ui_test.cpp
+│   ├── event_test.cpp
+│   ├── console_render_test.cpp
+│   └── invalid_test.cpp
 ├── .gitignore
 ├── CMakeLists.txt
 └── README.md
@@ -800,6 +813,9 @@ Las pruebas cubren, entre otros aspectos:
 - renderizado Emoji y ASCII;
 - dimensiones 20 × 30 del renderizado;
 - solucionabilidad de los escenarios de demostración.
+- uso de `PolicyController` mediante `std::unique_ptr<IController>`;
+- rechazo de comandos desconocidos sin ejecutar `step()` ni modificar el entorno;
+- prueba negativa de compilación de una policy que no satisface `NavigationPolicy`. (no forma parte de Maze_Test)
 
 La lógica del entorno puede probarse sin leer desde `std::cin` ni escribir en `std::cout`.
 
