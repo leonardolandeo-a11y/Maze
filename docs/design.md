@@ -157,6 +157,16 @@ concept NavigationPolicy = requires(
 
 De esta manera, una policy que no respete la interfaz esperada no puede utilizarse mediante `PolicyController`.
 
+También se incluye una prueba negativa de compilación para comprobar que una política que no satisface `NavigationPolicy` no puede utilizarse con `PolicyController`.
+
+La prueba se encuentra documentada en: `docs/negative_concept_test.md`
+
+y utiliza una `InvalidPolicy` cuyo método `selectAction` devuelve `int` en lugar de `Action`. El compilador rechaza la instanciación al no satisfacerse el requisito:
+
+```cpp
+std::same_as<Action>
+```
+
 ## 9. Polimorfismo dinámico
 
 El proyecto utiliza la interfaz:
@@ -176,9 +186,33 @@ virtual Action selectAction(
 ) = 0;
 ```
 
-Esto permite trabajar con diferentes controladores a través de una misma interfaz sin modificar `NavigationEnvironment`.
+PolicyController<Policy> implementa esta interfaz y adapta cualquier policy que satisfaga el concept NavigationPolicy.
 
-El polimorfismo dinámico se utiliza mediante `IController`, que proporciona una interfaz común para los controladores. `PolicyController<Policy>` hereda de esta interfaz y permite utilizar distintas policies a través del mismo contrato.
+Los controladores polimórficos pueden administrarse mediante:
+
+```cpp
+std::unique_ptr<IController>
+```
+Por ejemplo, la simulación automática crea un controller concreto y lo maneja mediante la interfaz base:
+
+```cpp
+std::unique_ptr<IController> controller =
+    std::make_unique<PolicyController<RandomPolicy>>(
+        RandomPolicy{seed}
+    );
+```
+La llamada:
+
+
+```cpp
+controller->selectAction(observation, legalActions);
+```
+
+utiliza despacho dinámico para ejecutar la implementación correspondiente al objeto concreto.
+
+El uso de `std::unique_ptr` nos permite evitar el uso directo de new y delete (los cuales estan prohibidos para los fines de este proyecto)
+
+De esta forma pueden utilizarse diferentes controladores a través del mismo contrato sin modificar `NavigationEnvironment`.
 
 ## 10. PolicyController
 
@@ -334,6 +368,10 @@ Se utiliza cuando una operación puede no producir un resultado válido, por eje
 ### std::span
 
 Se utiliza para proporcionar una vista no propietaria sobre una secuencia de elementos, evitando copias innecesarias.
+
+### std::unique_ptr
+
+Se utiliza para administrar controladores polimórficos mediante la interfaz `IController`.
 
 ### std::mt19937
 

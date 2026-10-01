@@ -29,7 +29,7 @@ Grid<Cell, 20,30> GameApplication::CreateScenario(ScenarioSelection scenario){
     return createScenario1();
 }
 
-// Configurado para usar valores del perfil standard, pero se puede cambiar para usar otros perfiles de dificultad ->Si, ya esta
+
 Agent GameApplication::CreatePlayer(const GameRules& rules) {
     return Agent(
         {1, 1},
@@ -38,6 +38,16 @@ Agent GameApplication::CreatePlayer(const GameRules& rules) {
     );
 }
 
+/*---------------------------------------------------------------------
+CreateGameComponent() -> Construye el componente interactivo de la partida.
+
+ConsoleUI traduce el evento de teclado a UICommand. Las acciones
+jugables se envían a NavigationEnvironment::step(), mientras que
+los comandos de ayuda y salida se resuelven en la capa de aplicación.
+
+El StepResult generado actualiza los eventos visibles y permite
+activar las pantallas de victoria o derrota.
+---------------------------------------------------------------------*/
 ftxui::Component GameApplication::CreateGameComponent(
     NavigationEnvironment<20,30>& environment,
     ConsoleUI& ui,
@@ -64,9 +74,13 @@ ftxui::Component GameApplication::CreateGameComponent(
         [&, onStepResult](const ftxui::Event& event){
             std::optional<UICommand> command = ui.KeyMapping(event);
 
-            if (!command.has_value()){
-                ui.setInputMessage("Unknown command");
-                return true;
+            if (!command.has_value()) {
+                if (event.is_character()) {
+                    ui.setInputMessage("Unknown command");
+                    return true;
+                }
+
+                return false;
             }
             ui.clearInputMessage();
 
@@ -121,14 +135,20 @@ ftxui::Component GameApplication::CreateGameComponent(
 
     return component;
 }
+/*---------------------------------------------------------------------
+Run() -> Coordina el ciclo completo de la aplicación.
 
+El renderer selecciona la vista activa entre animación inicial,
+menú, partida, victoria y derrota. Los eventos del menú configuran
+escenario, dificultad y modo de render antes de crear el entorno.
+---------------------------------------------------------------------*/
 void GameApplication::Run(){
     bool playAgain = true;
     bool firstGame = true;
 
     while (playAgain){
         playAgain = false;
-        //no se eliminan por ahora
+
         auto grid = CreateScenario(ScenarioSelection::scenario1);
         GameRules rules = rulesFor(Difficulty::standard);
         Agent player = CreatePlayer(rules);

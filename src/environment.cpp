@@ -2,6 +2,15 @@
 #include "circuit_escape/agent.h"
 #include "circuit_escape/game_rules.h"
 
+/*---------------------------------------------------------------------
+EndReason evalúa las condiciones de término respetando su prioridad:
+    1. alcanzar la salida con energía disponible;
+    2. quedarse sin energía;
+    3. alcanzar el límite de turnos.
+
+firstSatisfiedTermination(): procesa las condiciones mediante una
+fold expression y devuelve la primera que se cumple.
+---------------------------------------------------------------------*/
 EndReason evaluateTermination(
     bool agentOnExit,
     int energy,

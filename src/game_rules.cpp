@@ -1,6 +1,7 @@
 #include "circuit_escape/game_rules.h"
 #include <stdexcept>
 
+// Construye la configuración utilizada por cada perfil de dificultad.
 GameRules rulesFor(Difficulty difficulty) {
     switch (difficulty) {
 

@@ -46,7 +46,7 @@ public:
         std::span<const NavigationEvent> recentEvents) const;
     
     std::optional<UICommand> KeyMapping(const ftxui::Event& event) const;
-    //Se agrega Help y getter/setter
+
     ftxui::Element help() const;
 
     void setHelp() noexcept {
