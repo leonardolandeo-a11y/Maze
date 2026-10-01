@@ -65,8 +65,10 @@ ftxui::Component GameApplication::CreateGameComponent(
             std::optional<UICommand> command = ui.KeyMapping(event);
 
             if (!command.has_value()){
-                return false;
+                ui.setInputMessage("Unknown command");
+                return true;
             }
+            ui.clearInputMessage();
 
             if (command == UICommand::quit){
                 screen.Exit();
