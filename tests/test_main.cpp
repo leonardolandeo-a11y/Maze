@@ -9,6 +9,7 @@ void run_generic_function_tests();
 void run_console_ui_tests();
 void run_event_tests();
 void run_console_render_tests();
+void run_map_selector_tests();
 
 int main() {
 
@@ -23,5 +24,6 @@ int main() {
     run_console_ui_tests();
     run_event_tests();
     run_console_render_tests();
+    run_map_selector_tests();
     return 0;
 }

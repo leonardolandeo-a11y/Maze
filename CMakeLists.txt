@@ -28,6 +28,7 @@ add_library(Maze_core
     src/StartupAnimation.cpp 
     src/DeathAnimation.cpp
     src/VictoryAnimation.cpp
+    src/map_generation/map_selector.cpp
 )
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
@@ -64,6 +65,7 @@ add_executable(Maze_test
     tests/console_ui_test.cpp
     tests/event_test.cpp
     tests/console_render_test.cpp
+    tests/map_generation/map_selector_test.cpp
 )
 
 target_link_libraries(Maze_test PRIVATE Maze_core)
