@@ -336,6 +336,138 @@ void test_negative_cost_on_unverified_map_is_ignored() {
     assert(result->hard_id == 4);
 }
 
+void test_average_uses_all_verified_maps() {
+
+    const std::vector<MapCandidate> candidates = {
+        {1, 0, true},
+
+        {20, 4, true},
+        {10, 4, true},
+        {9, 4, true},
+        {8, 4, true},
+        {7, 4, true},
+        {6, 4, true},
+
+        {2, 8, true},
+
+        {3, 20, true}
+    };
+
+    const auto result =
+        select_maps(candidates);
+
+    assert(result.has_value());
+
+    assert(result->easy_id == 1);
+
+    // Average using ALL verified maps:
+    //
+    // (0 + 4 + 4 + 4 + 4 + 4 + 4 + 8 + 20) / 9
+    // = 52 / 9
+    // ≈ 5.78
+    //
+    // Cost 4 is closer than cost 8.
+    //
+    // Several maps have cost 4,
+    // so the smallest ID must win.
+
+    assert(result->medium_id == 6);
+
+    assert(result->hard_id == 3);
+}
+
+void test_unverified_maps_do_not_affect_average() {
+
+    const std::vector<MapCandidate> candidates = {
+        {1, 0, true},
+        {2, 4, true},
+        {3, 8, true},
+        {4, 20, true},
+
+        // These must have no influence.
+        {5, 1000, false},
+        {6, -500, false}
+    };
+
+    const auto result =
+        select_maps(candidates);
+
+    assert(result.has_value());
+
+    assert(result->easy_id == 1);
+    assert(result->medium_id == 3);
+    assert(result->hard_id == 4);
+}
+
+void test_multiple_input_orders_produce_same_selection() {
+
+    const std::vector<MapCandidate> first = {
+        {1, 10, true},
+        {2, 18, true},
+        {3, 21, true},
+        {4, 32, true}
+    };
+
+    const std::vector<MapCandidate> second = {
+        {4, 32, true},
+        {3, 21, true},
+        {2, 18, true},
+        {1, 10, true}
+    };
+
+    const std::vector<MapCandidate> third = {
+        {2, 18, true},
+        {4, 32, true},
+        {1, 10, true},
+        {3, 21, true}
+    };
+
+    const auto result1 =
+        select_maps(first);
+
+    const auto result2 =
+        select_maps(second);
+
+    const auto result3 =
+        select_maps(third);
+
+    assert(result1.has_value());
+    assert(result2.has_value());
+    assert(result3.has_value());
+
+    assert(result1->easy_id == result2->easy_id);
+    assert(result1->easy_id == result3->easy_id);
+
+    assert(result1->medium_id == result2->medium_id);
+    assert(result1->medium_id == result3->medium_id);
+
+    assert(result1->hard_id == result2->hard_id);
+    assert(result1->hard_id == result3->hard_id);
+}
+void test_three_distinct_costs_with_duplicates_are_valid() {
+
+    const std::vector<MapCandidate> candidates = {
+        {8, 10, true},
+        {2, 10, true},
+
+        {7, 20, true},
+        {3, 20, true},
+        {6, 20, true},
+
+        {9, 30, true},
+        {4, 30, true}
+    };
+
+    const auto result =
+        select_maps(candidates);
+
+    assert(result.has_value());
+
+    assert(result->easy_id == 2);
+    assert(result->medium_id == 3);
+    assert(result->hard_id == 4);
+}
+
 void run_map_selector_tests() {
 
     test_empty_collection();
@@ -363,6 +495,14 @@ void run_map_selector_tests() {
     test_negative_verified_cost_is_rejected();
 
     test_negative_cost_on_unverified_map_is_ignored();
+
+    test_average_uses_all_verified_maps();
+
+    test_unverified_maps_do_not_affect_average();
+
+    test_multiple_input_orders_produce_same_selection();
+
+    test_three_distinct_costs_with_duplicates_are_valid();
     std::cout
         << "All map selector tests passed!\n";
 }
