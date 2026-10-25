@@ -1,5 +1,8 @@
 #include "circuit_escape/map_generation/map_selector.h"
 
+#include <cmath>
+#include <limits>
+#include <set>
 
 std::optional<MapSelection> select_maps(const std::vector<MapCandidate>& candidates) {
     if (candidates.empty()) {
