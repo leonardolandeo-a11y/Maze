@@ -287,6 +287,54 @@ void test_average_preserves_decimal_part() {
     assert(result->medium_id == 2);
     assert(result->hard_id == 3);
 }
+void test_duplicate_ids_are_rejected() {
+
+    const std::vector<MapCandidate> candidates = {
+        {1, 10, true},
+        {2, 18, true},
+        {2, 25, true},
+        {3, 32, true}
+    };
+
+    const auto result =
+        select_maps(candidates);
+
+    assert(!result.has_value());
+}
+void test_negative_verified_cost_is_rejected() {
+
+    const std::vector<MapCandidate> candidates = {
+        {1, 10, true},
+        {2, -5, true},
+        {3, 20, true},
+        {4, 30, true}
+    };
+
+    const auto result =
+        select_maps(candidates);
+
+    assert(!result.has_value());
+}
+
+void test_negative_cost_on_unverified_map_is_ignored() {
+
+    const std::vector<MapCandidate> candidates = {
+        {1, -100, false},
+
+        {2, 10, true},
+        {3, 18, true},
+        {4, 32, true}
+    };
+
+    const auto result =
+        select_maps(candidates);
+
+    assert(result.has_value());
+
+    assert(result->easy_id == 2);
+    assert(result->medium_id == 3);
+    assert(result->hard_id == 4);
+}
 
 void run_map_selector_tests() {
 
@@ -309,6 +357,12 @@ void run_map_selector_tests() {
     test_input_not_modified();
 
     test_average_preserves_decimal_part();
+
+    test_duplicate_ids_are_rejected();
+
+    test_negative_verified_cost_is_rejected();
+
+    test_negative_cost_on_unverified_map_is_ignored();
     std::cout
         << "All map selector tests passed!\n";
 }

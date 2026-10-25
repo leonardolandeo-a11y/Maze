@@ -1,17 +1,33 @@
 #include "circuit_escape/map_generation/map_selector.h"
 
+#include <cmath>
+#include <limits>
+#include <set>
 
 std::optional<MapSelection> select_maps(const std::vector<MapCandidate>& candidates) {
     if (candidates.empty()) {
         return std::nullopt;
     }
 
+    std::set<std::size_t> seen_ids;
     std::vector<MapCandidate> verified_candidates;
 
     for (const auto& candidate : candidates) {
-        if (candidate.verified_win) {
-            verified_candidates.push_back(candidate);
+
+        // Every map must have a unique identifier.
+        if (!seen_ids.insert(candidate.id).second) {
+            return std::nullopt;
         }
+
+        if (!candidate.verified_win) {
+            continue;
+        }
+
+        if (candidate.minimum_energy_cost < 0) {
+            return std::nullopt;
+        }
+
+        verified_candidates.push_back(candidate);
     }
 
     if (verified_candidates.empty()) {
