@@ -256,6 +256,37 @@ void test_input_not_modified() {
     }
 }
 
+void test_average_preserves_decimal_part() {
+
+    const std::vector<MapCandidate> candidates = {
+
+        {1, 0, true},
+
+        // Average = (0 + 4 + 5 + 9) / 4 = 4.5
+        //
+        // Cost 4 and cost 5 are equally distant.
+        // Therefore the tie must be resolved by ID.
+        //
+        // ID 2 belongs to cost 5,
+        // so Medium must be map 2.
+
+        {8, 4, true},
+        {2, 5, true},
+
+        {3, 9, true}
+    };
+
+
+    const auto result =
+        select_maps(candidates);
+
+
+    assert(result.has_value());
+
+    assert(result->easy_id == 1);
+    assert(result->medium_id == 2);
+    assert(result->hard_id == 3);
+}
 
 void run_map_selector_tests() {
 
@@ -277,7 +308,7 @@ void run_map_selector_tests() {
 
     test_input_not_modified();
 
-
+    test_average_preserves_decimal_part();
     std::cout
         << "All map selector tests passed!\n";
 }
