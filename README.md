@@ -918,3 +918,25 @@ ctest --test-dir build --output-on-failure
 ```
 
 **Circuito de Escape** integra un motor de navegación por turnos desacoplado de la interfaz, reglas configurables, templates, especializaciones, concepts, eventos tipados, polimorfismo dinámico, controladores intercambiables y simulaciones reproducibles dentro de una aplicación de consola construida con C++20.
+
+---
+
+## 25. Proyecto 2: formato de los mapas guardados
+
+El módulo `map_generation/map_storage` escribe un archivo de texto UTF-8 por dificultad en `assets/maps/`: `mapa_facil.txt`, `mapa_medio.txt` y `mapa_dificil.txt`. Solo se guardan mapas seleccionados con una partida ganadora comprobada y reproducible. El archivo representa el estado **inicial** de una partida: interruptores desactivados, baterías y recursos sin consumir.
+
+La primera línea es `CIRCUIT_ESCAPE_MAP 1`. Después se registran, en este orden, los campos `id`, `seed`, `difficulty` (`easy`, `medium`, `hard`), `minimum_energy_cost`, `dimensions` (filas y columnas), `energy` (inicial y máxima), `turn_limit`, `player`, `guard`, `switch_a`, `switch_b`, `exit` (pares fila/columna desde 0), `effects` (recarga por batería, penalización energética por trampa, costo de esperar), `actions` (cantidad y secuencia de `U`, `D`, `L`, `R`, `W`), y `cells`. Después de `cells` hay exactamente una fila de símbolos por fila del tablero; el archivo termina con `end`.
+
+| Símbolo | Contenido |
+|---|---|
+| `.` | Casilla vacía, costo de entrada 1 |
+| `#` | Muro no transitable |
+| `R:n` | Terreno difícil, costo de entrada `n` |
+| `P:n` | Recurso de `n` puntos |
+| `B:n` | Batería de `n` unidades de energía |
+| `T:e:p` | Trampa: penalización de `e` unidades de energía y `p` puntos |
+| `E` | Salida |
+
+Los interruptores, el jugador y el vigilante se identifican por sus coordenadas, sin sobrescribir las casillas del tablero. Las baterías y trampas emplean valores homogéneos dentro de cada mapa, conforme al simulador actual.
+
+Al cargar un archivo se construye `Grid<Cell>` con las dimensiones guardadas y se reconstruye el grafo desde las casillas, sin ejecutar Kruskal. Se comprueban las dimensiones, tipos de casillas, costos, posiciones, costo mínimo calculado con Dijkstra y reproducción de la victoria guardada. Los archivos incompletos, inconsistentes o alterados se rechazan mediante excepciones. El generador y la interfaz del juego conectarán este módulo en la fase de integración del Proyecto 2.
