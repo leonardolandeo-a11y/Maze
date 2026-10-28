@@ -171,7 +171,8 @@ solamente consulta su estado y le entrega acciones.
 initialGrid_ e initialAgent_ conservan el estado inicial para que
 reset() pueda reproducir una nueva simulación.
 ---------------------------------------------------------------------*/
-template<std::size_t Rows, std::size_t Columns>
+// Omitted dimensions select the runtime-sized Grid<Cell> specialization.
+template<std::size_t Rows = 0, std::size_t Columns = 0>
 class NavigationEnvironment {
     Grid<Cell, Rows, Columns> initialGrid_;
     Grid<Cell, Rows, Columns> grid_;
@@ -253,8 +254,8 @@ class NavigationEnvironment {
             );
 
         return Position{
-            index/Columns, 
-            index%Columns 
+            index / grid_.columns(),
+            index % grid_.columns()
         };
     }
     /*---------------------------------------------------------------------

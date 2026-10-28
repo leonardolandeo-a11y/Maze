@@ -692,7 +692,138 @@ void test_difficulty_profiles() {
     assert(hard.trapScorePenalty == 2);
 }
 
+// Runtime-sized environments reuse the same movement and reset logic as static grids.
+void test_runtime_environment_dimensions() {
+    for (const Position dimensions : {Position{10, 15}, Position{20, 30}, Position{40, 60}}) {
+        Grid<Cell> grid(dimensions.row, dimensions.column);
+        const Position exit{dimensions.row - 1, dimensions.column - 1};
+        grid.at(exit) = Exit{};
+
+        NavigationEnvironment<> environment(
+            grid, Agent({0, 0}, 10, 10), testRules()
+        );
+
+        assert(environment.grid().rows() == dimensions.row);
+        assert(environment.grid().columns() == dimensions.column);
+        assert(environment.state().goal == exit);
+        assert((environment.state().agent == Position{0, 0}));
+        assert(environment.availableActions().size() == 3); // right, down, wait
+
+        const StepResult moved = environment.step(Action::right);
+        assert((moved.observation.agent == Position{0, 1}));
+        assert(moved.observation.energy == 9);
+        assert(moved.observation.turn == 1);
+        assert(!moved.finished);
+
+        environment.reset(42);
+        assert((environment.state().agent == Position{0, 0}));
+        assert(environment.state().energy == 10);
+        assert(environment.state().turn == 0);
+        assert(environment.state().goal == exit);
+    }
+}
+
+void test_runtime_environment_interactions_and_reset() {
+    Grid<Cell> grid(2, 5);
+    grid.at({0, 1}) = Wall{};
+    grid.at({1, 0}) = Battery{};
+    grid.at({1, 1}) = ResourceCell<int>{5};
+    grid.at({1, 2}) = RoughTerrain{};
+    grid.at({1, 3}) = Trap{};
+    grid.at({1, 4}) = Exit{};
+
+    NavigationEnvironment<> environment(
+        grid, Agent({0, 0}, 8, 10), testRules()
+    );
+    assert(environment.state().goal == (Position{1, 4}));
+
+    const StepResult rejected = environment.step(Action::right);
+    assert((rejected.observation.agent == Position{0, 0}));
+    assert(rejected.observation.energy == 7);
+    assert(std::holds_alternative<MovementRejectedEvent>(rejected.events.back()));
+
+    const StepResult recharged = environment.step(Action::down);
+    assert(recharged.observation.energy == 9); // 7 - 1 + 3
+    assert(std::get<Battery>(environment.grid().at({1, 0})).consumed);
+
+    const StepResult collected = environment.step(Action::right);
+    assert(collected.observation.score == 5);
+    assert(collected.observation.collectedResources == 1);
+    assert(std::get<ResourceCell<int>>(environment.grid().at({1, 1})).collected);
+
+    const StepResult rough = environment.step(Action::right);
+    assert(rough.observation.energy == 6); // 9 - 1 - 2
+
+    const StepResult trapped = environment.step(Action::right);
+    assert(trapped.observation.energy == 3); // 6 - 1 - 2
+    assert(trapped.observation.score == 4);
+
+    const StepResult escaped = environment.step(Action::right);
+    assert(escaped.finished);
+    assert(escaped.reason == EndReason::goalReached);
+    assert((escaped.observation.agent == Position{1, 4}));
+    assert(escaped.observation.energy == 2);
+
+    environment.reset(123);
+    assert(!environment.isFinished());
+    assert(environment.state().turn == 0);
+    assert(environment.state().energy == 8);
+    assert(environment.state().score == 0);
+    assert(environment.state().collectedResources == 0);
+    assert(!std::get<Battery>(environment.grid().at({1, 0})).consumed);
+    assert(!std::get<ResourceCell<int>>(environment.grid().at({1, 1})).collected);
+}
+
+void test_runtime_environment_validates_start_and_exit() {
+    Grid<Cell> grid(3, 4);
+    grid.at({2, 3}) = Exit{};
+
+    bool rejected = false;
+    try {
+        NavigationEnvironment<> invalid(grid, Agent({3, 0}, 10, 10), testRules());
+        (void)invalid;
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    assert(rejected);
+
+    grid.at({0, 0}) = Wall{};
+    rejected = false;
+    try {
+        NavigationEnvironment<> invalid(grid, Agent({0, 0}, 10, 10), testRules());
+        (void)invalid;
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    assert(rejected);
+
+    grid.at({0, 0}) = Empty{};
+    grid.at({2, 3}) = Empty{};
+    rejected = false;
+    try {
+        NavigationEnvironment<> invalid(grid, Agent({0, 0}, 10, 10), testRules());
+        (void)invalid;
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    assert(rejected);
+
+    grid.at({2, 3}) = Exit{};
+    grid.at({0, 2}) = Exit{};
+    rejected = false;
+    try {
+        NavigationEnvironment<> invalid(grid, Agent({0, 0}, 10, 10), testRules());
+        (void)invalid;
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    assert(rejected);
+}
+
 void run_environment_tests() {
+    test_runtime_environment_dimensions();
+    test_runtime_environment_interactions_and_reset();
+    test_runtime_environment_validates_start_and_exit();
     test_movimiento_libre();
     test_movimiento_contra_muro();
     test_movimiento_fuera_del_tablero();
