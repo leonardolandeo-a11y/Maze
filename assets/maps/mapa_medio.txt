@@ -1,0 +1,27 @@
+CIRCUIT_ESCAPE_MAP 1
+id 6
+seed 3041725071
+difficulty medium
+minimum_energy_cost 25
+dimensions 10 15
+energy 100 100
+turn_limit 150
+player 7 5
+guard 1 13
+switch_a 7 11
+switch_b 1 11
+exit 1 7
+effects 3 2 1
+actions 29 R R R R R R L L U U L L L L U U U L U R R R R R R L L L L
+cells
+# # # # # # # # # # # # # # #
+# . . R:2 . . . E R:2 . R:2 . . . #
+# # # R:2 # . # . # . # . # . #
+# . R:2 . . . # . # . # . # . #
+# # # # # R:2 # # # . # # # . #
+# . # . . . . . . . . . # . #
+# . # . # . # # # . # # # # #
+# . . R:2 . . R:2 . R:2 . . . . . #
+# # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # #
+end

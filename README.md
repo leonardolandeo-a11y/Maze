@@ -940,3 +940,21 @@ La primera línea es `CIRCUIT_ESCAPE_MAP 1`. Después se registran, en este orde
 Los interruptores, el jugador y el vigilante se identifican por sus coordenadas, sin sobrescribir las casillas del tablero. Las baterías y trampas emplean valores homogéneos dentro de cada mapa, conforme al simulador actual.
 
 Al cargar un archivo se construye `Grid<Cell>` con las dimensiones guardadas y se reconstruye el grafo desde las casillas, sin ejecutar Kruskal. Se comprueban las dimensiones, tipos de casillas, costos, posiciones, costo mínimo calculado con Dijkstra y reproducción de la victoria guardada. Los archivos incompletos, inconsistentes o alterados se rechazan mediante excepciones. El generador y la interfaz del juego conectarán este módulo en la fase de integración del Proyecto 2.
+
+---
+
+## 26. Proyecto 2: generador independiente de mapas
+
+El ejecutable `map_generator` usa `MapBatchRunner` para construir hasta 10 mapas con Kruskal, validar rutas con Dijkstra y verificar partidas ganadoras. Entre los mapas aceptados, el selector elige tres dificultades con costos distintos. Si un lote no produce tres dificultades, informa el motivo y se debe repetir con otra semilla o configuración, sin guardar archivos incompletos.
+
+Para compilar y ejecutar el generador desde la raíz del repositorio:
+
+```bash
+cmake -S . -B build
+cmake --build build --target map_generator
+./build/map_generator --rows 10 --columns 15 --seed 12345 --workers 4 --candidates 10 --output assets/maps
+```
+
+En Windows con CLion, seleccionar el target `map_generator` y configurar el directorio de trabajo en la raíz de Maze, o ejecutar `cmake-build-debug\map_generator.exe` desde PowerShell situado en esa carpeta. Usar `map_generator --help` para consultar todas las opciones.
+
+El generador imprime los identificadores, semillas, costos, motivos de rechazo y tiempos de las dos fases. Al completar el lote, escribe `mapa_facil.txt`, `mapa_medio.txt` y `mapa_dificil.txt` en el directorio seleccionado. Si faltan tres niveles, termina con código `2`; los argumentos inválidos o errores de lectura/escritura producen código `1`. Un resultado válido termina con código `0`. La interfaz del juego integrará la carga de estos archivos en una etapa posterior.

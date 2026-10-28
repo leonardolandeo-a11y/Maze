@@ -16,6 +16,7 @@ void run_map_validator_tests();
 void run_game_verifier_tests();
 void run_map_batch_tests();
 void run_map_storage_tests();
+void run_map_generator_cli_tests();
 
 int main() {
 
@@ -37,5 +38,6 @@ int main() {
     run_game_verifier_tests();
     run_map_batch_tests();
     run_map_storage_tests();
+    run_map_generator_cli_tests();
     return 0;
 }
