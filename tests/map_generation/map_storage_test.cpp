@@ -233,6 +233,34 @@ void selected_maps_test(const std::filesystem::path& folder) {
     check("mapa_facil.txt", result.selection->easy_id, SavedDifficulty::easy);
     check("mapa_medio.txt", result.selection->medium_id, SavedDifficulty::medium);
     check("mapa_dificil.txt", result.selection->hard_id, SavedDifficulty::hard);
+    // An invalid destination must not overwrite another map from the existing set.
+    const auto blocked = folder / "blocked_output";
+    std::filesystem::create_directories(blocked);
+    {
+        std::ofstream previous(blocked / "mapa_facil.txt");
+        previous << "previous easy map\n";
+    }
+    std::filesystem::create_directory(blocked / "mapa_medio.txt");
+    expect_failure([&] { save_selected_maps(result, blocked); });
+    {
+        std::ifstream preserved(blocked / "mapa_facil.txt");
+        std::string line;
+        std::getline(preserved, line);
+        assert(line == "previous easy map");
+    }
+    assert(std::filesystem::is_directory(blocked / "mapa_medio.txt"));
+    assert(!std::filesystem::exists(blocked / "mapa_dificil.txt"));
+    // No temporary files should be left after a rejected save.
+    for (const auto& item : std::filesystem::directory_iterator(blocked)) {
+        assert(item.path().filename().string().find(".circuit_escape_stage_") == std::string::npos);
+    }
+
+    // Re-saving to an existing destination must update the whole verified set.
+    save_selected_maps(result, folder / "selected");
+    check("mapa_facil.txt", result.selection->easy_id, SavedDifficulty::easy);
+    check("mapa_medio.txt", result.selection->medium_id, SavedDifficulty::medium);
+    check("mapa_dificil.txt", result.selection->hard_id, SavedDifficulty::hard);
+
     MapBatchResult empty;
     expect_failure([&] { save_selected_maps(empty, folder / "no_selection"); });
     MapBatchEntry unverified;

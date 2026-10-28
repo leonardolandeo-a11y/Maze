@@ -2,6 +2,7 @@
 #include "circuit_escape/graph.h"
 
 #include <algorithm>
+#include <array>
 #include <charconv>
 #include <fstream>
 #include <limits>
@@ -385,8 +386,81 @@ void save_selected_maps(const MapBatchResult& batch, const std::filesystem::path
         selected_entry(batch, batch.selection->medium_id), SavedDifficulty::medium);
     const SavedMap hard = make_saved_map(
         selected_entry(batch, batch.selection->hard_id), SavedDifficulty::hard);
+
+    constexpr std::array<const char*, 3> filenames{
+        "mapa_facil.txt", "mapa_medio.txt", "mapa_dificil.txt"
+    };
+    const std::array<const SavedMap*, 3> maps{&easy, &medium, &hard};
     std::filesystem::create_directories(directory);
-    save_map(easy, directory / "mapa_facil.txt");
-    save_map(medium, directory / "mapa_medio.txt");
-    save_map(hard, directory / "mapa_dificil.txt");
+
+    // A directory or a symbolic link must never be replaced by a generated map.
+    // Check all three destinations before writing anything.
+    for (const char* filename : filenames) {
+        const auto destination = directory / filename;
+        if (std::filesystem::is_symlink(destination) ||
+            (std::filesystem::exists(destination) &&
+             !std::filesystem::is_regular_file(destination))) {
+            throw std::runtime_error("Map output path is not a regular file: " +
+                                     destination.string());
+        }
+    }
+
+    // Write and validate all three maps before touching the existing files.
+    // The temporary directory is on the same volume, so the final moves are renames.
+    std::filesystem::path staging;
+    for (std::size_t attempt = 0; attempt < 128; ++attempt) {
+        const auto candidate = directory / (".circuit_escape_stage_" + std::to_string(attempt));
+        if (std::filesystem::create_directory(candidate)) {
+            staging = candidate;
+            break;
+        }
+    }
+    if (staging.empty()) {
+        throw std::runtime_error("Cannot reserve a temporary map output directory");
+    }
+
+    std::array<bool, 3> backed_up{};
+    std::array<bool, 3> installed{};
+    try {
+        for (std::size_t i = 0; i < filenames.size(); ++i) {
+            save_map(*maps[i], staging / filenames[i]);
+        }
+
+        for (std::size_t i = 0; i < filenames.size(); ++i) {
+            const auto destination = directory / filenames[i];
+            if (std::filesystem::exists(destination)) {
+                std::filesystem::rename(destination,
+                                        staging / (std::string("backup_") + filenames[i]));
+                backed_up[i] = true;
+            }
+            std::filesystem::rename(staging / filenames[i], destination);
+            installed[i] = true;
+        }
+    } catch (...) {
+        // Restore the previous complete set if any write/rename fails.
+        bool restored = true;
+        for (std::size_t i = filenames.size(); i-- > 0;) {
+            std::error_code error;
+            if (installed[i]) {
+                std::filesystem::remove(directory / filenames[i], error);
+                if (error) restored = false;
+            }
+            if (backed_up[i]) {
+                error.clear();
+                std::filesystem::rename(
+                    staging / (std::string("backup_") + filenames[i]),
+                    directory / filenames[i], error);
+                if (error) restored = false;
+            }
+        }
+        if (!restored) {
+            throw std::runtime_error("Map save failed and automatic restoration was incomplete; "
+                                     "recover backup files from " + staging.string());
+        }
+        std::error_code cleanup_error;
+        std::filesystem::remove_all(staging, cleanup_error);
+        throw;
+    }
+    std::error_code cleanup_error;
+    std::filesystem::remove_all(staging, cleanup_error);
 }
