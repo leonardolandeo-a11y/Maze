@@ -68,7 +68,6 @@ private:
     std::vector<int> trap_score_values_;
     std::vector<int> resource_indices_;
     std::vector<std::vector<std::size_t>> reversed_neighbors_;
-    std::vector<std::vector<std::size_t>> ordered_neighbors_;
 
     [[nodiscard]] std::size_t index(Position position) const;
     [[nodiscard]] Position position(std::size_t index) const;

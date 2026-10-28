@@ -2,6 +2,7 @@
 
 #include "circuit_escape/types.h"
 #include "circuit_escape/environment.h"
+#include "circuit_escape/project2_contracts.h"
 
 #include <concepts>
 #include <cstdint>
@@ -82,3 +83,21 @@ struct HeuristicPolicy {
         std::span<const Action> legalActions
     );
 };
+
+// Project 2 guard policy: choose the first step of a shortest unweighted
+// route towards the player. Ties follow up, left, right, down.
+// The graph is owned by the caller and must outlive this policy.
+class GuardBfsPolicy {
+public:
+    explicit GuardBfsPolicy(const GraphData& graph) noexcept : graph_(graph) {}
+
+    Action selectAction(
+        const Observation& observation,
+        std::span<const Action> legalActions
+    ) const;
+
+private:
+    const GraphData& graph_;
+};
+
+static_assert(NavigationPolicy<GuardBfsPolicy>);

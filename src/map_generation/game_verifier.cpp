@@ -1,4 +1,5 @@
 #include "circuit_escape/map_generation/game_verifier.h"
+#include "circuit_escape/controllers.h"
 
 #include <algorithm>
 #include <array>
@@ -84,7 +85,6 @@ GameVerifier::GameVerifier(MapValidationInput input, GameEffects effects)
     trap_score_values_.assign(vertex_count, 1);
     resource_indices_.assign(vertex_count, -1);
     reversed_neighbors_.resize(vertex_count);
-    ordered_neighbors_ = input_.graph.neighbors;
 
     for (std::size_t vertex = 0; vertex < vertex_count; ++vertex) {
         for (std::size_t adjacent : input_.graph.neighbors[vertex]) {
@@ -101,21 +101,6 @@ GameVerifier::GameVerifier(MapValidationInput input, GameEffects effects)
                 reversed_neighbors_[adjacent].push_back(vertex);
             }
         }
-    }
-
-    for (std::size_t vertex = 0; vertex < vertex_count; ++vertex) {
-        const Position from = position(vertex);
-        std::sort(ordered_neighbors_[vertex].begin(), ordered_neighbors_[vertex].end(),
-            [this, from](std::size_t first, std::size_t second) {
-                const auto rank = [this, from](std::size_t candidate) {
-                    const Position target = position(candidate);
-                    if (target.row < from.row) return 0;
-                    if (target.column < from.column) return 1;
-                    if (target.column > from.column) return 2;
-                    return 3;
-                };
-                return rank(first) < rank(second);
-            });
     }
 
     for (std::size_t battery = 0; battery < effects_.batteries.size(); ++battery) {
@@ -180,32 +165,34 @@ Position GameVerifier::guard_next_step(Position guard, Position player) const {
 }
 
 Position GameVerifier::next_guard_position(Position guard, Position player) const {
-    const std::size_t source = index(guard);
-    const std::size_t destination = index(player);
-    if (source == destination) {
-        return guard;
-    }
-    const std::size_t vertex_count = input_.graph.rows * input_.graph.columns;
-    std::vector<std::size_t> first_step(vertex_count, unreachable);
-    std::queue<std::size_t> pending;
-    first_step[source] = source;
-    pending.push(source);
+    if (guard == player) return guard;
 
-    while (!pending.empty()) {
-        const std::size_t current = pending.front();
-        pending.pop();
-        for (std::size_t adjacent : ordered_neighbors_[current]) {
-            if (input_.graph.blocked[adjacent] || first_step[adjacent] != unreachable) {
-                continue;
-            }
-            first_step[adjacent] = current == source ? adjacent : first_step[current];
-            if (adjacent == destination) {
-                return position(first_step[adjacent]);
-            }
-            pending.push(adjacent);
+    // Use the same IController adapter as Project 1 simulations. The BFS
+    // policy is shared by the validator and the live Project 2 session.
+    constexpr std::array<Action, 4> directions{
+        Action::up, Action::left, Action::right, Action::down
+    };
+    std::vector<Action> legal_actions;
+    const std::size_t current = index(guard);
+    for (Action action : directions) {
+        const auto next = neighbor(guard, action);
+        if (!next || next->row >= input_.graph.rows ||
+            next->column >= input_.graph.columns) continue;
+        const std::size_t next_vertex = index(*next);
+        if (input_.graph.blocked[next_vertex]) continue;
+        const auto& edges = input_.graph.neighbors[current];
+        if (std::find(edges.begin(), edges.end(), next_vertex) != edges.end()) {
+            legal_actions.push_back(action);
         }
     }
-    return guard;
+    legal_actions.push_back(Action::wait);
+
+    PolicyController<GuardBfsPolicy> controller{GuardBfsPolicy{input_.graph}};
+    Observation observation{};
+    observation.agent = guard;
+    observation.goal = player;
+    const Action selected = controller.selectAction(observation, legal_actions);
+    return neighbor(guard, selected).value_or(guard);
 }
 
 GameState GameVerifier::step(const GameState& state, Action action) const {
