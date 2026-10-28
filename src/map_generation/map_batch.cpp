@@ -1,4 +1,5 @@
 #include "circuit_escape/map_generation/map_batch.h"
+#include "circuit_escape/graph.h"
 
 #include <algorithm>
 #include <atomic>
@@ -53,38 +54,6 @@ std::size_t distance(Position first, Position second) {
     const std::size_t row = first.row > second.row ? first.row - second.row : second.row - first.row;
     const std::size_t column = first.column > second.column ? first.column - second.column : second.column - first.column;
     return row + column;
-}
-
-GraphData graph_from_grid(const Grid<Cell>& grid) {
-    GraphData graph;
-    graph.rows = grid.rows();
-    graph.columns = grid.columns();
-    const std::size_t count = graph.rows * graph.columns;
-    graph.neighbors.resize(count);
-    graph.blocked.resize(count);
-    graph.entry_costs.resize(count, 1);
-
-    for (std::size_t row = 0; row < graph.rows; ++row) {
-        for (std::size_t column = 0; column < graph.columns; ++column) {
-            const std::size_t vertex = row * graph.columns + column;
-            const Cell& cell = grid.at({row, column});
-            graph.blocked[vertex] = !isTraversable(cell);
-            if (const auto* rough = std::get_if<RoughTerrain>(&cell)) {
-                graph.entry_costs[vertex] = rough->energyCost;
-            }
-            if (graph.blocked[vertex]) continue;
-            const auto connect = [&](std::size_t adjacent_row, std::size_t adjacent_column) {
-                if (isTraversable(grid.at({adjacent_row, adjacent_column}))) {
-                    graph.neighbors[vertex].push_back(adjacent_row * graph.columns + adjacent_column);
-                }
-            };
-            if (row > 0) connect(row - 1, column);
-            if (column > 0) connect(row, column - 1);
-            if (column + 1 < graph.columns) connect(row, column + 1);
-            if (row + 1 < graph.rows) connect(row + 1, column);
-        }
-    }
-    return graph;
 }
 
 template<typename Work>

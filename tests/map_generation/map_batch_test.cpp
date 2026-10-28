@@ -1,12 +1,52 @@
 #include "circuit_escape/map_generation/map_batch.h"
+#include "circuit_escape/graph.h"
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <stdexcept>
 #include <utility>
 #include <vector>
 
 namespace {
+
+void graph_conversion_test() {
+    Grid<Cell> grid(3, 4);
+    grid.at({1, 1}) = Wall{};
+    grid.at({1, 2}) = RoughTerrain{4};
+    grid.at({0, 2}) = Battery{6, false};
+    grid.at({2, 3}) = Exit{};
+
+    const GraphData graph = graph_from_grid(grid);
+    assert(graph.rows == 3 && graph.columns == 4);
+    assert(graph.neighbors.size() == 12);
+    assert(graph.blocked.size() == 12);
+    assert(graph.entry_costs.size() == 12);
+    assert(graph.blocked[5]);
+    assert(graph.neighbors[5].empty());
+    assert((graph.neighbors[0] == std::vector<std::size_t>{1, 4}));
+    assert((graph.neighbors[4] == std::vector<std::size_t>{0, 8}));
+    assert((graph.neighbors[6] == std::vector<std::size_t>{2, 7, 10}));
+    assert(graph.entry_costs[6] == 4);
+    assert(graph.entry_costs[2] == 1);
+    assert(graph.entry_costs[11] == 1);
+
+    for (const auto& [rows, columns] : {
+             std::pair<std::size_t, std::size_t>{10, 15},
+             {20, 30}, {40, 60}}) {
+        Grid<Cell> empty_grid(rows, columns);
+        const GraphData connected = graph_from_grid(empty_grid);
+        assert(connected.rows == rows && connected.columns == columns);
+        std::size_t connections = 0;
+        for (const auto& neighbors : connected.neighbors) {
+            connections += neighbors.size();
+            for (const std::size_t neighbor : neighbors) {
+                assert(neighbor < connected.neighbors.size());
+            }
+        }
+        assert(connections == 2 * ((rows - 1) * columns + rows * (columns - 1)));
+    }
+}
 
 void expect_invalid(const MapBatchConfig& config) {
     bool caught = false;
@@ -206,6 +246,7 @@ void dimensions_and_rejections_test() {
 }
 
 void run_map_batch_tests() {
+    graph_conversion_test();
     invalid_configuration_test();
     generated_candidate_integrity_test();
     deterministic_workers_test();

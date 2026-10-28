@@ -1,4 +1,5 @@
 #include "circuit_escape/map_generation/map_storage.h"
+#include "circuit_escape/graph.h"
 
 #include <algorithm>
 #include <charconv>
@@ -146,37 +147,6 @@ std::string cell_token(const Cell& cell) {
     return "T:" + std::to_string(value.energyPenalty) + ":" + std::to_string(value.scorePenalty);
 }
 
-GraphData graph_from_cells(const Grid<Cell>& grid) {
-    GraphData graph;
-    graph.rows = grid.rows();
-    graph.columns = grid.columns();
-    const std::size_t count = graph.rows * graph.columns;
-    graph.neighbors.resize(count);
-    graph.blocked.resize(count);
-    graph.entry_costs.resize(count, 1);
-    for (std::size_t row = 0; row < graph.rows; ++row) {
-        for (std::size_t column = 0; column < graph.columns; ++column) {
-            const std::size_t vertex = row * graph.columns + column;
-            const Cell& cell = grid.at({row, column});
-            graph.blocked[vertex] = !isTraversable(cell);
-            if (const auto* rough = std::get_if<RoughTerrain>(&cell)) {
-                graph.entry_costs[vertex] = rough->energyCost;
-            }
-            if (graph.blocked[vertex]) continue;
-            const auto connect = [&](std::size_t r, std::size_t c) {
-                if (isTraversable(grid.at({r, c}))) {
-                    graph.neighbors[vertex].push_back(r * graph.columns + c);
-                }
-            };
-            if (row > 0) connect(row - 1, column);
-            if (column > 0) connect(row, column - 1);
-            if (column + 1 < graph.columns) connect(row, column + 1);
-            if (row + 1 < graph.rows) connect(row + 1, column);
-        }
-    }
-    return graph;
-}
-
 void verify_map(const SavedMap& map) {
     const std::size_t rows = map.grid.rows();
     const std::size_t columns = map.grid.columns();
@@ -185,7 +155,7 @@ void verify_map(const SavedMap& map) {
         throw std::invalid_argument("Invalid saved map metadata");
     }
     (void)difficulty_name(map.difficulty);
-    const GraphData rebuilt = graph_from_cells(map.grid);
+    const GraphData rebuilt = graph_from_grid(map.grid);
     const GraphData& graph = map.input.graph;
     if (graph.rows != rows || graph.columns != columns ||
         graph.neighbors != rebuilt.neighbors || graph.blocked != rebuilt.blocked ||
@@ -400,7 +370,7 @@ SavedMap load_map(const std::filesystem::path& path) {
     std::string trailing;
     if (input >> trailing) throw std::runtime_error("Unexpected trailing map file content");
     map.input.has_batteries = !map.effects.batteries.empty();
-    map.input.graph = graph_from_cells(map.grid);
+    map.input.graph = graph_from_grid(map.grid);
     verify_map(map);
     return map;
 }
