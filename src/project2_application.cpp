@@ -237,7 +237,11 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
 
     Component component = CatchEvent(renderer, [&](const Event& event) {
         if (startup_active) {
-            if (event == Event::Return) startup_active = false;
+            if (event == Event::Character('q') || event == Event::Character('Q')) {
+                screen.Exit();
+            } else if (event == Event::Return) {
+                startup_active = false;
+            }
             return true;
         }
         if (event == Event::Character('q') || event == Event::Character('Q')) {
@@ -317,14 +321,23 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
         while (running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(60));
             if (!running) break;
+            // Frame counters are owned by the FTXUI event thread. The timer
+            // thread only reads atomic animation flags and posts callbacks.
             if (startup_active) {
                 screen.Post([&] {
-                    if (++startup_frame >= StartupAnimation::maxFrames) startup_active = false;
+                    if (startup_active && ++startup_frame >= StartupAnimation::maxFrames)
+                        startup_active = false;
                 });
-            } else if (victory_active && victory_frame < VictoryAnimation::maxFrames) {
-                screen.Post([&] { ++victory_frame; });
-            } else if (death_active && death_frame < DeathAnimation::maxFrames) {
-                screen.Post([&] { ++death_frame; });
+            } else if (victory_active) {
+                screen.Post([&] {
+                    if (victory_active && victory_frame < VictoryAnimation::maxFrames)
+                        ++victory_frame;
+                });
+            } else if (death_active) {
+                screen.Post([&] {
+                    if (death_active && death_frame < DeathAnimation::maxFrames)
+                        ++death_frame;
+                });
             } else {
                 continue;
             }
