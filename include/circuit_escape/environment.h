@@ -34,7 +34,8 @@ enum class EndReason {
     none,
     goalReached,
     noEnergy,
-    turnLimit
+    turnLimit,
+    captured
 };
 
 // Representa una posible condición de término y el motivo asociado.

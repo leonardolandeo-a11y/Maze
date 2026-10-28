@@ -115,6 +115,28 @@ void battery_and_trap_test() {
     assert(without_battery.replay({Action::right, Action::right, Action::right, Action::right}).outcome == GameOutcome::energy_depleted);
 }
 
+void resource_and_score_test() {
+    auto input = isolated_guard_map();
+    input.initial_energy = 20;
+    input.maximum_energy = 20;
+    GameEffects effects;
+    effects.resources = {{{0, 1}, 10}};
+    effects.traps = {{0, 2}};
+    effects.trap_score_penalties = {{{0, 2}, 2}};
+    effects.trap_energy_penalty = 1;
+    const GameVerifier game(input, effects);
+    const auto start = game.initial_state();
+    assert(start.score == 0 && start.resource_count == 0);
+    const auto collected = game.step(start, Action::right);
+    assert(collected.score == 10 && collected.resource_count == 1);
+    const auto trapped = game.step(collected, Action::right);
+    assert(trapped.score == 8 && trapped.resource_count == 1);
+    const auto back = game.step(trapped, Action::left);
+    assert(back.score == 8 && back.resource_count == 1);
+    const auto again = game.step(back, Action::right);
+    assert(again.score == 6 && again.resource_count == 1);
+}
+
 void limit_and_wait_test() {
     auto input = isolated_guard_map();
     input.turn_limit = 3;
@@ -224,6 +246,7 @@ void run_game_verifier_tests() {
     guard_even_turn_capture_test();
     capture_priority_test();
     battery_and_trap_test();
+    resource_and_score_test();
     limit_and_wait_test();
     blocked_and_validation_test();
     different_sizes_test();

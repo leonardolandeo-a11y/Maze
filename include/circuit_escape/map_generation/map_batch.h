@@ -25,6 +25,9 @@ struct MapBatchConfig {
     int rough_terrain_cost{2};
     std::size_t battery_count{};
     std::size_t trap_count{};
+    std::size_t resource_count{};
+    int resource_points{10};
+    int trap_score_penalty{1};
     int battery_recharge{3};
     int trap_energy_penalty{2};
     std::size_t maximum_search_states{20'000};

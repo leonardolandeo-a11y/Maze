@@ -26,7 +26,8 @@ void validate_config(const MapBatchConfig& config) {
     if (config.initial_energy <= 0 || config.maximum_energy < config.initial_energy ||
         config.turn_limit == 0 || config.rough_terrain_percent > 100 ||
         config.rough_terrain_cost < 1 || config.battery_recharge < 0 ||
-        config.trap_energy_penalty < 0) {
+        config.trap_energy_penalty < 0 || config.resource_points < 0 ||
+        config.trap_score_penalty < 0) {
         throw std::invalid_argument("Invalid map batch rules");
     }
 }
@@ -144,8 +145,9 @@ PreparedMap build_map(const MapBatchConfig& config, std::size_t id, std::uint32_
         }
     }
     if (config.battery_count > available.size() ||
-        config.trap_count > available.size() - config.battery_count) {
-        throw std::invalid_argument("Not enough free cells for batteries and traps");
+        config.trap_count > available.size() - config.battery_count ||
+        config.resource_count > available.size() - config.battery_count - config.trap_count) {
+        throw std::invalid_argument("Not enough free cells for batteries, traps and resources");
     }
 
     for (Position cell : available) {
@@ -164,7 +166,13 @@ PreparedMap build_map(const MapBatchConfig& config, std::size_t id, std::uint32_
     for (std::size_t i = config.battery_count;
          i < config.battery_count + config.trap_count; ++i) {
         effects.traps.push_back(available[i]);
-        maze.grid.at(available[i]) = Trap{config.trap_energy_penalty, 1};
+        effects.trap_score_penalties.emplace_back(available[i], config.trap_score_penalty);
+        maze.grid.at(available[i]) = Trap{config.trap_energy_penalty, config.trap_score_penalty};
+    }
+    for (std::size_t i = config.battery_count + config.trap_count;
+         i < config.battery_count + config.trap_count + config.resource_count; ++i) {
+        effects.resources.emplace_back(available[i], config.resource_points);
+        maze.grid.at(available[i]) = ResourceCell<int>{config.resource_points, false};
     }
     maze.grid.at(exit) = Exit{};
 

@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <utility>
 #include <vector>
 
 enum class GameOutcome {
@@ -22,6 +23,8 @@ struct GameEffects {
     int battery_recharge{3};
     int trap_energy_penalty{2};
     int wait_energy_cost{1};
+    std::vector<std::pair<Position, int>> resources;
+    std::vector<std::pair<Position, int>> trap_score_penalties;
 };
 
 struct GameState {
@@ -32,6 +35,9 @@ struct GameState {
     bool switch_a_active{};
     bool switch_b_active{};
     std::vector<std::uint64_t> consumed_batteries;
+    std::vector<std::uint64_t> collected_resources;
+    int score{};
+    std::size_t resource_count{};
     GameOutcome outcome{GameOutcome::in_progress};
 };
 
@@ -57,6 +63,8 @@ private:
     GameEffects effects_;
     std::vector<int> battery_indices_;
     std::vector<bool> trap_cells_;
+    std::vector<int> trap_score_values_;
+    std::vector<int> resource_indices_;
     std::vector<std::vector<std::size_t>> reversed_neighbors_;
     std::vector<std::vector<std::size_t>> ordered_neighbors_;
 

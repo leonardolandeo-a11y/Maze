@@ -55,6 +55,8 @@ SavedMap verified_fixture(std::size_t rows, std::size_t columns) {
     map.grid.at({rows - 2, columns - 3}) = Wall{};
     map.effects.batteries = {{3, 3}};
     map.effects.traps = {{4, 4}};
+    map.effects.resources = {{{3, 4}, 9}};
+    map.effects.trap_score_penalties = {{{4, 4}, 2}};
     map.effects.battery_recharge = 6;
     map.effects.trap_energy_penalty = 5;
     map.effects.wait_energy_cost = 1;
@@ -103,6 +105,8 @@ void compare_maps(const SavedMap& source, const SavedMap& loaded) {
     assert(source.input.graph.entry_costs == loaded.input.graph.entry_costs);
     assert(source.effects.batteries == loaded.effects.batteries);
     assert(source.effects.traps == loaded.effects.traps);
+    assert(source.effects.resources == loaded.effects.resources);
+    assert(source.effects.trap_score_penalties == loaded.effects.trap_score_penalties);
     assert(source.effects.battery_recharge == loaded.effects.battery_recharge);
     assert(source.effects.trap_energy_penalty == loaded.effects.trap_energy_penalty);
     assert(source.effects.wait_energy_cost == loaded.effects.wait_energy_cost);

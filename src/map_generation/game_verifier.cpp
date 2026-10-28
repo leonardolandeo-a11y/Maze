@@ -81,6 +81,8 @@ GameVerifier::GameVerifier(MapValidationInput input, GameEffects effects)
     const std::size_t vertex_count = input_.graph.rows * input_.graph.columns;
     battery_indices_.assign(vertex_count, -1);
     trap_cells_.assign(vertex_count, false);
+    trap_score_values_.assign(vertex_count, 1);
+    resource_indices_.assign(vertex_count, -1);
     reversed_neighbors_.resize(vertex_count);
     ordered_neighbors_ = input_.graph.neighbors;
 
@@ -136,6 +138,23 @@ GameVerifier::GameVerifier(MapValidationInput input, GameEffects effects)
         }
         trap_cells_[index(cell)] = true;
     }
+    for (const auto& [cell, points] : effects_.trap_score_penalties) {
+        if (cell.row >= input_.graph.rows || cell.column >= input_.graph.columns ||
+            !trap_cells_[index(cell)] || points < 0) {
+            throw std::invalid_argument("Invalid trap score penalty");
+        }
+        trap_score_values_[index(cell)] = points;
+    }
+    for (std::size_t resource = 0; resource < effects_.resources.size(); ++resource) {
+        const auto& [cell, points] = effects_.resources[resource];
+        if (cell.row >= input_.graph.rows || cell.column >= input_.graph.columns ||
+            input_.graph.blocked[index(cell)] || resource_indices_[index(cell)] != -1 ||
+            battery_indices_[index(cell)] >= 0 || trap_cells_[index(cell)] ||
+            points < 0 || resource > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            throw std::invalid_argument("Invalid resource placement or points");
+        }
+        resource_indices_[index(cell)] = static_cast<int>(resource);
+    }
 }
 
 std::size_t GameVerifier::index(Position cell) const {
@@ -152,6 +171,7 @@ GameState GameVerifier::initial_state() const {
     result.guard = input_.guard_start;
     result.energy = input_.initial_energy;
     result.consumed_batteries.resize((effects_.batteries.size() + 63) / 64);
+    result.collected_resources.resize((effects_.resources.size() + 63) / 64);
     return result;
 }
 
@@ -217,8 +237,25 @@ GameState GameVerifier::step(const GameState& state, Action action) const {
                         ));
                     }
                 }
+                const int resource = resource_indices_[vertex];
+                if (resource >= 0) {
+                    const std::size_t group = static_cast<std::size_t>(resource) / 64;
+                    const std::uint64_t bit = std::uint64_t{1} << (resource % 64);
+                    if ((result.collected_resources[group] & bit) == 0) {
+                        result.collected_resources[group] |= bit;
+                        ++result.resource_count;
+                        const std::int64_t score = static_cast<std::int64_t>(result.score) +
+                            effects_.resources[resource].second;
+                        result.score = static_cast<int>(std::min(
+                            score, static_cast<std::int64_t>(std::numeric_limits<int>::max())));
+                    }
+                }
                 if (trap_cells_[vertex]) {
                     result.energy = std::max(0, result.energy - effects_.trap_energy_penalty);
+                    const std::int64_t score = static_cast<std::int64_t>(result.score) -
+                        trap_score_values_[vertex];
+                    result.score = static_cast<int>(std::max(
+                        score, static_cast<std::int64_t>(std::numeric_limits<int>::min())));
                 }
             }
         }

@@ -986,6 +986,9 @@ ftxui::Element DeathAnimation::RenderGameOver(
     else if (reason == EndReason::turnLimit) {
         reasonText = "TURN LIMIT EXCEEDED";
     }
+    else if (reason == EndReason::captured) {
+        reasonText = "CAPTURED BY THE GUARD";
+    }
     else {
         reasonText = "SYSTEM FAILURE";
     }

@@ -43,6 +43,9 @@ void print_usage(std::ostream& output) {
            << "  --rough-cost N        Rough terrain entry cost (default: 2)\n"
            << "  --batteries N         Battery count (default: 0)\n"
            << "  --traps N             Trap count (default: 0)\n"
+           << "  --resources N         Diamond count (default: 0)\n"
+           << "  --resource-points N   Points per diamond (default: 10)\n"
+           << "  --trap-score-penalty N  Points lost per trap (default: 1)\n"
            << "  --battery-recharge N  Energy restored per battery (default: 3)\n"
            << "  --trap-penalty N      Energy penalty per trap (default: 2)\n"
            << "  --search-states N     Verification search budget (default: 20000)\n"
@@ -83,6 +86,9 @@ Options parse_options(const std::vector<std::string>& arguments) {
         else if (key == "--rough-cost") options.config.rough_terrain_cost = read_number<int>(value, key);
         else if (key == "--batteries") options.config.battery_count = read_number<std::size_t>(value, key);
         else if (key == "--traps") options.config.trap_count = read_number<std::size_t>(value, key);
+        else if (key == "--resources") options.config.resource_count = read_number<std::size_t>(value, key);
+        else if (key == "--resource-points") options.config.resource_points = read_number<int>(value, key);
+        else if (key == "--trap-score-penalty") options.config.trap_score_penalty = read_number<int>(value, key);
         else if (key == "--battery-recharge") options.config.battery_recharge = read_number<int>(value, key);
         else if (key == "--trap-penalty") options.config.trap_energy_penalty = read_number<int>(value, key);
         else if (key == "--search-states") options.config.maximum_search_states = read_number<std::size_t>(value, key);

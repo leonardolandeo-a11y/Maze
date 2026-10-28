@@ -198,6 +198,8 @@ void verify_map(const SavedMap& map) {
     }
     std::vector<Position> batteries;
     std::vector<Position> traps;
+    std::vector<std::pair<Position, int>> resources;
+    std::vector<std::pair<Position, int>> trap_scores;
     std::size_t exits = 0;
     for (std::size_t row = 0; row < rows; ++row) {
         for (std::size_t column = 0; column < columns; ++column) {
@@ -205,6 +207,9 @@ void verify_map(const SavedMap& map) {
             const Cell& cell = map.grid.at(position);
             (void)cell_token(cell);
             if (std::holds_alternative<Exit>(cell)) ++exits;
+            if (const auto* resource = std::get_if<ResourceCell<int>>(&cell)) {
+                resources.emplace_back(position, resource->reward);
+            }
             if (const auto* battery = std::get_if<Battery>(&cell)) {
                 if (battery->energy != map.effects.battery_recharge) {
                     throw std::invalid_argument("Battery recharge values are inconsistent");
@@ -216,6 +221,7 @@ void verify_map(const SavedMap& map) {
                     throw std::invalid_argument("Trap energy penalties are inconsistent");
                 }
                 traps.push_back(position);
+                trap_scores.emplace_back(position, trap->scorePenalty);
             }
         }
     }
@@ -225,8 +231,17 @@ void verify_map(const SavedMap& map) {
         });
         return positions;
     };
+    const auto sorted_effects = [](std::vector<std::pair<Position, int>> values) {
+        std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) {
+            return a.first.row < b.first.row ||
+                (a.first.row == b.first.row && a.first.column < b.first.column);
+        });
+        return values;
+    };
     if (exits != 1 || sorted(batteries) != sorted(map.effects.batteries) ||
         sorted(traps) != sorted(map.effects.traps) ||
+        sorted_effects(resources) != sorted_effects(map.effects.resources) ||
+        sorted_effects(trap_scores) != sorted_effects(map.effects.trap_score_penalties) ||
         map.input.has_batteries != !batteries.empty()) {
         throw std::invalid_argument("Map effects and cells do not match");
     }
@@ -363,6 +378,9 @@ SavedMap load_map(const std::filesystem::path& path) {
         for (std::size_t column = 0; column < columns; ++column) {
             const Position position{row, column};
             map.grid.at(position) = parse_cell(read_token(input));
+            if (const auto* resource = std::get_if<ResourceCell<int>>(&map.grid.at(position))) {
+                map.effects.resources.emplace_back(position, resource->reward);
+            }
             if (const auto* battery = std::get_if<Battery>(&map.grid.at(position))) {
                 map.effects.batteries.push_back(position);
                 if (battery->energy != map.effects.battery_recharge) {
@@ -371,6 +389,7 @@ SavedMap load_map(const std::filesystem::path& path) {
             }
             if (const auto* trap = std::get_if<Trap>(&map.grid.at(position))) {
                 map.effects.traps.push_back(position);
+                map.effects.trap_score_penalties.emplace_back(position, trap->scorePenalty);
                 if (trap->energyPenalty != map.effects.trap_energy_penalty) {
                     throw std::runtime_error("Inconsistent trap value");
                 }

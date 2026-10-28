@@ -41,6 +41,12 @@ void invalid_configuration_test() {
     config = {};
     config.maximum_search_states = 0;
     expect_invalid(config);
+    config = {};
+    config.resource_points = -1;
+    expect_invalid(config);
+    config = {};
+    config.trap_score_penalty = -1;
+    expect_invalid(config);
 }
 
 void generated_candidate_integrity_test() {
@@ -49,6 +55,7 @@ void generated_candidate_integrity_test() {
     config.worker_count = 2;
     config.battery_count = 2;
     config.trap_count = 2;
+    config.resource_count = 3;
     config.maximum_search_states = 500;
     const auto batch = run_map_batch(config);
     assert(batch.entries.size() == 3);
@@ -65,6 +72,8 @@ void generated_candidate_integrity_test() {
         assert(entry.map->input.graph.columns == config.columns);
         assert(entry.map->effects.batteries.size() == 2);
         assert(entry.map->effects.traps.size() == 2);
+        assert(entry.map->effects.resources.size() == 3);
+        assert(entry.map->effects.trap_score_penalties.size() == 2);
         assert(entry.map->input.has_batteries);
         assert(entry.map->seed == entry.seed);
         if (entry.winning_game) {
@@ -84,6 +93,9 @@ void deterministic_workers_test() {
     config.candidate_count = 4;
     config.worker_count = 1;
     config.maximum_search_states = 1500;
+    config.resource_count = 2;
+    config.battery_count = 1;
+    config.trap_count = 1;
     const auto single = run_map_batch(config);
     config.worker_count = 4;
     const auto parallel = run_map_batch(config);
@@ -106,6 +118,10 @@ void deterministic_workers_test() {
         if (!a.map) continue;
         const auto& first = *a.map;
         const auto& second = *b.map;
+        assert(first.effects.resources == second.effects.resources);
+        assert(first.effects.batteries == second.effects.batteries);
+        assert(first.effects.traps == second.effects.traps);
+        assert(first.effects.trap_score_penalties == second.effects.trap_score_penalties);
         assert(first.input.player_start == second.input.player_start);
         assert(first.input.guard_start == second.input.guard_start);
         assert(first.input.switch_a == second.input.switch_a);

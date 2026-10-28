@@ -1,0 +1,344 @@
+#include "circuit_escape/console_ui.h"
+#include "circuit_escape/project2_session.h"
+#include "circuit_escape/menus.h"
+
+#include <cassert>
+#include <utility>
+#include <string>
+#include <vector>
+
+#include <ftxui/screen/screen.hpp>
+
+namespace {
+
+SavedMap make_fixture(std::size_t rows, std::size_t columns) {
+    SavedMap map(rows, columns);
+    map.id = 1;
+    map.seed = 12345;
+    map.difficulty = SavedDifficulty::easy;
+    map.minimum_energy_cost = 3;
+    map.grid.at({1, 4}) = Exit{};
+    map.input.graph.rows = rows;
+    map.input.graph.columns = columns;
+    const std::size_t count = rows * columns;
+    map.input.graph.neighbors.resize(count);
+    map.input.graph.blocked.resize(count, false);
+    map.input.graph.entry_costs.resize(count, 1);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t column = 0; column < columns; ++column) {
+            auto& neighbors = map.input.graph.neighbors[row * columns + column];
+            if (row > 0) neighbors.push_back((row - 1) * columns + column);
+            if (column > 0) neighbors.push_back(row * columns + column - 1);
+            if (column + 1 < columns) neighbors.push_back(row * columns + column + 1);
+            if (row + 1 < rows) neighbors.push_back((row + 1) * columns + column);
+        }
+    }
+    map.input.player_start = {1, 1};
+    map.input.guard_start = {rows - 2, columns - 2};
+    map.input.switch_a = {1, 2};
+    map.input.switch_b = {1, 3};
+    map.input.exit = {1, 4};
+    map.input.initial_energy = 100;
+    map.input.maximum_energy = 100;
+    map.input.turn_limit = 150;
+    map.winning_actions = {Action::right, Action::right, Action::right};
+    return map;
+}
+
+std::string render_to_string(const ftxui::Element& element) {
+    auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(140), ftxui::Dimension::Fixed(55));
+    ftxui::Render(screen, element);
+    return screen.ToString();
+}
+
+ftxui::Cell rendered_player(const ftxui::Element& element) {
+    auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(80), ftxui::Dimension::Fixed(30));
+    ftxui::Render(screen, element);
+    for (int row = 0; row < screen.dimy(); ++row) {
+        for (int column = 0; column < screen.dimx(); ++column) {
+            const auto& cell = screen.PixelAt(column, row);
+            if (cell.character == "@") return cell;
+        }
+    }
+    assert(false && "Player marker missing");
+    return {};
+}
+
+}
+
+void project2_items_visual_test() {
+    SavedMap map = make_fixture(10, 15);
+    map.grid.at({1, 0}) = ResourceCell<int>{10, false};
+    map.grid.at({2, 0}) = Battery{5, false};
+    map.grid.at({2, 1}) = Trap{2, 1};
+    map.effects.resources = {{{1, 0}, 10}};
+    map.effects.batteries = {{2, 0}};
+    map.effects.traps = {{2, 1}};
+    map.effects.trap_score_penalties = {{{2, 1}, 1}};
+    map.effects.battery_recharge = 5;
+    map.effects.trap_energy_penalty = 2;
+    Project2Session session(std::move(map));
+    ConsoleUI ui(RenderMode::emoji);
+    const std::string original = render_to_string(ui.render_project2(session));
+    assert(original.find("💎") != std::string::npos);
+    assert(original.find("⚡") != std::string::npos);
+    assert(original.find("💥") != std::string::npos);
+    assert(original.find("Resources 0/1") != std::string::npos);
+    auto state = session.step(Action::left);
+    assert(state.score == 10 && state.resource_count == 1);
+    state = session.step(Action::down);
+    assert(state.energy == 100);
+    assert(session.resource_collected({1, 0}));
+    assert(session.battery_consumed({2, 0}));
+    const std::string consumed = render_to_string(ui.render_project2(session));
+    assert(consumed.find("Resources 1/1") != std::string::npos);
+    assert(consumed.find("Score 10") != std::string::npos);
+    assert(consumed.find("💎") == std::string::npos);
+    assert(consumed.find("⚡") == std::string::npos);
+    state = session.step(Action::right);
+    assert(state.score == 9);
+    state = session.step(Action::left);
+    state = session.step(Action::right);
+    assert(state.score == 8 && state.resource_count == 1);
+    session.reset();
+    assert(session.state().score == 0 && session.state().resource_count == 0);
+    assert(!session.resource_collected({1, 0}));
+    assert(!session.battery_consumed({2, 0}));
+}
+
+void project2_viewport_test() {
+    ConsoleUI ui(RenderMode::emoji);
+    for (const auto& [rows, columns] : {
+            std::pair<std::size_t, std::size_t>{10,15},
+            {20,30}, {40,60}}) {
+        Project2Session session(make_fixture(rows, columns));
+        auto board = ui.render_project2_board(session, {}, Project2MapView::detail);
+        board->ComputeRequirement();
+        assert(board->requirement().min_x == 60);
+        assert(board->requirement().min_y == 20);
+    }
+
+    SavedMap distant = make_fixture(40, 60);
+    distant.input.player_start = {36, 56};
+    distant.input.guard_start = {1, 1};
+    distant.grid.at({36, 55}) = ResourceCell<int>{10, false};
+    distant.grid.at({1, 10}) = Battery{5, false};
+    distant.effects.resources = {{{36, 55}, 10}};
+    distant.effects.batteries = {{1, 10}};
+    Project2Session session(std::move(distant));
+    const auto camera_view = render_to_string(
+        ui.render_project2_board(session, {}, Project2MapView::detail));
+    assert(camera_view.find("🤖") != std::string::npos);
+    assert(camera_view.find("💎") != std::string::npos);
+    assert(camera_view.find("⚡") == std::string::npos);
+}
+
+void project2_full_map_test() {
+    SavedMap map = make_fixture(40, 60);
+    map.input.player_start = {36, 56};
+    map.input.guard_start = {1, 1};
+    map.input.switch_a = {35, 52};
+    map.input.switch_b = {2, 53};
+    map.input.exit = {1, 58};
+    map.grid.at({1, 4}) = Empty{};
+    map.grid.at({1, 58}) = Exit{};
+    Project2Session session(std::move(map));
+    ConsoleUI ui(RenderMode::emoji);
+    auto full = ui.render_project2_board(session);
+    auto detail = ui.render_project2_board(session, {}, Project2MapView::detail);
+    full->ComputeRequirement();
+    detail->ComputeRequirement();
+    assert(full->requirement().min_x == 60);
+    assert(full->requirement().min_y == 20);
+    assert(detail->requirement().min_x == 60);
+    assert(detail->requirement().min_y == 20);
+    const auto full_text = render_to_string(full);
+    const auto detail_text = render_to_string(detail);
+    assert(full_text.find("@") != std::string::npos);
+    assert(full_text.find("00   05") == std::string::npos);
+    assert(full_text.find("V") != std::string::npos);
+    assert(full_text.find("A") != std::string::npos);
+    assert(full_text.find("B") != std::string::npos);
+    assert(full_text.find("S") != std::string::npos);
+    assert(detail_text.find("👀") == std::string::npos);
+    const auto before = session.state();
+    ui.render_project2(session, Project2MapView::detail);
+    ui.render_project2(session, Project2MapView::overview);
+    assert(session.state().turn == before.turn);
+    assert(session.state().energy == before.energy);
+}
+
+void project2_compact_player_row_test() {
+    SavedMap map = make_fixture(40, 60);
+    map.input.player_start = {22, 25};
+    map.input.guard_start = {1, 1};
+    Project2Session session(std::move(map));
+    ConsoleUI ui(RenderMode::emoji);
+
+    const auto upper = render_to_string(ui.render_project2_board(session));
+    assert(upper.find("@") != std::string::npos);
+    const auto upper_player = rendered_player(ui.render_project2_board(session));
+    assert(upper_player.foreground_color == ftxui::Color::RGB(255, 255, 255));
+    assert(upper_player.background_color == ftxui::Color::RGB(15, 110, 157));
+    assert(render_to_string(ui.render_project2(session)).find("Player (22,25)") != std::string::npos);
+    assert(render_to_string(ui.render_project2(session)).find("S = goal") != std::string::npos);
+
+    const auto after_first = session.step(Action::down);
+    assert(after_first.player == (Position{23, 25}));
+    const auto lower = render_to_string(ui.render_project2_board(session));
+    assert(lower.find("@") != std::string::npos);
+    const auto lower_player = rendered_player(ui.render_project2_board(session));
+    assert(lower_player.foreground_color == ftxui::Color::RGB(29, 215, 252));
+    assert(lower_player.background_color == ftxui::Color::RGB(23, 35, 54));
+    assert(upper_player.background_color != lower_player.background_color);
+    assert(render_to_string(ui.render_project2(session)).find("Player (23,25)") != std::string::npos);
+
+    const auto after_second = session.step(Action::down);
+    assert(after_second.player == (Position{24, 25}));
+    const auto next_upper = render_to_string(ui.render_project2_board(session));
+    assert(next_upper.find("@") != std::string::npos);
+    const auto next_player = rendered_player(ui.render_project2_board(session));
+    assert(next_player.background_color == upper_player.background_color);
+    assert(render_to_string(ui.render_project2(session)).find("Player (24,25)") != std::string::npos);
+}
+
+
+void project2_overview_palette_test() {
+    SavedMap map = make_fixture(40, 60);
+    map.grid.at({4, 10}) = ResourceCell<int>{10, false};
+    map.grid.at({6, 11}) = Battery{5, false};
+    map.grid.at({8, 12}) = Trap{2, 1};
+    map.grid.at({1, 4}) = Empty{};
+    map.grid.at({10, 13}) = Exit{};
+    map.input.exit = {10, 13};
+    Project2Session session(std::move(map));
+    ConsoleUI ui(RenderMode::emoji);
+    auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(80), ftxui::Dimension::Fixed(28));
+    ftxui::Render(screen, ui.render_project2_board(session));
+    assert(screen.PixelAt(10, 2).foreground_color == ftxui::Color::RGB(14, 119, 145));
+    assert(screen.PixelAt(11, 3).foreground_color == ftxui::Color::RGB(167, 118, 11));
+    assert(screen.PixelAt(12, 4).foreground_color == ftxui::Color::RGB(170, 41, 57));
+    assert(screen.PixelAt(13, 5).foreground_color == ftxui::Color::RGB(25, 120, 69));
+}
+
+void project2_stable_layout_test() {
+    Project2Session session(make_fixture(40, 60));
+    ConsoleUI ui(RenderMode::emoji);
+    auto overview = ui.render_project2(session, Project2MapView::overview);
+    auto detail = ui.render_project2(session, Project2MapView::detail);
+    const std::vector<std::string> help_lines{
+        "A 18 | B 48 | Exit locked",
+        "Route: CURRENT -> A -> B -> EXIT",
+        "Cost 103 | Remaining 297 | ENOUGH",
+        "Estimate ignores guard movements, batteries and waiting",
+        "Highlight: 1=A 2=B 3=route 0=off | H/Esc back | Z zoom"
+    };
+    auto help_overview = ui.render_project2(session, Project2MapView::overview,
+        std::span<const Position>{}, help_lines);
+    auto help_detail = ui.render_project2(session, Project2MapView::detail,
+        std::span<const Position>{}, help_lines);
+
+    for (auto& element : {overview, detail, help_overview, help_detail}) {
+        element->ComputeRequirement();
+        assert(element->requirement().min_x == 76);
+        assert(element->requirement().min_y == 38);
+    }
+    const auto help_render = render_to_string(help_overview);
+    assert(help_render.find("DIJKSTRA ENERGY HELP") != std::string::npos);
+    assert(help_render.find("Route: CURRENT") != std::string::npos);
+    assert(help_render.find(" MAZE ") != std::string::npos);
+    assert(help_render.find(" STATUS ") != std::string::npos);
+    const auto state = session.state();
+    assert(state.turn == 0 && state.energy == 100);
+}
+
+void project2_responsive_layout_test() {
+    ConsoleUI ui(RenderMode::emoji);
+    for (const auto& [rows, columns] : {
+            std::pair<std::size_t, std::size_t>{10, 15}, {20, 30}, {40, 60}}) {
+        Project2Session session(make_fixture(rows, columns));
+        auto overview = ui.render_project2(session, Project2MapView::overview, {}, {},
+            ftxui::Dimensions{160, 65});
+        auto detail = ui.render_project2(session, Project2MapView::detail, {}, {},
+            ftxui::Dimensions{160, 65});
+        const std::vector<std::string> lines{
+            "A 18 | B 48 | Exit locked",
+            "Route: CURRENT -> A -> B -> EXIT",
+            "Cost 103 | Remaining 297 | ENOUGH"
+        };
+        auto help = ui.render_project2(session, Project2MapView::overview, {}, lines,
+            ftxui::Dimensions{160, 65});
+        overview->ComputeRequirement();
+        detail->ComputeRequirement();
+        help->ComputeRequirement();
+        const int expected_width = columns == 60 ? 128 : (columns == 30 ? 98 : 76);
+        assert(overview->requirement().min_x == expected_width);
+        assert(detail->requirement().min_x == expected_width);
+        assert(help->requirement().min_x == expected_width);
+        assert(overview->requirement().min_y == detail->requirement().min_y);
+        assert(overview->requirement().min_y == help->requirement().min_y);
+        auto board = ui.render_project2_board(session, {}, Project2MapView::overview,
+            expected_width - 6, 44);
+        const std::string map_text = render_to_string(board);
+        assert(map_text.find("@") != std::string::npos);
+        assert(map_text.find("00   05") == std::string::npos);
+        board->ComputeRequirement();
+        assert(board->requirement().min_x <= expected_width - 6);
+        assert(board->requirement().min_y <= 44);
+    }
+    Project2Session large(make_fixture(40, 60));
+    auto expanded = ui.render_project2_board(large, {}, Project2MapView::overview, 122, 44);
+    expanded->ComputeRequirement();
+    // The full-height overview uses all forty independent map rows.
+    assert(expanded->requirement().min_x == 120);
+    assert(expanded->requirement().min_y == 40);
+    auto very_wide = ui.render_project2(large, Project2MapView::overview, {}, {},
+        ftxui::Dimensions{240, 80});
+    very_wide->ComputeRequirement();
+    assert(very_wide->requirement().min_x == 128);
+    assert(very_wide->requirement().min_y < 65);
+    auto small_terminal = ui.render_project2(large, Project2MapView::overview, {}, {},
+        ftxui::Dimensions{90, 35});
+    small_terminal->ComputeRequirement();
+    assert(small_terminal->requirement().min_x == 76);
+}
+
+void run_project2_integration_tests() {
+    project2_items_visual_test();
+    project2_viewport_test();
+    project2_full_map_test();
+    project2_compact_player_row_test();
+    project2_overview_palette_test();
+    project2_stable_layout_test();
+    project2_responsive_layout_test();
+    assert(Menus(true).selectedDifficulty() == Difficulty::easy);
+    assert(Menus(false).selectedDifficulty() == Difficulty::standard);
+    for (const auto& [rows, columns] : {
+            std::pair<std::size_t, std::size_t>{10,15}, {20,30}, {40,60}}) {
+        Project2Session session(make_fixture(rows, columns));
+        ConsoleUI emoji(RenderMode::emoji);
+        ConsoleUI ascii(RenderMode::ascii);
+        const auto screen_emoji = render_to_string(emoji.render_project2(session));
+        const auto screen_ascii = render_to_string(ascii.render_project2(session));
+        assert(screen_emoji.find(" MAZE ") != std::string::npos);
+        assert(screen_emoji.find(" STATUS ") != std::string::npos);
+        assert(screen_emoji.find("Score 0") != std::string::npos);
+        assert(screen_emoji.find("Resources 0/0") != std::string::npos);
+        assert(screen_emoji.find(rows > 20 || columns > 30 ? "@" : "🤖") != std::string::npos);
+        assert(screen_emoji.find("0️⃣") == std::string::npos);
+        assert(screen_emoji.find("Next move: turn 2") != std::string::npos);
+        assert(screen_ascii.find("@") != std::string::npos);
+        assert(screen_ascii.find("A") != std::string::npos);
+        assert(screen_ascii.find("B") != std::string::npos);
+        const auto before = session.state();
+        const auto help = session.help_report();
+        assert(help.total_cost.has_value());
+        assert(session.state().turn == before.turn);
+        assert(session.state().energy == before.energy);
+        assert(session.state().player == before.player);
+        const auto route_screen = render_to_string(emoji.render_project2_board(session, help.complete_path));
+        assert(!route_screen.empty());
+        assert(session.state().turn == before.turn);
+        assert(session.state().energy == before.energy);
+    }
+}

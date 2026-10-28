@@ -67,6 +67,10 @@ namespace {
 
 }
 
+Menus::Menus(bool project2_mode) : project2_mode_(project2_mode) {
+    if (project2_mode_) selectedDifficulty_ = Difficulty::easy;
+}
+
 /*---------------------------------------------------------------------
 OnEvent() -> Procesa la navegación entre pantallas del menú.
 
@@ -77,7 +81,8 @@ opción de la partida o producir un MenuCommand para GameApplication.
 bool Menus::OnEvent(ftxui::Event event) {
     using namespace ftxui;
 
-    const int optionCount = OptionCount(currentScreen_);
+    const int optionCount = project2_mode_ && currentScreen_ == MenuScreen::Main
+        ? 5 : OptionCount(currentScreen_);
 
     if (event == Event::ArrowDown || event == Event::Character('s') ||
         event == Event::Character('S')) {
@@ -95,6 +100,18 @@ bool Menus::OnEvent(ftxui::Event event) {
 
     if (event == Event::Return || event == Event::Character('\n')) {
         if (currentScreen_ == MenuScreen::Main) {
+            if (project2_mode_) {
+                switch (selectedOption_) {
+                    case 0: pendingCommand_ = MenuCommand::startGame; return true;
+                    case 1: currentScreen_ = MenuScreen::Difficulty; break;
+                    case 2: currentScreen_ = MenuScreen::RenderMode; break;
+                    case 3: currentScreen_ = MenuScreen::Help; break;
+                    case 4: pendingCommand_ = MenuCommand::quit; return true;
+                    default: return false;
+                }
+                selectedOption_ = 0;
+                return true;
+            }
             switch (selectedOption_) {
                 case 0:
                     pendingCommand_ = MenuCommand::startGame;
@@ -237,6 +254,16 @@ ftxui::Element Menus::Render() const {
 
     switch (currentScreen_) {
         case MenuScreen::Main:
+            if (project2_mode_) {
+                options = {
+                    RenderOption(MenuArt::START_GAME, selectedOption_ == 0),
+                    RenderOption(MenuArt::DIFFICULTY, selectedOption_ == 1),
+                    RenderOption(MenuArt::RENDER_MODE, selectedOption_ == 2),
+                    RenderOption(MenuArt::HELP, selectedOption_ == 3),
+                    RenderOption(MenuArt::QUIT, selectedOption_ == 4),
+                };
+                break;
+            }
             options = {
             RenderOption(MenuArt::START_GAME,  selectedOption_ == 0),
             RenderOption(MenuArt::SCENARIO,    selectedOption_ == 1),
@@ -258,7 +285,7 @@ ftxui::Element Menus::Render() const {
         case MenuScreen::Difficulty:
             options = {
             RenderOption(MenuArt::EASY,     selectedOption_ == 0),
-            RenderOption(MenuArt::STANDARD, selectedOption_ == 1),
+            RenderOption(project2_mode_ ? MenuArt::MEDIUM : MenuArt::STANDARD, selectedOption_ == 1),
             RenderOption(MenuArt::HARD,     selectedOption_ == 2),
             RenderOption(MenuArt::BACK,     selectedOption_ == 3),
         };

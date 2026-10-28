@@ -26,6 +26,7 @@ enum class ScenarioSelection {
 
 class Menus {
 public:
+    explicit Menus(bool project2_mode = false);
     [[nodiscard]] ftxui::Element Render() const;
     bool OnEvent(ftxui::Event event);
     MenuCommand takeCommand();
@@ -34,6 +35,7 @@ public:
     [[nodiscard]]RenderMode selectedRenderMode() const noexcept;
 
 private:
+    bool project2_mode_ = false;
     MenuScreen currentScreen_ = MenuScreen::Main;
     int selectedOption_ = 0;
     /*

@@ -55,7 +55,11 @@ void generated_files_test(const std::filesystem::path& directory) {
     std::ostringstream error;
     const int result = run_map_generator(
         {"--rows", "10", "--columns", "15", "--seed", "12345",
-         "--workers", "4", "--candidates", "10", "--output", output_directory.string()},
+         "--workers", "4", "--candidates", "10",
+         "--resources", "3", "--resource-points", "12",
+         "--batteries", "2", "--battery-recharge", "5",
+         "--traps", "2", "--trap-penalty", "3", "--trap-score-penalty", "2",
+         "--output", output_directory.string()},
         output, error);
     assert(result == 0);
     assert(error.str().empty());
@@ -70,6 +74,14 @@ void generated_files_test(const std::filesystem::path& directory) {
     assert(medium.minimum_energy_cost < hard.minimum_energy_cost);
     assert(easy.grid.rows() == 10 && easy.grid.columns() == 15);
     assert(medium.grid.rows() == 10 && hard.grid.columns() == 15);
+    for (const auto* map : {&easy, &medium, &hard}) {
+        assert(map->effects.resources.size() == 3);
+        assert(map->effects.batteries.size() == 2);
+        assert(map->effects.traps.size() == 2);
+        assert(map->effects.resources.front().second == 12);
+        assert(map->effects.trap_score_penalties.front().second == 2);
+        assert(GameVerifier(map->input, map->effects).replay(map->winning_actions).outcome == GameOutcome::victory);
+    }
 }
 
 }
