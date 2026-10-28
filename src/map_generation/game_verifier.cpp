@@ -72,8 +72,8 @@ struct PendingNode {
 }
 
 GameVerifier::GameVerifier(MapValidationInput input, GameEffects effects)
-    : input_(std::move(input)), effects_(std::move(effects)) {
-    (void)validate_map_routes(input_);
+    : input_(std::move(input)), effects_(std::move(effects)),
+      route_validation_(validate_map_routes(input_)) {
     if (effects_.battery_recharge < 0 || effects_.trap_energy_penalty < 0 ||
         effects_.wait_energy_cost < 0) {
         throw std::invalid_argument("Game effect costs must be nonnegative");
@@ -333,7 +333,9 @@ std::size_t GameVerifier::minimum_remaining_turns(
 
 std::optional<GameVerification> GameVerifier::find_winning_game(std::size_t maximum_states) const {
     if (maximum_states == 0) return std::nullopt;
-    const auto validation = validate_map_routes(input_);
+    // Reuse routes already validated at construction rather than running
+    // Dijkstra again for each search of the same map.
+    const auto& validation = route_validation_;
     for (const auto& plan : {validation.recommended, validation.a_then_b, validation.b_then_a}) {
         if (!plan) continue;
         std::vector<Action> actions;

@@ -63,6 +63,7 @@ public:
 private:
     MapValidationInput input_;
     GameEffects effects_;
+    MapRouteValidation route_validation_;
     std::vector<int> battery_indices_;
     std::vector<bool> trap_cells_;
     std::vector<int> trap_score_values_;

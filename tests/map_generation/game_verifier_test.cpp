@@ -228,6 +228,66 @@ void guard_tie_break_test() {
     assert((result.history.back().guard == Position{0, 1}));
 }
 
+void reverse_switch_order_test() {
+    auto input = isolated_guard_map();
+    input.switch_a = {0, 2};
+    input.switch_b = {0, 1};
+    const GameVerifier game(input);
+    const auto result = game.replay({Action::right, Action::right, Action::right});
+    assert(result.outcome == GameOutcome::victory);
+    assert(result.history[1].switch_b_active);
+    assert(!result.history[1].switch_a_active);
+    assert(result.history[2].switch_a_active);
+    const auto first = game.find_winning_game(2'000);
+    const auto second = game.find_winning_game(2'000);
+    assert(first && second);
+    assert(first->actions == second->actions);
+    assert(game.replay(first->actions).outcome == GameOutcome::victory);
+}
+
+void battery_consumed_once_test() {
+    auto input = isolated_guard_map();
+    input.switch_b = {0, 3};
+    input.exit = {0, 4};
+    input.initial_energy = 2;
+    input.maximum_energy = 6;
+    input.has_batteries = true;
+    GameEffects effects;
+    effects.batteries = {{0, 2}};
+    effects.battery_recharge = 5;
+    const GameVerifier game(input, effects);
+    const auto result = game.replay({Action::right, Action::right, Action::left,
+        Action::right, Action::right, Action::right});
+    assert(result.outcome == GameOutcome::victory);
+    assert(result.history[2].energy == 5);
+    assert(result.history[4].energy == 3); // No second recharge.
+    assert(result.history[4].consumed_batteries[0] == std::uint64_t{1});
+}
+
+void route_does_not_prove_win_test() {
+    auto input = isolated_guard_map();
+    input.graph = graph_of(1, 5);
+    input.guard_start = {0, 1};
+    input.switch_a = {0, 2};
+    input.switch_b = {0, 3};
+    input.exit = {0, 4};
+    const auto routes = validate_map_routes(input);
+    assert(routes.recommended);
+    const GameVerifier game(input);
+    assert(!game.find_winning_game(2'000)); // The guard blocks the only corridor.
+    const auto lost = game.replay({Action::right});
+    assert(lost.outcome == GameOutcome::captured);
+}
+
+void replay_stops_on_victory_test() {
+    const GameVerifier game(isolated_guard_map());
+    const auto result = game.replay({Action::right, Action::right, Action::right,
+        Action::wait, Action::wait});
+    assert(result.outcome == GameOutcome::victory);
+    assert(result.actions.size() == 3);
+    assert(result.history.size() == 4);
+}
+
 void bounded_search_test() {
     const GameVerifier game(isolated_guard_map());
     assert(!game.find_winning_game(0));
@@ -251,6 +311,10 @@ void run_game_verifier_tests() {
     blocked_and_validation_test();
     different_sizes_test();
     bounded_search_test();
+    reverse_switch_order_test();
+    battery_consumed_once_test();
+    route_does_not_prove_win_test();
+    replay_stops_on_victory_test();
     forced_battery_detour_test();
     guard_tie_break_test();
 }
