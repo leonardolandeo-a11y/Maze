@@ -32,6 +32,7 @@ add_library(Maze_core
     src/map_generation/disjoint_set.cpp
     src/map_generation/kruskal.cpp
     src/map_generation/map_validator.cpp
+    src/map_generation/game_verifier.cpp
     src/pathfinding/dijkstra.cpp
 )
 # Include headers
@@ -72,6 +73,7 @@ add_executable(Maze_test
     tests/map_generation/map_selector_test.cpp
     tests/map_generation/kruskal_test.cpp
     tests/map_generation/map_validator_test.cpp
+    tests/map_generation/game_verifier_test.cpp
     tests/pathfinding/dijkstra_test.cpp
 )
 

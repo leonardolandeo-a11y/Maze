@@ -13,6 +13,7 @@ void run_map_selector_tests();
 void run_kruskal_tests();
 void run_dijkstra_tests();
 void run_map_validator_tests();
+void run_game_verifier_tests();
 
 int main() {
 
@@ -31,5 +32,6 @@ int main() {
     run_kruskal_tests();
     run_dijkstra_tests();
     run_map_validator_tests();
+    run_game_verifier_tests();
     return 0;
 }
