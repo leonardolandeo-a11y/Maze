@@ -218,6 +218,41 @@ void difficulty_selection_test() {
     }
 }
 
+void revalidation_clears_stale_results_test() {
+    MapBatchConfig config;
+    const MapBatchResult batch = run_map_batch(config);
+    assert(batch.selection);
+
+    const std::size_t selected_id = batch.selection->easy_id;
+    const auto selected = std::find_if(batch.entries.begin(), batch.entries.end(),
+        [selected_id](const MapBatchEntry& entry) { return entry.id == selected_id; });
+    assert(selected != batch.entries.end());
+    assert(selected->map && selected->winning_game);
+
+    MapBatchEntry entry = *selected;
+    const int original_energy = entry.map->input.initial_energy;
+    entry.map->input.initial_energy = 1;
+    validate_map(entry, config.maximum_search_states);
+    assert(!entry.winning_game);
+    assert(!entry.rejection_reason.empty());
+
+    // A failed validation must not poison a successful subsequent attempt.
+    entry.map->input.initial_energy = original_energy;
+    validate_map(entry, config.maximum_search_states);
+    assert(entry.winning_game);
+    assert(entry.winning_game->outcome == GameOutcome::victory);
+    assert(entry.rejection_reason.empty());
+
+    // Failed map construction retains its original diagnostic, but not stale results.
+    MapBatchEntry failed = entry;
+    failed.map.reset();
+    failed.rejection_reason = "Not enough cells";
+    validate_map(failed, config.maximum_search_states);
+    assert(!failed.winning_game);
+    assert(!failed.route_validation);
+    assert(failed.rejection_reason == "Not enough cells");
+}
+
 void dimensions_and_rejections_test() {
     MapBatchConfig config;
     config.candidate_count = 1;
@@ -251,5 +286,6 @@ void run_map_batch_tests() {
     generated_candidate_integrity_test();
     deterministic_workers_test();
     difficulty_selection_test();
+    revalidation_clears_stale_results_test();
     dimensions_and_rejections_test();
 }

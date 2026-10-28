@@ -155,9 +155,18 @@ PreparedMap build_map(const MapBatchConfig& config, std::size_t id, std::uint32_
 
 void validate_map(MapBatchEntry& entry, std::size_t maximum_search_states) {
     if (!entry.map) {
+        entry.route_validation.reset();
+        entry.winning_game.reset();
         if (entry.rejection_reason.empty()) entry.rejection_reason = "Map construction failed";
         return;
     }
+
+    // A candidate can be revalidated with a different search budget.
+    // Never retain the outcome or diagnostic from an earlier attempt.
+    entry.route_validation.reset();
+    entry.winning_game.reset();
+    entry.rejection_reason.clear();
+
     entry.route_validation = validate_map_routes(entry.map->input);
     const MapRouteValidation& routes = *entry.route_validation;
     if (routes.status == MapRouteStatus::unreachable ||
