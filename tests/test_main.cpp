@@ -15,6 +15,7 @@ void run_dijkstra_tests();
 void run_map_validator_tests();
 void run_game_verifier_tests();
 void run_map_batch_tests();
+void run_map_storage_tests();
 
 int main() {
 
@@ -35,5 +36,6 @@ int main() {
     run_map_validator_tests();
     run_game_verifier_tests();
     run_map_batch_tests();
+    run_map_storage_tests();
     return 0;
 }
