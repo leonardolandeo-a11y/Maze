@@ -29,6 +29,8 @@ add_library(Maze_core
     src/DeathAnimation.cpp
     src/VictoryAnimation.cpp
     src/map_generation/map_selector.cpp
+    src/map_generation/disjoint_set.cpp
+    src/map_generation/kruskal.cpp
 )
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
@@ -66,6 +68,7 @@ add_executable(Maze_test
     tests/event_test.cpp
     tests/console_render_test.cpp
     tests/map_generation/map_selector_test.cpp
+    tests/map_generation/kruskal_test.cpp
 )
 
 target_link_libraries(Maze_test PRIVATE Maze_core)
