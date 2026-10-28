@@ -12,6 +12,7 @@ void run_console_render_tests();
 void run_map_selector_tests();
 void run_kruskal_tests();
 void run_dijkstra_tests();
+void run_map_validator_tests();
 
 int main() {
 
@@ -29,5 +30,6 @@ int main() {
     run_map_selector_tests();
     run_kruskal_tests();
     run_dijkstra_tests();
+    run_map_validator_tests();
     return 0;
 }
