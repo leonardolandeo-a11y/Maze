@@ -918,3 +918,20 @@ ctest --test-dir build --output-on-failure
 ```
 
 **Circuito de Escape** integra un motor de navegación por turnos desacoplado de la interfaz, reglas configurables, templates, especializaciones, concepts, eventos tipados, polimorfismo dinámico, controladores intercambiables y simulaciones reproducibles dentro de una aplicación de consola construida con C++20.
+
+---
+
+## Proyecto 2 — Generador de mapas (etapa 9)
+
+El ejecutable independiente `map_generator` prepara hasta diez alternativas mediante Kruskal, valida sus rutas y energía con Dijkstra, comprueba partidas ganadoras y selecciona un mapa por dificultad. Construcción y validación se realizan en fases paralelas separadas mediante `std::jthread`; se informan sus tiempos individuales.
+
+```powershell
+cmake -S . -B cmake-build-debug
+cmake --build cmake-build-debug --target map_generator
+.\cmake-build-debug\map_generator.exe --help
+.\cmake-build-debug\map_generator.exe --rows 10 --columns 15 --seed 12345 --workers 4 --candidates 10 --output assets/maps
+```
+
+La salida utiliza tres archivos de texto: `mapa_facil.txt`, `mapa_medio.txt` y `mapa_dificil.txt`. Cada uno registra las dimensiones, celdas, costos, posiciones iniciales, reglas de energía, identificador, semilla, dificultad, costo mínimo y una secuencia ganadora reproducible. El formato `CIRCUIT_ESCAPE_MAP 1` se lee y valida con `load_map`; para generar otra configuración hay que repetir la preparación. El generador no sustituye el ejecutable del juego.
+
+Si un lote no tiene al menos tres costos distintos entre los mapas con victoria comprobada, el programa devuelve el código `2` sin guardar niveles incompletos. Un error de argumentos o de archivos devuelve `1`. La opción `--help` devuelve `0`.

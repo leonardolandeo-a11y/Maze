@@ -36,6 +36,7 @@ add_library(Maze_core
     src/map_generation/game_verifier.cpp
     src/map_generation/map_batch.cpp
     src/map_generation/map_storage.cpp
+    src/map_generation/map_generator_cli.cpp
 )
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
@@ -54,6 +55,11 @@ add_executable(Maze
 target_link_libraries(Maze PRIVATE
         Maze_core
 )
+
+add_executable(map_generator
+    app/map_generator_main.cpp
+)
+target_link_libraries(map_generator PRIVATE Maze_core)
 
 #Tests
 
@@ -79,6 +85,7 @@ add_executable(Maze_test
     tests/map_generation/game_verifier_test.cpp
     tests/map_generation/map_batch_test.cpp
     tests/map_generation/map_storage_test.cpp
+    tests/map_generation/map_generator_cli_test.cpp
 )
 
 target_link_libraries(Maze_test PRIVATE Maze_core)
