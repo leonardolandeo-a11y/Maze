@@ -171,7 +171,8 @@ solamente consulta su estado y le entrega acciones.
 initialGrid_ e initialAgent_ conservan el estado inicial para que
 reset() pueda reproducir una nueva simulación.
 ---------------------------------------------------------------------*/
-template<std::size_t Rows, std::size_t Columns>
+// Omitted dimensions select the runtime-sized Grid<Cell> specialization.
+template<std::size_t Rows = 0, std::size_t Columns = 0>
 class NavigationEnvironment {
     Grid<Cell, Rows, Columns> initialGrid_;
     Grid<Cell, Rows, Columns> grid_;
@@ -188,7 +189,7 @@ class NavigationEnvironment {
     ---------------------------------------------------------------------*/
     void validateInitialState() const {
         const Position start = agent.getPosition();
-        
+
         if (!grid_.contains(start)) {
             throw std::invalid_argument(
                 "Initial position is outside the grid"
@@ -201,9 +202,9 @@ class NavigationEnvironment {
             );
         }
         const std::size_t exitCount = countMatching(
-            grid_.cbegin(), 
-            grid_.cend(), 
-            [](const Cell& cell) {return std::holds_alternative<Exit>(cell);} 
+            grid_.cbegin(),
+            grid_.cend(),
+            [](const Cell& cell) {return std::holds_alternative<Exit>(cell);}
         );
 
         if (exitCount != 1) {
@@ -217,7 +218,7 @@ class NavigationEnvironment {
                 "Initial energy must be positive"
             );
         }
-        
+
         if (rules.turnLimit == 0) {
             throw std::invalid_argument(
                 "Turn limit must be positive"
@@ -227,7 +228,7 @@ class NavigationEnvironment {
 
     /*---------------------------------------------------------------------
     Localiza la única salida del tablero mediante LinearSearch y convierte
-    la posición lineal del iterador en coordenadas fila-columna. 
+    la posición lineal del iterador en coordenadas fila-columna.
     ---------------------------------------------------------------------*/
     Position goalPosition() const {
         const auto exitIterator = LinearSearch(
@@ -253,8 +254,8 @@ class NavigationEnvironment {
             );
 
         return Position{
-            index/Columns, 
-            index%Columns 
+            index / grid_.columns(),
+            index % grid_.columns()
         };
     }
     /*---------------------------------------------------------------------
