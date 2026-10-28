@@ -424,7 +424,96 @@ void project2_navigation_engine_parity_test() {
     }
 }
 
+// The H report must recalculate Dijkstra costs as objectives change, without
+// executing a turn or modifying the player's energy.
+void project2_dijkstra_help_progression_test() {
+    for (const auto& [rows, columns] : {
+            std::pair<std::size_t, std::size_t>{10, 15},
+            {20, 30}, {40, 60}}) {
+        Project2Session session(make_fixture(rows, columns));
+        const auto unchanged_by_help = [&](const HelpReport& report) {
+            const GameState before = session.state();
+            assert(report.current_energy == before.energy);
+            assert(session.state().turn == before.turn);
+            assert(session.state().energy == before.energy);
+            assert(session.state().player == before.player);
+            assert(session.state().guard == before.guard);
+        };
+
+        const HelpReport initial = session.help_report();
+        unchanged_by_help(initial);
+        assert(initial.switch_a.status == ObjectiveStatus::pending);
+        assert(initial.switch_b.status == ObjectiveStatus::pending);
+        assert(initial.exit_goal.status == ObjectiveStatus::locked);
+        assert(initial.switch_a.cost_from_current == 1);
+        assert(initial.switch_b.cost_from_current == 2);
+        assert(!initial.exit_goal.cost_from_current.has_value());
+        assert(initial.total_cost == 3);
+        assert(initial.recommended_order == (std::vector<HelpTarget>{
+            HelpTarget::switch_a, HelpTarget::switch_b, HelpTarget::exit}));
+        assert(initial.segment_costs == (std::vector<int>{1, 1, 1}));
+        assert(initial.complete_path == (std::vector<Position>{
+            {1, 1}, {1, 2}, {1, 3}, {1, 4}}));
+
+        const GameState at_a = session.step(Action::right);
+        assert(at_a.switch_a_active && !at_a.switch_b_active);
+        const HelpReport after_a = session.help_report();
+        unchanged_by_help(after_a);
+        assert(after_a.switch_a.status == ObjectiveStatus::activated);
+        assert(!after_a.switch_a.cost_from_current.has_value());
+        assert(after_a.switch_b.cost_from_current == 1);
+        assert(after_a.exit_goal.status == ObjectiveStatus::locked);
+        assert(after_a.total_cost == 2);
+        assert(after_a.recommended_order == (std::vector<HelpTarget>{
+            HelpTarget::switch_b, HelpTarget::exit}));
+        assert(after_a.segment_costs == (std::vector<int>{1, 1}));
+        assert(after_a.complete_path == (std::vector<Position>{
+            {1, 2}, {1, 3}, {1, 4}}));
+
+        const GameState at_b = session.step(Action::right);
+        assert(at_b.switch_a_active && at_b.switch_b_active);
+        const HelpReport after_both = session.help_report();
+        unchanged_by_help(after_both);
+        assert(after_both.switch_a.status == ObjectiveStatus::activated);
+        assert(after_both.switch_b.status == ObjectiveStatus::activated);
+        assert(after_both.exit_goal.status == ObjectiveStatus::enabled);
+        assert(after_both.exit_goal.cost_from_current == 1);
+        assert(after_both.total_cost == 1);
+        assert(after_both.recommended_order ==
+            (std::vector<HelpTarget>{HelpTarget::exit}));
+        assert(after_both.segment_costs == (std::vector<int>{1}));
+        assert(after_both.complete_path == (std::vector<Position>{{1, 3}, {1, 4}}));
+
+        session.reset();
+        const HelpReport after_reset = session.help_report();
+        unchanged_by_help(after_reset);
+        assert(after_reset.total_cost == initial.total_cost);
+        assert(after_reset.recommended_order == initial.recommended_order);
+
+        // Reverse the objective positions: the optimal order must now be B, A, exit.
+        SavedMap reversed = make_fixture(rows, columns);
+        reversed.input.switch_a = {1, 3};
+        reversed.input.switch_b = {1, 2};
+        Project2Session reversed_session(std::move(reversed));
+        const HelpReport reverse_help = reversed_session.help_report();
+        assert(reverse_help.total_cost == 3);
+        assert(reverse_help.recommended_order == (std::vector<HelpTarget>{
+            HelpTarget::switch_b, HelpTarget::switch_a, HelpTarget::exit}));
+        assert(reverse_help.segment_costs == (std::vector<int>{1, 1, 1}));
+        assert(reversed_session.state().turn == 0);
+        assert(reversed_session.state().energy == 100);
+        const GameState at_first_b = reversed_session.step(Action::right);
+        assert(at_first_b.switch_b_active && !at_first_b.switch_a_active);
+        const HelpReport reverse_after_b = reversed_session.help_report();
+        assert(reverse_after_b.recommended_order == (std::vector<HelpTarget>{
+            HelpTarget::switch_a, HelpTarget::exit}));
+        assert(reverse_after_b.total_cost == 2);
+        assert(reversed_session.state().turn == at_first_b.turn);
+    }
+}
+
 void run_project2_integration_tests() {
+    project2_dijkstra_help_progression_test();
     project2_navigation_engine_parity_test();
     project2_items_visual_test();
     project2_viewport_test();
