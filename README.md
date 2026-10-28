@@ -958,3 +958,19 @@ cmake --build build --target map_generator
 En Windows con CLion, seleccionar el target `map_generator` y configurar el directorio de trabajo en la raíz de Maze, o ejecutar `cmake-build-debug\map_generator.exe` desde PowerShell situado en esa carpeta. Usar `map_generator --help` para consultar todas las opciones.
 
 El generador imprime los identificadores, semillas, costos, motivos de rechazo y tiempos de las dos fases. Al completar el lote, escribe `mapa_facil.txt`, `mapa_medio.txt` y `mapa_dificil.txt` en el directorio seleccionado. Si faltan tres niveles, termina con código `2`; los argumentos inválidos o errores de lectura/escritura producen código `1`. Un resultado válido termina con código `0`. La interfaz del juego integrará la carga de estos archivos en una etapa posterior.
+
+---
+
+## Proyecto 2: juego de mapas generados
+
+El ejecutable `escape_circuit` abre los mapas creados y validados por `map_generator`, manteniendo el ejecutable anterior `Maze` para el Proyecto 1.
+
+```powershell
+.\cmake-build-debug\escape_circuit.exe
+.\cmake-build-debug\escape_circuit.exe --difficulty easy --maps assets/maps
+.\cmake-build-debug\escape_circuit.exe --help
+```
+
+Sin `--difficulty`, el menú permite elegir fácil, medio o difícil. `WASD` y las flechas mueven al jugador; `E` espera; `H` consulta Dijkstra sin avanzar turnos; `1`, `2`, `3` y `0` cambian el camino resaltado mientras la ayuda está abierta; `H` o `Esc` cierran la ayuda; `Q` termina; y `R` regresa al menú después de una partida finalizada. La partida usa las mismas reglas de turnos, energía, baterías, trampas, interruptores y vigilante que el verificador de mapas.
+
+Para jugar desde otra ubicación, indique la carpeta que contiene `mapa_facil.txt`, `mapa_medio.txt` y `mapa_dificil.txt` con `--maps`. La selección de tamaños se realiza al generar los archivos; al cargarlos, el juego utiliza sus dimensiones guardadas. Esta interfaz es una integración provisional: podrá adaptarse a los módulos de interfaz y vigilante del equipo sin alterar los mapas guardados.

@@ -38,6 +38,8 @@ add_library(Maze_core
     src/map_generation/map_storage.cpp
     src/map_generation/map_generator_cli.cpp
     src/pathfinding/dijkstra.cpp
+    src/project2_session.cpp
+    src/project2_application.cpp
 )
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
@@ -60,6 +62,9 @@ target_link_libraries(Maze PRIVATE
 
 add_executable(map_generator app/map_generator_main.cpp)
 target_link_libraries(map_generator PRIVATE Maze_core)
+
+add_executable(escape_circuit app/escape_circuit_main.cpp)
+target_link_libraries(escape_circuit PRIVATE Maze_core)
 
 #Tests
 
@@ -86,6 +91,7 @@ add_executable(Maze_test
     tests/map_generation/map_storage_test.cpp
     tests/map_generation/map_generator_cli_test.cpp
     tests/pathfinding/dijkstra_test.cpp
+    tests/project2_session_test.cpp
 )
 
 target_link_libraries(Maze_test PRIVATE Maze_core)
