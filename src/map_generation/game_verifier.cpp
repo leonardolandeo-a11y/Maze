@@ -175,6 +175,10 @@ GameState GameVerifier::initial_state() const {
     return result;
 }
 
+Position GameVerifier::guard_next_step(Position guard, Position player) const {
+    return next_guard_position(guard, player);
+}
+
 Position GameVerifier::next_guard_position(Position guard, Position player) const {
     const std::size_t source = index(guard);
     const std::size_t destination = index(player);

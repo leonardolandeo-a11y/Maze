@@ -1,5 +1,6 @@
 #pragma once
 
+#include "circuit_escape/environment.h"
 #include "circuit_escape/map_generation/game_verifier.h"
 #include "circuit_escape/map_generation/map_storage.h"
 #include "circuit_escape/project2_contracts.h"
@@ -21,5 +22,6 @@ public:
 private:
     SavedMap map_;
     GameVerifier verifier_;
+    NavigationEnvironment<> environment_;
     GameState state_;
 };

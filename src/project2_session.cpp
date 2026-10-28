@@ -56,9 +56,25 @@ std::optional<EnergyPlan> create_plan(
 
 }
 
+namespace {
+GameRules project2_rules(const SavedMap& map) {
+    return GameRules{
+        map.input.initial_energy, map.input.maximum_energy, map.input.turn_limit,
+        1, 2, map.effects.wait_energy_cost, 0,
+        map.effects.battery_recharge, map.effects.trap_energy_penalty, 0
+    };
+}
+
+// Both the game and verifier operate on the validated map's orthogonal graph.
+// The engine uses the saved cells for the exact terrain and item values.
+}
+
 Project2Session::Project2Session(SavedMap map)
     : map_(std::move(map)),
       verifier_(map_.input, map_.effects),
+      environment_(map_.grid,
+          Agent(map_.input.player_start, map_.input.initial_energy, map_.input.maximum_energy),
+          project2_rules(map_), NavigationOptions{true, true}),
       state_(verifier_.initial_state()) {}
 
 const SavedMap& Project2Session::map() const noexcept { return map_; }
@@ -66,11 +82,67 @@ const SavedMap& Project2Session::map() const noexcept { return map_; }
 const GameState& Project2Session::state() const noexcept { return state_; }
 
 GameState Project2Session::step(Action action) {
-    state_ = verifier_.step(state_, action);
+    if (state_.outcome != GameOutcome::in_progress) {
+        throw std::logic_error("Cannot advance a finished game");
+    }
+
+    // Reuse the Project 1 navigation engine for movement, energy, rewards,
+    // consumed items, and the turn counter, without duplicating those rules.
+    const StepResult result = environment_.step(action);
+    state_.player = result.observation.agent;
+    state_.energy = result.observation.energy;
+    state_.turn = result.observation.turn;
+    state_.score = result.observation.score;
+    state_.resource_count = result.observation.collectedResources;
+
+    const auto& cells = environment_.grid();
+    for (std::size_t i = 0; i < map_.effects.batteries.size(); ++i) {
+        const Position position = map_.effects.batteries[i];
+        if (const auto* battery = std::get_if<Battery>(&cells.at(position));
+            battery && battery->consumed) {
+            state_.consumed_batteries[i / 64] |= std::uint64_t{1} << (i % 64);
+        }
+    }
+    for (std::size_t i = 0; i < map_.effects.resources.size(); ++i) {
+        const Position position = map_.effects.resources[i].first;
+        if (const auto* resource = std::get_if<ResourceCell<int>>(&cells.at(position));
+            resource && resource->collected) {
+            state_.collected_resources[i / 64] |= std::uint64_t{1} << (i % 64);
+        }
+    }
+
+    // Project 2 precedence: capture, energy, switches/exit, and turn limit.
+    if (state_.player == state_.guard) {
+        state_.outcome = GameOutcome::captured;
+    } else {
+        if (state_.turn % 2 == 0) {
+            state_.guard = verifier_.guard_next_step(state_.guard, state_.player);
+        }
+        if (state_.player == state_.guard) {
+            state_.outcome = GameOutcome::captured;
+        } else if (state_.energy <= 0) {
+            state_.outcome = GameOutcome::energy_depleted;
+        } else {
+            if (state_.player == map_.input.switch_a) state_.switch_a_active = true;
+            if (state_.player == map_.input.switch_b) state_.switch_b_active = true;
+            if (state_.player == map_.input.exit &&
+                state_.switch_a_active && state_.switch_b_active) {
+                state_.outcome = GameOutcome::victory;
+            } else if (state_.turn >= map_.input.turn_limit) {
+                state_.outcome = GameOutcome::turn_limit;
+            }
+        }
+    }
+    if (state_.outcome != GameOutcome::in_progress) {
+        environment_.finish();
+    }
     return state_;
 }
 
-void Project2Session::reset() { state_ = verifier_.initial_state(); }
+void Project2Session::reset() {
+    environment_.reset(0);
+    state_ = verifier_.initial_state();
+}
 
 bool Project2Session::battery_consumed(Position position) const {
     const auto found = std::find(map_.effects.batteries.begin(), map_.effects.batteries.end(), position);

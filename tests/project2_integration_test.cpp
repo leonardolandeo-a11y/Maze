@@ -3,6 +3,8 @@
 #include "circuit_escape/menus.h"
 
 #include <cassert>
+#include <filesystem>
+#include <limits>
 #include <utility>
 #include <string>
 #include <vector>
@@ -303,7 +305,127 @@ void project2_responsive_layout_test() {
     assert(small_terminal->requirement().min_x == 76);
 }
 
+
+// The interactive session must reproduce the verifier's game rules while
+// processing movement and cell interactions through NavigationEnvironment.
+void project2_navigation_engine_parity_test() {
+    const auto compare = [](SavedMap map, const std::vector<Action>& actions,
+                            GameOutcome expected) {
+        GameVerifier verifier(map.input, map.effects);
+        Project2Session session(std::move(map));
+        GameState simulated = verifier.initial_state();
+        const auto verify_state = [](const GameState& actual, const GameState& reference) {
+            assert(actual.player == reference.player);
+            assert(actual.guard == reference.guard);
+            assert(actual.energy == reference.energy);
+            assert(actual.turn == reference.turn);
+            assert(actual.score == reference.score);
+            assert(actual.resource_count == reference.resource_count);
+            assert(actual.switch_a_active == reference.switch_a_active);
+            assert(actual.switch_b_active == reference.switch_b_active);
+            assert(actual.consumed_batteries == reference.consumed_batteries);
+            assert(actual.collected_resources == reference.collected_resources);
+            assert(actual.outcome == reference.outcome);
+        };
+        verify_state(session.state(), simulated);
+        for (Action action : actions) {
+            if (simulated.outcome != GameOutcome::in_progress) break;
+            simulated = verifier.step(simulated, action);
+            const GameState played = session.step(action);
+            verify_state(played, simulated);
+        }
+        assert(simulated.outcome == expected);
+        // Reset must restore both the environment's mutable cell flags and the game state.
+        session.reset();
+        verify_state(session.state(), verifier.initial_state());
+        for (Action action : actions) {
+            if (session.state().outcome != GameOutcome::in_progress) break;
+            (void)session.step(action);
+        }
+        verify_state(session.state(), simulated);
+        if (simulated.outcome != GameOutcome::in_progress) {
+            bool rejected = false;
+            try { (void)session.step(Action::wait); }
+            catch (const std::logic_error&) { rejected = true; }
+            assert(rejected);
+        }
+    };
+
+    // Also exercise the exact map serialization path used by the installer.
+    const auto saved_path = std::filesystem::temp_directory_path() /
+        "maze_project2_navigation_audit_map.txt";
+    const SavedMap serialized = make_fixture(20, 30);
+    save_map(serialized, saved_path);
+    const SavedMap loaded = load_map(saved_path);
+    std::filesystem::remove(saved_path);
+    compare(loaded, loaded.winning_actions, GameOutcome::victory);
+
+    for (const auto& [rows, columns] : {
+            std::pair<std::size_t, std::size_t>{10, 15}, {20, 30}, {40, 60}}) {
+        auto ordinary = make_fixture(rows, columns);
+        compare(ordinary, {Action::right, Action::right, Action::right}, GameOutcome::victory);
+
+        auto reversed = make_fixture(rows, columns);
+        compare(reversed, {Action::down, Action::right, Action::right,
+            Action::up, Action::left, Action::right, Action::right}, GameOutcome::victory);
+
+        auto items = make_fixture(rows, columns);
+        items.grid.at({1, 0}) = ResourceCell<int>{10, false};
+        items.grid.at({2, 0}) = Battery{5, false};
+        items.grid.at({2, 1}) = Trap{2, 2};
+        items.grid.at({1, 5}) = RoughTerrain{4};
+        items.input.graph.entry_costs[columns + 5] = 4;
+        items.effects.resources = {{{1, 0}, 10}};
+        items.effects.batteries = {{2, 0}};
+        items.effects.traps = {{2, 1}};
+        items.effects.trap_score_penalties = {{{2, 1}, 2}};
+        items.effects.battery_recharge = 5;
+        items.effects.trap_energy_penalty = 2;
+        compare(items, {Action::left, Action::down, Action::right, Action::left,
+            Action::right, Action::up, Action::right, Action::right, Action::right},
+            GameOutcome::victory);
+
+        auto large_values = make_fixture(rows, columns);
+        large_values.input.initial_energy = std::numeric_limits<int>::max();
+        large_values.input.maximum_energy = std::numeric_limits<int>::max();
+        large_values.grid.at({1, 0}) = ResourceCell<int>{std::numeric_limits<int>::max(), false};
+        large_values.grid.at({2, 0}) = Battery{std::numeric_limits<int>::max(), false};
+        large_values.grid.at({2, 1}) = Trap{2, 2};
+        large_values.grid.at({1, 5}) = RoughTerrain{4};
+        large_values.input.graph.entry_costs[1 * columns + 5] = 4;
+        large_values.effects.resources = {{{1, 0}, std::numeric_limits<int>::max()}};
+        large_values.effects.batteries = {{2, 0}};
+        large_values.effects.traps = {{2, 1}};
+        large_values.effects.trap_score_penalties = {{{2, 1}, 2}};
+        large_values.effects.battery_recharge = std::numeric_limits<int>::max();
+        large_values.effects.trap_energy_penalty = 2;
+        compare(large_values, {Action::left, Action::down, Action::right, Action::left,
+            Action::right, Action::up, Action::right, Action::right, Action::right},
+            GameOutcome::victory);
+
+        auto depleted = make_fixture(rows, columns);
+        depleted.input.initial_energy = 1;
+        depleted.input.maximum_energy = 1;
+        compare(depleted, {Action::wait}, GameOutcome::energy_depleted);
+
+        auto captured = make_fixture(rows, columns);
+        captured.input.guard_start = {2, 1};
+        compare(captured, {Action::down}, GameOutcome::captured);
+
+        auto limited = make_fixture(rows, columns);
+        limited.input.turn_limit = 2;
+        compare(limited, {Action::right, Action::right}, GameOutcome::turn_limit);
+
+        auto blocked = make_fixture(rows, columns);
+        blocked.grid.at({2, 1}) = Wall{};
+        blocked.input.graph.blocked[2 * columns + 1] = true;
+        compare(blocked, {Action::up, Action::down, Action::wait,
+            Action::right, Action::right, Action::right}, GameOutcome::victory);
+    }
+}
+
 void run_project2_integration_tests() {
+    project2_navigation_engine_parity_test();
     project2_items_visual_test();
     project2_viewport_test();
     project2_full_map_test();

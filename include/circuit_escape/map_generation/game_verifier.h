@@ -52,6 +52,8 @@ public:
     GameVerifier(MapValidationInput input, GameEffects effects = {});
 
     [[nodiscard]] GameState initial_state() const;
+    // Reuse the same BFS pursuit and tie-breaking in the interactive game.
+    [[nodiscard]] Position guard_next_step(Position guard, Position player) const;
     [[nodiscard]] GameState step(const GameState& state, Action action) const;
     [[nodiscard]] GameVerification replay(const std::vector<Action>& actions) const;
     [[nodiscard]] std::optional<GameVerification> find_winning_game(

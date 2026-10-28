@@ -145,6 +145,14 @@ Resultado completo de ejecutar una acción.
 Contiene el nuevo estado observable, los eventos producidos durante
 el turno y la información de término de la partida.
 ---------------------------------------------------------------------*/
+// Project 2 uses the original navigation engine for movement and cell effects.
+// Its game session determines capture, switches, and final outcome afterward.
+// Default options preserve the Project 1 behavior without changes.
+struct NavigationOptions {
+    bool deferTermination{false};
+    bool useCellValues{false};
+};
+
 struct StepResult {
     Observation observation;
     std::vector<NavigationEvent> events;
@@ -182,6 +190,7 @@ class NavigationEnvironment {
     Agent agent;
     GameRules rules;
     std::size_t turn{0};
+    NavigationOptions options_{};
 
     /*---------------------------------------------------------------------
     Verifica las invariantes necesarias para crear un entorno válido:
@@ -271,8 +280,8 @@ class NavigationEnvironment {
                                   return rules.normalCellCost;
                               },
 
-                              [&](const RoughTerrain &) {
-                                  return rules.roughTerrainCost;
+                              [&](const RoughTerrain &terrain) {
+                                  return options_.useCellValues ? terrain.energyCost : rules.roughTerrainCost;
                               },
 
                               [&](const ResourceCell<int> &) {
@@ -318,13 +327,14 @@ class NavigationEnvironment {
                         return;
                     }
 
-                    agent.addScore(rules.resourcePoints);
+                    const int points = options_.useCellValues ? resource.reward : rules.resourcePoints;
+                    agent.addScore(points);
                     agent.addcollectedResources(1);
                     resource.collected = true;
 
                     events.push_back(
                         ResourceCollectedEvent{
-                            agent.getPosition(), rules.resourcePoints
+                            agent.getPosition(), points
                     }
                 );
     },
@@ -336,7 +346,7 @@ class NavigationEnvironment {
 
                            const int previousEnergy = agent.getEnergy();
                            
-                           agent.addEnergy(rules.batteryRecharge);
+                           agent.addEnergy(options_.useCellValues ? battery.energy : rules.batteryRecharge);
                            battery.consumed = true;
 
                            if (agent.getEnergy() != previousEnergy) {
@@ -350,10 +360,12 @@ class NavigationEnvironment {
                        },
 
                        
-                       [&](Trap &) {
+                       [&](Trap &trap) {
                            const int previousEnergy = agent.getEnergy();
-                           agent.setEnergy(agent.getEnergy() - rules.trapEnergyPenalty);
-                           agent.addScore(-rules.trapScorePenalty);
+                           const int energyPenalty = options_.useCellValues ? trap.energyPenalty : rules.trapEnergyPenalty;
+                           const int scorePenalty = options_.useCellValues ? trap.scorePenalty : rules.trapScorePenalty;
+                           agent.setEnergy(agent.getEnergy() - energyPenalty);
+                           agent.addScore(-scorePenalty);
 
                            if (agent.getEnergy() != previousEnergy) {
                                events.push_back(
@@ -393,7 +405,7 @@ class NavigationEnvironment {
                     grid_.at(agent.getPosition())
                 );
         
-        const EndReason reason = evaluateTermination(
+        const EndReason reason = options_.deferTermination ? EndReason::none : evaluateTermination(
             agentOnExit,
             agent.getEnergy(),
             turn,
@@ -424,13 +436,15 @@ public:
     NavigationEnvironment(
         grid_type initialGrid,
         Agent agent_,
-        GameRules rules_
+        GameRules rules_,
+        NavigationOptions options = {}
     )
         : initialGrid_(initialGrid),
           grid_(initialGrid),
           initialAgent_(agent_),
           agent(agent_),
-          rules(rules_) {
+          rules(rules_),
+          options_(options) {
         validateInitialState();
     }
     /*---------------------------------------------------------------------
@@ -516,6 +530,12 @@ public:
     }
     [[nodiscard]] const grid_type &grid() const noexcept {
         return grid_;
+    }
+
+    // The Project 2 session applies its own termination priority (capture first).
+    // The original engine remains responsible for executing every player action.
+    void finish() noexcept {
+        agent.finish();
     }
 
     

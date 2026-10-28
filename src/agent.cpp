@@ -1,5 +1,9 @@
 #include "circuit_escape/agent.h"
 
+#include <algorithm>
+#include <cstdint>
+#include <limits>
+
 Agent::Agent(Position start, int initialEnergy, int maximumEnergy)
 : position(start), energy(initialEnergy), maximumEnergy(maximumEnergy), score(0), collectedResources(0), active(true){}
 
@@ -43,7 +47,10 @@ void Agent::setEnergy(int amount) {
 }
 
 void Agent::addScore(int points) {
-    score += points;
+    const std::int64_t result = static_cast<std::int64_t>(score) + points;
+    score = static_cast<int>(std::clamp(result,
+        static_cast<std::int64_t>(std::numeric_limits<int>::min()),
+        static_cast<std::int64_t>(std::numeric_limits<int>::max())));
 }
 
 void Agent::addcollectedResources(size_t resources) {
@@ -51,7 +58,9 @@ void Agent::addcollectedResources(size_t resources) {
 }
 
 void Agent::addEnergy(int energy_) {
-    setEnergy(energy + energy_);
+    const std::int64_t result = static_cast<std::int64_t>(energy) + energy_;
+    setEnergy(static_cast<int>(std::clamp(result,
+        std::int64_t{0}, static_cast<std::int64_t>(maximumEnergy))));
 }
 
 void Agent::finish() {
