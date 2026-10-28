@@ -11,6 +11,7 @@ FetchContent_Declare(ftxui
     GIT_TAG v7.0.3
 )
 FetchContent_MakeAvailable(ftxui)
+find_package(Threads REQUIRED)
 
 
 # Include src files
@@ -33,12 +34,14 @@ add_library(Maze_core
     src/map_generation/kruskal.cpp
     src/map_generation/map_validator.cpp
     src/map_generation/game_verifier.cpp
+    src/map_generation/map_batch.cpp
     src/pathfinding/dijkstra.cpp
 )
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
 
 target_link_libraries(Maze_core PUBLIC
+        Threads::Threads
         ftxui::screen
         ftxui::dom
         ftxui::component
@@ -74,6 +77,7 @@ add_executable(Maze_test
     tests/map_generation/kruskal_test.cpp
     tests/map_generation/map_validator_test.cpp
     tests/map_generation/game_verifier_test.cpp
+    tests/map_generation/map_batch_test.cpp
     tests/pathfinding/dijkstra_test.cpp
 )
 
