@@ -5,6 +5,7 @@
 #include <cassert>
 #include <filesystem>
 #include <limits>
+#include <type_traits>
 #include <utility>
 #include <string>
 #include <vector>
@@ -558,7 +559,73 @@ void project2_dijkstra_help_progression_test() {
     }
 }
 
+void project2_observation_contract_test() {
+    static_assert(std::is_same_v<
+        decltype(std::declval<const ReadOnlyMapView&>().at(Position{})),
+        const Cell&>);
+    static_assert(!std::is_assignable_v<
+        decltype(std::declval<const ReadOnlyMapView&>().at(Position{})), Cell>);
+
+    for (const auto& [rows, columns] : {
+            std::pair<std::size_t, std::size_t>{10, 15},
+            {20, 30}, {40, 60}}) {
+        Project2Session session(make_fixture(rows, columns));
+        const Position initial_guard = session.state().guard;
+        const Observation initial = session.observation();
+        assert(initial.map.rows == rows && initial.map.columns == columns);
+        assert(initial.map.cells.size() == rows * columns);
+        assert(initial.map.contains({1, 4}));
+        assert(std::holds_alternative<Exit>(initial.map.at({1, 4})));
+        assert(!initial.map.contains({rows, columns}));
+        bool rejected = false;
+        try { (void)initial.map.at({rows, columns}); }
+        catch (const std::out_of_range&) { rejected = true; }
+        assert(rejected);
+        assert(initial.agent == (Position{1, 1}));
+        assert(initial.guardPosition == initial_guard);
+        assert(!initial.switchAActive && !initial.switchBActive);
+        assert(initial.turn == 0);
+        assert(!initial.availableActions.empty());
+
+        (void)session.step(Action::right);
+        const Observation after_a = session.observation();
+        assert(after_a.agent == (Position{1, 2}));
+        assert(after_a.switchAActive && !after_a.switchBActive);
+        assert(after_a.guardPosition == initial_guard);
+        assert(after_a.turn == 1);
+
+        (void)session.step(Action::right);
+        const Observation after_b = session.observation();
+        assert(after_b.switchAActive && after_b.switchBActive);
+        assert(after_b.guardPosition == session.state().guard);
+        assert(after_b.guardPosition != initial_guard);
+        assert(after_b.turn == 2);
+
+        session.reset();
+        const Observation reset = session.observation();
+        assert(!reset.switchAActive && !reset.switchBActive);
+        assert(reset.guardPosition == initial_guard);
+        assert(reset.agent == (Position{1, 1}));
+        assert(reset.turn == 0);
+        assert(reset.map.rows == rows && reset.map.columns == columns);
+        assert(std::holds_alternative<Exit>(reset.map.at({1, 4})));
+    }
+
+    // Original fixed-size Grid also provides the read-only map view.
+    Grid<Cell, 2, 3> original_grid;
+    original_grid.at({1, 2}) = Exit{};
+    NavigationEnvironment<2, 3> original(
+        original_grid, Agent({0, 0}, 10, 10), GameRules{
+            10, 10, 10, 1, 2, 1, 0, 3, 2, 0});
+    const Observation old_style = original.state();
+    assert(old_style.map.rows == 2 && old_style.map.columns == 3);
+    assert(std::holds_alternative<Exit>(old_style.map.at({1, 2})));
+    assert(!old_style.switchAActive && !old_style.switchBActive);
+    assert(!old_style.guardPosition.has_value());
+}
+
 void run_project2_integration_tests() {
+    project2_observation_contract_test();
     project2_dijkstra_help_progression_test();
     project2_navigation_engine_parity_test();
     project2_items_visual_test();

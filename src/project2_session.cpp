@@ -81,6 +81,14 @@ const SavedMap& Project2Session::map() const noexcept { return map_; }
 
 const GameState& Project2Session::state() const noexcept { return state_; }
 
+Observation Project2Session::observation() const {
+    Observation result = environment_.state();
+    result.switchAActive = state_.switch_a_active;
+    result.switchBActive = state_.switch_b_active;
+    result.guardPosition = state_.guard;
+    return result;
+}
+
 GameState Project2Session::step(Action action) {
     if (state_.outcome != GameOutcome::in_progress) {
         throw std::logic_error("Cannot advance a finished game");

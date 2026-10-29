@@ -7,6 +7,8 @@
 #include "circuit_escape/generic_functions.h"
 
 #include <iterator> 
+#include <optional>
+#include <span>
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -78,6 +80,25 @@ Snapshot del estado observable del entorno.
 Los controladores reciben este struct para tomar decisiones
 sin obtener acceso directo al estado interno de NavigationEnvironment.
 ---------------------------------------------------------------------*/
+// Non-owning, read-only view of the live grid. The owner must outlive this
+// view; reacquire it after reset() because the storage may be replaced.
+struct ReadOnlyMapView {
+    std::span<const Cell> cells{};
+    std::size_t rows{};
+    std::size_t columns{};
+
+    [[nodiscard]] bool contains(Position position) const noexcept {
+        return position.row < rows && position.column < columns;
+    }
+
+    [[nodiscard]] const Cell& at(Position position) const {
+        if (!contains(position)) {
+            throw std::out_of_range("Observation map position out of range");
+        }
+        return cells[position.row * columns + position.column];
+    }
+};
+
 struct Observation {
     Position agent;
     Position goal;
@@ -88,6 +109,12 @@ struct Observation {
     std::size_t turn{};
     std::size_t turnLimit{};
     std::vector<Action> availableActions;
+
+    // Project 2 additions; defaults keep existing Project 1 controllers valid.
+    ReadOnlyMapView map{};
+    bool switchAActive{false};
+    bool switchBActive{false};
+    std::optional<Position> guardPosition{};
 };
 
 /*---------------------------------------------------------------------
@@ -534,7 +561,7 @@ public:
     a los miembros internos del entorno.
     ---------------------------------------------------------------------*/
     [[nodiscard]] Observation state() const {
-        return Observation{
+        Observation observation{
             agent.getPosition(),
             goalPosition(),
             agent.getEnergy(),
@@ -545,6 +572,12 @@ public:
             rules.turnLimit,
             availableActions()
         };
+        observation.map = ReadOnlyMapView{
+            std::span<const Cell>{grid_.cbegin(), grid_.cend()},
+            grid_.rows(),
+            grid_.columns()
+        };
+        return observation;
     }
 
     [[nodiscard]] bool isFinished() const noexcept {

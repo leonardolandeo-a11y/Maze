@@ -13,6 +13,7 @@ public:
 
     [[nodiscard]] const SavedMap& map() const noexcept;
     [[nodiscard]] const GameState& state() const noexcept;
+    [[nodiscard]] Observation observation() const;
     [[nodiscard]] GameState step(Action action);
     void reset();
     [[nodiscard]] HelpReport help_report() const;

@@ -111,17 +111,7 @@ ftxui::Element help_content(const Project2Session& session, const HelpReport& re
 }
 
 Observation animation_observation(const Project2Session& session) {
-    Observation observation;
-    const GameState& state = session.state();
-    observation.agent = state.player;
-    observation.goal = session.map().input.exit;
-    observation.energy = state.energy;
-    observation.maximumEnergy = session.map().input.maximum_energy;
-    observation.score = state.score;
-    observation.collectedResources = state.resource_count;
-    observation.turn = state.turn;
-    observation.turnLimit = session.map().input.turn_limit;
-    return observation;
+    return session.observation();
 }
 
 EndReason end_reason(GameOutcome outcome) {
