@@ -1,4 +1,5 @@
 #include "circuit_escape/console_ui.h"
+#include "circuit_escape/project2_help_text.h"
 #include "circuit_escape/project2_session.h"
 #include "circuit_escape/menus.h"
 
@@ -624,7 +625,42 @@ void project2_observation_contract_test() {
     assert(!old_style.guardPosition.has_value());
 }
 
+void project2_active_help_text_test() {
+    HelpReport report;
+    report.switch_a = {ObjectiveStatus::pending, 2};
+    report.switch_b = {ObjectiveStatus::pending, 3};
+    report.exit_goal = {ObjectiveStatus::locked, std::nullopt};
+    report.total_cost = 10;
+    report.recommended_order = {HelpTarget::switch_a, HelpTarget::switch_b, HelpTarget::exit};
+
+    report.current_energy = 11;
+    const auto positive = format_project2_help_lines(report);
+    assert(positive.size() == 5);
+    assert(positive[0].find("A: 2 energy") != std::string::npos);
+    assert(positive[0].find("B: 3 energy") != std::string::npos);
+    assert(positive[0].find("Exit: locked") != std::string::npos);
+    assert(positive[1] == "Route: CURRENT -> A -> B -> EXIT");
+    assert(positive[2] == "Cost 10 | Remaining 1 | ENOUGH");
+    assert(positive[4].find("H/Esc back | Z zoom") != std::string::npos);
+
+    report.current_energy = 10;
+    const auto zero = format_project2_help_lines(report);
+    assert(zero[2] == "Cost 10 | Remaining 0 | ZERO AT EXIT - RECHARGE");
+
+    report.current_energy = 9;
+    const auto negative = format_project2_help_lines(report);
+    assert(negative[2] == "Cost 10 | Remaining -1 | INSUFFICIENT - RECHARGE");
+
+    report.total_cost.reset();
+    report.exit_goal = {ObjectiveStatus::enabled, std::nullopt};
+    const auto unreachable = format_project2_help_lines(report);
+    assert(unreachable[1] == "Route: unavailable");
+    assert(unreachable[2] == "Cost: unreachable");
+    assert(unreachable[0].find("Exit: unreachable") != std::string::npos);
+}
+
 void run_project2_integration_tests() {
+    project2_active_help_text_test();
     project2_observation_contract_test();
     project2_dijkstra_help_progression_test();
     project2_navigation_engine_parity_test();

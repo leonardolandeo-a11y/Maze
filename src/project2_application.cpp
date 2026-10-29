@@ -6,6 +6,7 @@
 #include "circuit_escape/DeathAnimation.h"
 #include "circuit_escape/menus.h"
 #include "circuit_escape/console_ui.h"
+#include "circuit_escape/project2_help_text.h"
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/event.hpp>
@@ -56,28 +57,8 @@ std::string outcome_label(GameOutcome outcome) {
     return "IN PROGRESS";
 }
 
-std::string target_label(HelpTarget target) {
-    switch (target) {
-        case HelpTarget::switch_a: return "A";
-        case HelpTarget::switch_b: return "B";
-        case HelpTarget::exit: return "EXIT";
-    }
-    return "EXIT";
-}
-
-std::string status_line(const char* label, const ObjectiveInfo& info) {
-    switch (info.status) {
-        case ObjectiveStatus::activated: return std::string(label) + ": activated";
-        case ObjectiveStatus::locked: return std::string(label) + ": locked";
-        case ObjectiveStatus::enabled: break;
-        case ObjectiveStatus::pending: break;
-    }
-    if (!info.cost_from_current) return std::string(label) + ": unreachable";
-    return std::string(label) + ": " + std::to_string(*info.cost_from_current) + " energy";
-}
-
-ftxui::Element help_content(const Project2Session& session, const HelpReport& report, int highlight_mode, const ConsoleUI& ui, Project2MapView view) {
-    using namespace ftxui;
+ftxui::Element help_content(const Project2Session& session, const HelpReport& report,
+    int highlight_mode, const ConsoleUI& ui, Project2MapView view) {
     const std::vector<Position>* path = &report.complete_path;
     if (highlight_mode == 0) {
         static const std::vector<Position> empty;
@@ -87,30 +68,7 @@ ftxui::Element help_content(const Project2Session& session, const HelpReport& re
     } else if (highlight_mode == 2) {
         path = &report.path_to_b;
     }
-    std::string route = "Route: unavailable";
-    std::string cost = "Cost: unreachable";
-    if (report.total_cost) {
-        route = "Route: CURRENT";
-        for (HelpTarget target : report.recommended_order) {
-            route += " -> " + target_label(target);
-        }
-        const long long remaining = static_cast<long long>(report.current_energy) -
-            static_cast<long long>(*report.total_cost);
-        const char* energy_status = remaining > 0 ? "ENOUGH" :
-            (remaining == 0 ? "ZERO AT EXIT - RECHARGE" : "INSUFFICIENT - RECHARGE");
-        cost = "Cost " + std::to_string(*report.total_cost) +
-            " | Remaining " + std::to_string(remaining) +
-            " | " + energy_status;
-    }
-    const std::vector<std::string> lines{
-        status_line("A", report.switch_a) + " | " +
-            status_line("B", report.switch_b) + " | " + status_line("Exit", report.exit_goal),
-        route,
-        cost,
-        "Estimate ignores guard movements, batteries and waiting",
-        "Highlight: 1=A 2=B 3=route 0=off | H/Esc back | Z zoom"
-    };
-    return ui.render_project2(session, view, *path, lines);
+    return ui.render_project2(session, view, *path, format_project2_help_lines(report));
 }
 
 Observation animation_observation(const Project2Session& session) {
