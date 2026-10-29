@@ -2,6 +2,7 @@
 #include "circuit_escape/map_generation/kruskal.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -177,6 +178,29 @@ void test_dimensions_and_minimum_cost() {
     }
 }
 
+void test_known_minimum_spanning_tree() {
+    // Known 5x5 maze: four rooms and four candidate wall openings.
+    // With seed 42, Kruskal must choose the three cheapest connections.
+    const MazeGenerationResult maze = generate_maze(5, 5, 42u);
+    assert(maze.room_count == 4);
+    assert(maze.candidate_openings.size() == 4);
+    assert(maze.tree_openings.size() == 3);
+    assert(maze.extra_openings.empty());
+
+    const std::array<std::uint32_t, 3> expected_weights{126'068u, 286'877u, 637'543u};
+    const std::array<Position, 3> expected_walls{{{2, 1}, {2, 3}, {1, 2}}};
+    std::uint64_t actual_total = 0;
+    for (std::size_t index = 0; index < expected_weights.size(); ++index) {
+        const WallOpening& opening = maze.tree_openings[index];
+        assert(opening.weight == expected_weights[index]);
+        assert(opening.wall == expected_walls[index]);
+        assert(!is_wall(maze.grid, opening.wall));
+        actual_total += opening.weight;
+    }
+
+    assert(actual_total == 1'050'488ULL);
+    assert(is_wall(maze.grid, {3, 2}));
+}
 void test_seed_and_extra_paths() {
     const MazeGenerationResult base = generate_maze(20, 30, 2026u);
     const MazeGenerationResult same = generate_maze(20, 30, 2026u);
@@ -233,6 +257,7 @@ void test_invalid_dimensions() {
 void run_kruskal_tests() {
     test_disjoint_set();
     test_dimensions_and_minimum_cost();
+    test_known_minimum_spanning_tree();
     test_seed_and_extra_paths();
     test_invalid_dimensions();
 }
