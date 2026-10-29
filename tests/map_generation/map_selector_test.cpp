@@ -316,7 +316,7 @@ void test_negative_verified_cost_is_rejected() {
     assert(!result.has_value());
 }
 
-void test_negative_cost_on_unverified_map_is_ignored() {
+void test_negative_cost_on_unverified_map_is_rejected() {
 
     const std::vector<MapCandidate> candidates = {
         {1, -100, false},
@@ -329,11 +329,7 @@ void test_negative_cost_on_unverified_map_is_ignored() {
     const auto result =
         select_maps(candidates);
 
-    assert(result.has_value());
-
-    assert(result->easy_id == 2);
-    assert(result->medium_id == 3);
-    assert(result->hard_id == 4);
+    assert(!result.has_value());
 }
 
 void run_map_selector_tests() {
@@ -362,7 +358,7 @@ void run_map_selector_tests() {
 
     test_negative_verified_cost_is_rejected();
 
-    test_negative_cost_on_unverified_map_is_ignored();
+    test_negative_cost_on_unverified_map_is_rejected();
     std::cout
         << "All map selector tests passed!\n";
 }

@@ -1,6 +1,6 @@
 #include "circuit_escape/map_generation/kruskal.h"
 
-#include "circuit_escape/map_generation/disjoint_set.h"
+#include "circuit_escape/graph/disjoint_set.h"
 
 #include <algorithm>
 #include <limits>

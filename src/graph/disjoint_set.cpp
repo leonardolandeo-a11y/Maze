@@ -1,4 +1,4 @@
-#include "circuit_escape/map_generation/disjoint_set.h"
+#include "circuit_escape/graph/disjoint_set.h"
 
 #include <numeric>
 #include <stdexcept>
@@ -42,4 +42,12 @@ std::size_t DisjointSet::component_count() const noexcept {
 
 std::size_t DisjointSet::size() const noexcept {
     return parent_.size();
+}
+
+bool DisjointSet::connected(std::size_t first, std::size_t second) {
+    return find(first) == find(second);
+}
+
+std::size_t DisjointSet::set_count() const noexcept {
+    return component_count_;
 }

@@ -9,8 +9,10 @@ public:
 
     std::size_t find(std::size_t element);
     bool unite(std::size_t first, std::size_t second);
+    bool connected(std::size_t first, std::size_t second);
 
     [[nodiscard]] std::size_t component_count() const noexcept;
+    [[nodiscard]] std::size_t set_count() const noexcept;
     [[nodiscard]] std::size_t size() const noexcept;
 
 private:
