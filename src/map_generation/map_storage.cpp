@@ -144,8 +144,11 @@ std::string cell_token(const Cell& cell) {
         if (value->consumed) throw std::invalid_argument("Cannot save a consumed battery");
         return "B:" + std::to_string(value->energy);
     }
-    const auto& value = std::get<Trap>(cell);
-    return "T:" + std::to_string(value.energyPenalty) + ":" + std::to_string(value.scorePenalty);
+    if (const auto* value = std::get_if<Trap>(&cell)) {
+        return "T:" + std::to_string(value->energyPenalty) + ":" + std::to_string(value->scorePenalty);
+    }
+    // Project 2 stores switch positions separately, not as Grid Switch cells.
+    throw std::invalid_argument("Switch cells cannot be serialized; use switch_a and switch_b positions");
 }
 
 void verify_map(const SavedMap& map) {

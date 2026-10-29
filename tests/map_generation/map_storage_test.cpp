@@ -165,6 +165,17 @@ void reject_invalid_input_test(const std::filesystem::path& folder) {
     map = verified_fixture(10, 15);
     map.grid.at({3, 4}) = ResourceCell<int>{9, true};
     expect_failure([&] { save_map(map, path); });
+    // Switch positions are saved in metadata, not inside Grid cells.
+    map = verified_fixture(10, 15);
+    map.grid.at({5, 4}) = Switch{SwitchId::a, false};
+    map.input.graph = graph_for(map.grid);
+    bool switch_rejected = false;
+    try {
+        save_map(map, path);
+    } catch (const std::invalid_argument& error) {
+        switch_rejected = std::string(error.what()).find("Switch cells") != std::string::npos;
+    }
+    assert(switch_rejected);
     map = verified_fixture(10, 15);
     save_map(map, path);
     std::ifstream input(path);
