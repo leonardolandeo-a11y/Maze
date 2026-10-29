@@ -89,14 +89,45 @@ ftxui::Element ConsoleUI::help() const {
 RenderSupBar() -> Construye la barra de estado con turno, energía, puntaje y recursos.
 
 ---------------------------------------------------------------------*/
-ftxui::Element ConsoleUI::RenderSupBar(const Observation& observation) const {
+ftxui::Element ConsoleUI::RenderSupBar( const Observation& observation) const {
 
-    return ftxui::text(
-        "Turn " + std::to_string(observation.turn) + "/" + std::to_string(observation.turnLimit) +
-        " | Energy " + std::to_string(observation.energy) + "/" + std::to_string(observation.maximumEnergy) +
-        " | Score " + std::to_string(observation.score) +
-        " | Resources " +std::to_string(observation.collectedResources)
+    HudReport report = hudReport_.value_or(HudReport{});
+
+    // datos ya disponibles en el estado real del juego
+    report.turn = observation.turn;
+    report.turn_limit = observation.turnLimit;
+    report.energy = observation.energy;
+    report.maximum_energy = observation.maximumEnergy;
+
+    const auto lines = format_status(report);
+
+    ftxui::Elements content;
+
+    content.push_back(
+        ftxui::text(
+            lines[0] + " | " +
+            lines[1] +
+            " | Score: " + std::to_string(observation.score) +
+            " | Resources: " +
+            std::to_string(observation.collectedResources)
+        )
     );
+
+    if (hudReport_.has_value()) {
+        content.push_back(
+            ftxui::text(lines[2] + " | " + lines[3])
+        );
+
+        content.push_back(
+            ftxui::text(lines[4])
+        );
+    } else {
+        content.push_back(
+            ftxui::text("A/B y vigilante: datos pendientes de integrar")
+        );
+    }
+
+    return ftxui::vbox(content);
 }
 
 ftxui::Element ConsoleUI::CoordinateCell(const std::string& label) const {
@@ -170,9 +201,10 @@ ftxui::Element ConsoleUI::RenderBoard(
 
             const Cell& cell = environment.grid().at(position);
             const bool isAgent = observation.agent == position;
+            const bool isGuard = guardPosition_.has_value() && *guardPosition_ == position;
 
             columns.push_back(
-                RenderCell(cell, isAgent)
+                RenderCell(cell, isAgent, isGuard)
                 | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, cellVisualWidth)
                 | ftxui::center
             );
@@ -327,11 +359,16 @@ El agente tiene prioridad visual sobre la celda que ocupa.
 Para el resto de casos, std::visit identifica el tipo almacenado
 en Cell y selecciona su símbolo usando la funcion aux symbol_for
 ---------------------------------------------------------------------*/
-ftxui::Element ConsoleUI::RenderCell( const Cell& cell, bool IsAgent) const {
+ftxui::Element ConsoleUI::RenderCell( const Cell& cell, bool IsAgent, bool IsGuardian) const {
 
     // El jugador tiene prioridad sobre la casilla que ocupa.
+    //El vigilante igual
     if (IsAgent) {
         return ftxui::text(symbol_for(GameSymbol::player));
+    }
+
+    if (IsGuardian) {
+        return ftxui::text(symbol_for(GameSymbol::guard));
     }
 
     return std::visit(
@@ -445,3 +482,35 @@ std::string ConsoleUI::EventMessage(
     );
 }
 
+/*---------------------------------------------------------------------
+format_Status() -> Establece el formato con el que se renderizara
+el reporte de estaod:
+
+1. Turno
+2. Energia
+3. Estado de los switches A y B
+4. Movimientos del vigilante
+---------------------------------------------------------------------*/
+std::vector<std::string> ConsoleUI::format_status(
+    const HudReport& report
+) const {
+    return {
+        "Turno: " +
+            std::to_string(report.turn) + "/" +
+            std::to_string(report.turn_limit),
+
+        "Energia: " +
+            std::to_string(report.energy) + "/" +
+            std::to_string(report.maximum_energy),
+
+        std::string("A: ") +
+            (report.switch_a_activated ? "Activado" : "Pendiente"),
+
+        std::string("B: ") +
+            (report.switch_b_activated ? "Activado" : "Pendiente"),
+
+        report.guard_moves_next_turn
+            ? "Vigilante: avanzara despues de tu siguiente accion."
+            : "Vigilante: permanecera quieto despues de tu siguiente accion."
+    };
+}

@@ -261,6 +261,104 @@ void test_switches_render() {
     }
 }
 
+void test_hud_renders_switches_and_guard_status() {
+    auto environment = createRenderTestEnvironment();
+    ConsoleUI ui(RenderMode::ascii);
+
+    // Antes de recibir información del motor.
+    std::string output = renderToString(ui, environment);
+    assert(
+        output.find("datos pendientes de integrar")
+        != std::string::npos
+    );
+
+    // Primer reporte: A activo, B pendiente y vigilante por avanzar.
+    HudReport report;
+    report.switch_a_activated = true;
+    report.switch_b_activated = false;
+    report.guard_moves_next_turn = true;
+
+    ui.setHudReport(report);
+
+    output = renderToString(ui, environment);
+
+    assert(
+        output.find("A: Activado | B: Pendiente")
+        != std::string::npos
+    );
+
+    assert(
+        output.find("Vigilante: avanzara")
+        != std::string::npos
+    );
+
+    assert(
+        output.find("datos pendientes de integrar")
+        == std::string::npos
+    );
+
+    // Segundo reporte: cambian los interruptores y el aviso.
+    report.switch_a_activated = false;
+    report.switch_b_activated = true;
+    report.guard_moves_next_turn = false;
+
+    ui.setHudReport(report);
+
+    output = renderToString(ui, environment);
+
+    assert(
+        output.find("A: Pendiente | B: Activado")
+        != std::string::npos
+    );
+
+    assert(
+        output.find("Vigilante: permanecera quieto")
+        != std::string::npos
+    );
+}
+
+void test_guard_rendering() {
+    auto environment = createRenderTestEnvironment();
+
+    for (RenderMode mode : {RenderMode::ascii, RenderMode::emoji}) {
+        ConsoleUI ui(mode);
+
+        const std::string original =
+            renderToString(ui, environment);
+
+        // Colocamos al vigilante sobre el interruptor A pendiente.
+        ui.setGuardPosition(Position{0, 7});
+
+        std::string output = renderToString(ui, environment);
+
+        output.erase(
+            std::remove(output.begin(), output.end(), ' '),
+            output.end()
+        );
+
+        // El vigilante debe cubrir solamente el primer interruptor.
+        const std::string expected =
+            mode == RenderMode::ascii
+                ? "VaBb"
+                : "👮🟢🟥🟩";
+
+        assert(output.find(expected) != std::string::npos);
+
+        // Al retirarlo, debe reaparecer el contenido original.
+        ui.clearGuardPosition();
+
+        output = renderToString(ui, environment);
+
+        assert(output == original);
+
+        // Si coincide con el jugador, se mantiene su prioridad visual.
+        ui.setGuardPosition(environment.state().agent);
+
+        output = renderToString(ui, environment);
+
+        assert(output == original);
+    }
+}
 
 // Punto de entrada para integrarlo con tests/test_main.cpp.
 void run_console_render_tests() {
@@ -270,4 +368,6 @@ void run_console_render_tests() {
     test_emoji_renders_all_cell_types();
     test_emoji_board_has_20_rows_and_30_cells();
     test_switches_render();
+    test_hud_renders_switches_and_guard_status();
+    test_guard_rendering();
 }

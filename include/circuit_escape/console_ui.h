@@ -9,6 +9,7 @@
 //Agregados para obtener los contratos necesarios para renderizar: gamesymbol
 #include "circuit_escape/project2_contracts.h"
 #include <string>
+#include <vector>
 
 enum class RenderMode {
     emoji,
@@ -30,7 +31,7 @@ private:
     bool help_{false};
     std::string inputMessage_;
 
-    ftxui::Element RenderCell(const Cell& cell, bool IsAgent) const;
+    ftxui::Element RenderCell(const Cell& cell, bool IsAgent, bool IsGuardian=false) const;
     //metodos aux agregados para mantener limpio el codigo
     ftxui::Element RenderSupBar(const Observation& observation) const;
     ftxui::Element RenderBoard(const NavigationEnvironment<20, 30>& environment, 
@@ -42,8 +43,18 @@ private:
     */
     ftxui::Element CoordinateCell(const std::string& label) const;
     std::string EventMessage(const NavigationEvent& event) const;
+    
     //Determina el simbolo que se escogera para renderizar
     std::string symbol_for(GameSymbol symbol) const;
+    
+    // Formato de la renderizacion del reporte de estado
+    std::vector<std::string> format_status(const HudReport& report) const;
+
+    //reporte de estado
+    std::optional<HudReport> hudReport_;
+
+    //position del vigilante
+    std::optional<Position> guardPosition_;
 public:
     explicit ConsoleUI(RenderMode mode = RenderMode::emoji);
 
@@ -67,5 +78,17 @@ public:
 
     void clearInputMessage() {
         inputMessage_.clear();
+    }
+
+    void setHudReport(const HudReport& report) {
+        hudReport_ = report;
+    }
+
+    void setGuardPosition(Position position) noexcept {
+        guardPosition_ = position;
+    }
+
+    void clearGuardPosition() noexcept {
+        guardPosition_.reset();
     }
 };
