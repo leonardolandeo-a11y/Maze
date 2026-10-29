@@ -19,13 +19,14 @@ std::optional<MapSelection> select_maps(const std::vector<MapCandidate>& candida
             return std::nullopt;
         }
 
+        if (candidate.minimum_energy_cost < 0) {
+            return std::nullopt;
+        }
+
         if (!candidate.verified_win) {
             continue;
         }
 
-        if (candidate.minimum_energy_cost < 0) {
-            return std::nullopt;
-        }
 
         verified_candidates.push_back(candidate);
     }
