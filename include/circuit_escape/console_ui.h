@@ -25,6 +25,15 @@ enum class UICommand{
     help,
     quit
 };
+
+//Este enum identifica qué camino quiere ver el usuario
+enum class HelpPathSelection {
+    none,
+    to_a,
+    to_b,
+    complete
+};
+
 class ConsoleUI {
 private:
     RenderMode mode_;
@@ -55,6 +64,11 @@ private:
 
     //position del vigilante
     std::optional<Position> guardPosition_;
+
+    //resaltado de rutas
+    std::vector<Position> highlightedPath_;
+
+    std::optional<HelpReport> helpReport_;
 public:
     explicit ConsoleUI(RenderMode mode = RenderMode::emoji);
 
@@ -90,5 +104,30 @@ public:
 
     void clearGuardPosition() noexcept {
         guardPosition_.reset();
+    }
+
+    void setHighlightedPath(const std::vector<Position>& path) {
+        highlightedPath_ = path;
+    }
+
+    void clearHighlightedPath() noexcept {
+        highlightedPath_.clear();
+    }
+
+    void highlightHelpPath(
+        const HelpReport& report,
+        HelpPathSelection selection
+    );
+
+    void setHelpReport(const HelpReport& report) {
+        helpReport_ = report;
+
+        // El camino anterior podría pertenecer a otra posición del jugador.
+        clearHighlightedPath();
+    }
+
+    void clearHelpReport() noexcept {
+        helpReport_.reset();
+        clearHighlightedPath();
     }
 };

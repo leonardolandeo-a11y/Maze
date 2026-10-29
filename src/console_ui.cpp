@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <array>
 #include <stdexcept>
+#include <algorithm>
 
 
 ConsoleUI::ConsoleUI(RenderMode mode): mode_(mode){};
@@ -51,34 +52,25 @@ Mientras help_ esté activo, render() muestra esta vista en lugar
 del tablero principal.
 ---------------------------------------------------------------------*/
 ftxui::Element ConsoleUI::help() const {
-    // Datos temporales para comprobar la presentación.
-    HelpReport report;
-
-    report.switch_a = {ObjectiveStatus::pending, 8};
-    report.switch_b = {ObjectiveStatus::pending, 2};
-    report.exit_goal = {ObjectiveStatus::locked, std::nullopt};
-
-    report.current_energy = 12;
-    report.total_cost = 10;
-
-    report.recommended_order = {
-        HelpTarget::switch_b,
-        HelpTarget::switch_a,
-        HelpTarget::exit
-    };
-
-    report.segment_costs = {2, 5, 3};
-
     Help helpView;
 
+    if (!helpReport_.has_value()) {
+        return ftxui::vbox({
+            helpView.RenderMenu(),
+
+            ftxui::separatorEmpty(),
+
+            ftxui::text("La ayuda de energia aun no esta disponible.")
+                | ftxui::color(ftxui::Color::Yellow),
+
+            ftxui::separatorEmpty(),
+
+            ftxui::text("H - Volver a la partida")
+        });
+    }
+
     return ftxui::vbox({
-        ftxui::text("VISTA DE PRUEBA: DATOS DE EJEMPLO")
-            | ftxui::bold
-            | ftxui::color(ftxui::Color::Yellow),
-
-        ftxui::separatorEmpty(),
-
-        helpView.RenderGame(report),
+        helpView.RenderGame(*helpReport_),
 
         ftxui::separatorEmpty(),
 
@@ -196,28 +188,48 @@ ftxui::Element ConsoleUI::RenderBoard(
 
         // Celdas
         for (std::size_t column = 0; column < 30; ++column) {
-
-            Position position{ row, column };
+            Position position{row, column};
 
             const Cell& cell = environment.grid().at(position);
-            const bool isAgent = observation.agent == position;
-            const bool isGuard = guardPosition_.has_value() && *guardPosition_ == position;
 
-            columns.push_back(
+            const bool isAgent = observation.agent == position;
+
+            const bool isGuard =
+                guardPosition_.has_value() &&
+                *guardPosition_ == position;
+
+            auto cellElement =
                 RenderCell(cell, isAgent, isGuard)
-                | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, cellVisualWidth)
-                | ftxui::center
-            );
-        }
+                    | ftxui::size(
+                        ftxui::WIDTH,
+                        ftxui::EQUAL,
+                        cellVisualWidth
+                    )
+                    | ftxui::center;
+
+            const bool isOnPath =
+                std::find(
+                    highlightedPath_.begin(),
+                    highlightedPath_.end(),
+                    position
+                ) != highlightedPath_.end();
+
+            if (isOnPath) {
+                cellElement =
+                    cellElement
+                        | ftxui::bgcolor(ftxui::Color::Blue)
+                        | ftxui::color(ftxui::Color::White);
+            }
+
+            columns.push_back(cellElement);
+        } // Fin del recorrido de columnas.
 
         rows.push_back(
             ftxui::hbox(std::move(columns))
         );
-    }
+    } // Fin del recorrido de filas.
 
-    return ftxui::vbox(
-        std::move(rows)
-    );
+    return ftxui::vbox(std::move(rows));
 }
 /*---------------------------------------------------------------------
 RenderInfBar() -> Construye el footer de la partida.
@@ -252,9 +264,30 @@ ftxui::Element ConsoleUI::render(
     using namespace ftxui;
 
     if (help_) {
-        return help();
-    }
+        // Mientras no haya reporte, mostramos la ayuda general.
+        if (!helpReport_.has_value()) {
+            return help();
+        }
 
+        const Observation observation = environment.state();
+
+        auto boardWindow = ftxui::window(
+            ftxui::text(" MAPA Y RUTA ")
+                | ftxui::bold
+                | ftxui::color(ftxui::Color::CyanLight),
+
+            RenderBoard(environment, observation)
+        );
+
+        return ftxui::vbox({
+            help(),
+
+            ftxui::separatorEmpty(),
+
+            boardWindow
+        }) | ftxui::center;
+    }
+    
     Observation observation = environment.state();
 
     auto SupWindow = window(
@@ -513,4 +546,27 @@ std::vector<std::string> ConsoleUI::format_status(
             ? "Vigilante: avanzara despues de tu siguiente accion."
             : "Vigilante: permanecera quieto despues de tu siguiente accion."
     };
+}
+
+void ConsoleUI::highlightHelpPath(
+    const HelpReport& report,
+    HelpPathSelection selection
+) {
+    switch (selection) {
+        case HelpPathSelection::none:
+            clearHighlightedPath();
+            break;
+
+        case HelpPathSelection::to_a:
+            setHighlightedPath(report.path_to_a);
+            break;
+
+        case HelpPathSelection::to_b:
+            setHighlightedPath(report.path_to_b);
+            break;
+
+        case HelpPathSelection::complete:
+            setHighlightedPath(report.complete_path);
+            break;
+    }
 }

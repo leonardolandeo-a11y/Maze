@@ -257,7 +257,6 @@ void test_switches_render() {
         }
 
         assert(output.find(expected) != std::string::npos);
-        assert(output.find(expected) != std::string::npos);
     }
 }
 
@@ -360,6 +359,233 @@ void test_guard_rendering() {
     }
 }
 
+void test_path_highlighting() {
+    auto environment = createRenderTestEnvironment();
+    ConsoleUI ui(RenderMode::ascii);
+
+    auto renderScreen = [&]() {
+        auto screen = ftxui::Screen::Create(
+            ftxui::Dimension::Fixed(120),
+            ftxui::Dimension::Fixed(50)
+        );
+
+        ftxui::Render(screen, ui.render(environment, {}));
+
+        return screen;
+    };
+
+    const auto original = renderScreen();
+
+    // Camino de ejemplo sobre celdas libres hasta el jugador.
+    ui.setHighlightedPath({
+        Position{19, 27},
+        Position{19, 28},
+        Position{19, 29}
+    });
+
+    const auto highlighted = renderScreen();
+
+    bool foundBlueBackground = false;
+    bool foundHighlightedPlayer = false;
+
+    for (int y = 0; y < highlighted.dimy(); ++y) {
+        for (int x = 0; x < highlighted.dimx(); ++x) {
+            const auto& cell = highlighted.CellAt(x, y);
+            const auto& previous = original.CellAt(x, y);
+
+            // Resaltar no debe cambiar ningún símbolo.
+            assert(cell.character == previous.character);
+
+            if (cell.background_color == ftxui::Color::Blue) {
+                foundBlueBackground = true;
+
+                if (cell.character == "@") {
+                    foundHighlightedPlayer = true;
+                }
+            }
+        }
+    }
+
+    assert(foundBlueBackground);
+    assert(foundHighlightedPlayer);
+
+    // Limpiar debe restaurar los colores originales.
+    ui.clearHighlightedPath();
+
+    const auto cleared = renderScreen();
+
+    for (int y = 0; y < cleared.dimy(); ++y) {
+        for (int x = 0; x < cleared.dimx(); ++x) {
+            const auto& cell = cleared.CellAt(x, y);
+            const auto& previous = original.CellAt(x, y);
+
+            assert(cell.character == previous.character);
+            assert(cell.background_color == previous.background_color);
+            assert(cell.foreground_color == previous.foreground_color);
+        }
+    }
+}
+
+void test_help_path_selection() {
+    auto environment = createRenderTestEnvironment();
+    ConsoleUI ui(RenderMode::ascii);
+
+    HelpReport report;
+
+    // Posiciones simuladas para probar únicamente la presentación.
+    report.path_to_a = {{0, 7}};
+    report.path_to_b = {{0, 9}};
+    report.complete_path = {
+        {0, 7}, {0, 8}, {0, 9}, {0, 10}
+    };
+
+    // Devuelve los símbolos de interruptor que tienen fondo azul.
+    auto highlightedSwitches = [&]() -> std::string {
+        auto screen = ftxui::Screen::Create(
+            ftxui::Dimension::Fixed(120),
+            ftxui::Dimension::Fixed(50)
+        );
+
+        ftxui::Render(screen, ui.render(environment, {}));
+
+        std::string result;
+
+        for (int y = 0; y < screen.dimy(); ++y) {
+            for (int x = 0; x < screen.dimx(); ++x) {
+                const auto& cell = screen.CellAt(x, y);
+
+                const bool isSwitch =
+                    cell.character == "A" ||
+                    cell.character == "a" ||
+                    cell.character == "B" ||
+                    cell.character == "b";
+
+                if (isSwitch &&
+                    cell.background_color == ftxui::Color::Blue) {
+                    result += cell.character;
+                }
+            }
+        }
+
+        return result;
+    };
+
+    ui.highlightHelpPath(report, HelpPathSelection::to_a);
+    assert(highlightedSwitches() == "A");
+
+    ui.highlightHelpPath(report, HelpPathSelection::to_b);
+    assert(highlightedSwitches() == "B");
+
+    ui.highlightHelpPath(report, HelpPathSelection::complete);
+    assert(highlightedSwitches() == "AaBb");
+
+    ui.highlightHelpPath(report, HelpPathSelection::none);
+    assert(highlightedSwitches().empty());
+
+    // Elegir una ruta vacía debe eliminar el resaltado anterior.
+    ui.highlightHelpPath(report, HelpPathSelection::to_a);
+
+    report.path_to_b.clear();
+
+    ui.highlightHelpPath(report, HelpPathSelection::to_b);
+    assert(highlightedSwitches().empty());
+}
+
+
+void test_help_report_integration(
+    RenderMode mode,
+    bool showPreview = false
+) {
+    auto environment = createRenderTestEnvironment();
+    ConsoleUI ui(mode);
+    // Abrimos la ayuda sin haber recibido un reporte.
+    ui.setHelp();
+
+    std::string output = renderToString(ui, environment);
+
+    assert(output.find("AYUDA GENERAL") != std::string::npos);
+    assert(
+        output.find("La ayuda de energia aun no esta disponible.")
+        != std::string::npos
+    );
+
+    // Reporte de ejemplo: ambos interruptores están activados.
+    HelpReport report;
+
+    report.switch_a = {
+        ObjectiveStatus::activated, std::nullopt
+    };
+
+    report.switch_b = {
+        ObjectiveStatus::activated, std::nullopt
+    };
+
+    report.exit_goal = {ObjectiveStatus::enabled, 3};
+
+    report.current_energy = 12;
+    report.total_cost = 3;
+    report.recommended_order = {HelpTarget::exit};
+    report.segment_costs = {3};
+
+    
+    report.complete_path = {
+        {0, 7}, {0, 8}, {0, 9}, {0, 10}
+    };
+    
+    ui.setHelpReport(report);
+    
+    ui.highlightHelpPath(
+        report,
+        HelpPathSelection::complete
+    );
+
+    if (showPreview) {
+        auto preview = ftxui::Screen::Create(
+            ftxui::Dimension::Fixed(120),
+            ftxui::Dimension::Fixed(60)
+        );
+
+        ftxui::Render(preview, ui.render(environment, {}));
+
+        preview.Print();
+    }
+
+    output = renderToString(ui, environment);
+
+    assert(output.find("AYUDA DE ENERGIA") != std::string::npos);
+    assert(output.find("MAPA Y RUTA") != std::string::npos);
+    assert(output.find("Recorrido: Actual -> Salida") != std::string::npos);
+    assert(output.find("Energia actual: 12") != std::string::npos);
+    assert(output.find("Saldo estimado: 9") != std::string::npos);
+
+    // Un nuevo reporte debe actualizar la vista.
+    report.current_energy = 3;
+    ui.setHelpReport(report);
+
+    output = renderToString(ui, environment);
+
+    assert(output.find("Energia actual: 3") != std::string::npos);
+    assert(output.find("Saldo estimado: 0") != std::string::npos);
+    assert(output.find("no permite ganar") != std::string::npos);
+    assert(output.find("Energia actual: 12") == std::string::npos);
+
+    // Sin reporte volvemos a la ayuda general.
+    ui.clearHelpReport();
+
+    output = renderToString(ui, environment);
+
+    assert(output.find("AYUDA GENERAL") != std::string::npos);
+    assert(output.find("AYUDA DE ENERGIA") == std::string::npos);
+
+    // Cerramos la ayuda y vuelve a mostrarse el tablero.
+    ui.setHelp();
+
+    output = renderToString(ui, environment);
+
+    assert(output.find("MAZE") != std::string::npos);
+    assert(output.find("AYUDA GENERAL") == std::string::npos);
+}
+
 // Punto de entrada para integrarlo con tests/test_main.cpp.
 void run_console_render_tests() {
     test_ascii_renders_all_cell_types();
@@ -370,4 +596,8 @@ void run_console_render_tests() {
     test_switches_render();
     test_hud_renders_switches_and_guard_status();
     test_guard_rendering();
+    test_path_highlighting();
+    test_help_path_selection();
+    test_help_report_integration(RenderMode::ascii);
+    test_help_report_integration(RenderMode::emoji);
 }
