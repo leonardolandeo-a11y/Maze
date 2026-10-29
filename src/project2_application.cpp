@@ -94,10 +94,13 @@ ftxui::Element help_content(const Project2Session& session, const HelpReport& re
         for (HelpTarget target : report.recommended_order) {
             route += " -> " + target_label(target);
         }
-        const int remaining = report.current_energy - *report.total_cost;
+        const long long remaining = static_cast<long long>(report.current_energy) -
+            static_cast<long long>(*report.total_cost);
+        const char* energy_status = remaining > 0 ? "ENOUGH" :
+            (remaining == 0 ? "ZERO AT EXIT - RECHARGE" : "INSUFFICIENT - RECHARGE");
         cost = "Cost " + std::to_string(*report.total_cost) +
             " | Remaining " + std::to_string(remaining) +
-            (remaining > 0 ? " | ENOUGH" : " | NEED RECHARGES");
+            " | " + energy_status;
     }
     const std::vector<std::string> lines{
         status_line("A", report.switch_a) + " | " +
