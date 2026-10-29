@@ -13,6 +13,7 @@ void run_event_tests();
 void run_console_render_tests();
 void run_map_selector_tests();
 void run_help_tests();
+void run_menus_tests();
 void run_graph_tests();
 void run_disjoint_set_tests();
 void run_kruskal_tests();
@@ -41,6 +42,7 @@ int main() {
     run_console_render_tests();
     run_map_selector_tests();
     run_help_tests();
+    run_menus_tests();
     run_graph_tests();
 
     run_disjoint_set_tests();

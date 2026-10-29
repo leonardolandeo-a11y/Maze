@@ -90,6 +90,7 @@ add_executable(Maze_test
     tests/console_render_test.cpp
     tests/map_generation/map_selector_test.cpp
     tests/help_test.cpp
+    tests/menus_test.cpp
         tests/graph_test.cpp
     tests/graph/disjoint_set_test.cpp
     tests/map_generation/kruskal_test.cpp
