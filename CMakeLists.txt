@@ -77,6 +77,7 @@ add_executable(Maze_test
     tests/test_main.cpp
     tests/grid_test.cpp
     tests/types_test.cpp
+    tests/agent_test.cpp
     tests/environment_test.cpp
     tests/interactions_test.cpp
     tests/controllers_test.cpp
