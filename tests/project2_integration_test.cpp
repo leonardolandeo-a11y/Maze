@@ -655,6 +655,14 @@ void run_project2_integration_tests() {
         assert(screen_ascii.find("@") != std::string::npos);
         assert(screen_ascii.find("A") != std::string::npos);
         assert(screen_ascii.find("B") != std::string::npos);
+        if (rows <= 20 && columns <= 30) {
+            // The active Project 2 legend must match the selected render mode.
+            assert(screen_ascii.find("V guard | @ player | S exit") != std::string::npos);
+            assert(screen_ascii.find("Resources: R | Batteries: + | Traps: T | Walls: #")
+                != std::string::npos);
+            assert(screen_ascii.find("Resources: diamonds") == std::string::npos);
+            assert(screen_emoji.find("Resources: diamonds") != std::string::npos);
+        }
         const auto before = session.state();
         const auto help = session.help_report();
         assert(help.total_cost.has_value());

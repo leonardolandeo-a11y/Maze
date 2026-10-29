@@ -654,12 +654,17 @@ ftxui::Element ConsoleUI::render_project2(
         footer_lines.push_back(text(std::string(" View: ") +
             (view == Project2MapView::overview ? "FULL MAP" : "DETAIL") +
             " | Help: H | Quit: Q"));
+        const bool ascii_legend = mode_ == RenderMode::ascii;
         footer_lines.push_back(compact
             ? text(" @ player | V guard | A/B switches | S = goal tile")
-            : text(" A/B switches | Guard: eyes | S = down; goal is on the map"));
+            : ascii_legend
+                ? text(" A/B switches | V guard | @ player | S exit")
+                : text(" A/B switches | Guard: eyes | S = down; goal is on the map"));
         footer_lines.push_back(compact
             ? text(" Colors: teal resource | amber battery | burgundy trap | green goal")
-            : text(" Resources: diamonds | Batteries: lightning | Traps: explosions"));
+            : ascii_legend
+                ? text(" Resources: R | Batteries: + | Traps: T | Walls: #")
+                : text(" Resources: diamonds | Batteries: lightning | Traps: explosions"));
     }
     while (footer_lines.size() < 5) {
         footer_lines.push_back(text(" "));
