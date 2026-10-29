@@ -1,4 +1,5 @@
 #include "circuit_escape/console_ui.h"
+#include "circuit_escape/help.h"
 #include <variant>
 #include <type_traits>
 #include <array>
@@ -50,120 +51,39 @@ Mientras help_ esté activo, render() muestra esta vista en lugar
 del tablero principal.
 ---------------------------------------------------------------------*/
 ftxui::Element ConsoleUI::help() const {
-    using namespace ftxui;
+    // Datos temporales para comprobar la presentación.
+    HelpReport report;
 
-    const std::array<std::string, 6> controlsTitle = {
-        " ██████╗ ██████╗ ███╗   ██╗████████╗██████╗  ██████╗ ██╗     ███████╗",
-        "██╔════╝██╔═══██╗████╗  ██║╚══██╔══╝██╔══██╗██╔═══██╗██║     ██╔════╝",
-        "██║     ██║   ██║██╔██╗ ██║   ██║   ██████╔╝██║   ██║██║     ███████╗",
-        "██║     ██║   ██║██║╚██╗██║   ██║   ██╔══██╗██║   ██║██║     ╚════██║",
-        "╚██████╗╚██████╔╝██║ ╚████║   ██║   ██║  ██║╚██████╔╝███████╗███████║",
-        " ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝"
+    report.switch_a = {ObjectiveStatus::pending, 8};
+    report.switch_b = {ObjectiveStatus::pending, 2};
+    report.exit_goal = {ObjectiveStatus::locked, std::nullopt};
+
+    report.current_energy = 12;
+    report.total_cost = 10;
+
+    report.recommended_order = {
+        HelpTarget::switch_b,
+        HelpTarget::switch_a,
+        HelpTarget::exit
     };
 
-    Elements titleLines;
+    report.segment_costs = {2, 5, 3};
 
-    for (const auto& line : controlsTitle){
-        titleLines.push_back(
-            text(line)
-            | color(Color::CyanLight)
-            | bold
-            | center
-        );
-    }
+    Help helpView;
 
-    auto movement = vbox({
-        hbox({
-            text("W / ↑") | bold | color(Color::CyanLight),
-            text("    MOVE UP")
-        }),
-        hbox({
-            text("S / ↓") | bold | color(Color::CyanLight),
-            text("    MOVE DOWN")
-        }),
-        hbox({
-            text("A / ←") | bold | color(Color::CyanLight),
-            text("    MOVE LEFT")
-        }),
-        hbox({
-            text("D / →") | bold | color(Color::CyanLight),
-            text("    MOVE RIGHT")
-        })
+    return ftxui::vbox({
+        ftxui::text("VISTA DE PRUEBA: DATOS DE EJEMPLO")
+            | ftxui::bold
+            | ftxui::color(ftxui::Color::Yellow),
+
+        ftxui::separatorEmpty(),
+
+        helpView.RenderGame(report),
+
+        ftxui::separatorEmpty(),
+
+        ftxui::text("H - Volver a la partida")
     });
-
-    auto actions = vbox({
-        hbox({
-            text("E") | bold | color(Color::CyanLight),
-            text("        WAIT ONE TURN")
-        }),
-        hbox({
-            text("H") | bold | color(Color::CyanLight),
-            text("        CLOSE HELP")
-        }),
-        hbox({
-            text("Q") | bold | color(Color::CyanLight),
-            text("        EXIT")
-        })
-    });
-
-    auto content = vbox({
-        text("MOVEMENT")
-        | bold
-        | color(Color::CyanLight),
-
-        separatorEmpty(),
-        movement,
-        separatorEmpty(),
-
-        separator(),
-
-        text("ACTIONS")
-        | bold
-        | color(Color::CyanLight),
-
-        separatorEmpty(),
-        actions,
-        separatorEmpty()
-    });
-
-    auto controlsWindow = window(
-        text(" COMMAND REFERENCE ")
-        | bold
-        | color(Color::CyanLight),
-
-        hbox({
-            text("  "),
-            content,
-            text("  ")
-        })
-    );
-
-    return vbox({
-        filler(),
-
-        vbox(titleLines),
-
-        text("INPUT PROTOCOL // COMMAND REFERENCE")
-        | color(Color::White)
-        | bold
-        | center,
-
-        separatorEmpty(),
-        separatorEmpty(),
-
-        controlsWindow
-        | size(WIDTH, EQUAL, 52)
-        | center,
-
-        separatorEmpty(),
-
-        text("H - RETURN TO GAME")
-        | color(Color::GrayLight)
-        | center,
-
-        filler()
-    })
-    | bgcolor(Color::Black);
 }
 /*---------------------------------------------------------------------
 RenderSupBar() -> Construye la barra de estado con turno, energía, puntaje y recursos.

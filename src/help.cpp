@@ -42,7 +42,7 @@ ftxui::Element Help::RenderMenu() const {
         ftxui::text("Llegar a la salida con energia cero no permite ganar.")
     });
 
-    return window(
+    return ftxui::window(
         ftxui::text(" AYUDA GENERAL ") | ftxui::bold | ftxui::color(ftxui::Color::CyanLight),
         content
     );
@@ -51,7 +51,7 @@ ftxui::Element Help::RenderMenu() const {
 /*---------------------------------------------------------------------
 RenderGame() -> Renderiza la información reicibida de HelpReport
 
-1. cosText es un lambda que guarda el costo 
+1. cosText es un lambda que convierte y guarda el costo/estado como string 
 2. activeA/B guardan el estado de los bottones y exitState el estado de la salida en string
 3. row define como se componene las filas
 4. return -> la ventana con todo la información necesaria
@@ -99,6 +99,113 @@ ftxui::Element Help::RenderGame(const HelpReport& report) const {
         });
     };
 
+    auto targetName = [](HelpTarget target) -> std::string {
+        switch (target) {
+            case HelpTarget::switch_a:
+                return "A";
+
+            case HelpTarget::switch_b:
+                return "B";
+
+            case HelpTarget::exit:
+                return "Salida";
+        }
+
+        return "Desconocido";
+    };
+
+    ftxui::Elements routeDetails;
+
+    if (!report.total_cost.has_value()) {
+        routeDetails.push_back( ftxui::text("No hay un recorrido completo.") );
+    
+    } else if ( report.recommended_order.empty() || report.recommended_order.size() != report.segment_costs.size()) {
+        routeDetails.push_back( ftxui::text("Datos del recorrido incompletos.") );
+
+    } else {
+        std::string route = "Recorrido: Actual";
+
+        for (HelpTarget target : report.recommended_order) {
+            route += " -> " + targetName(target);
+        }
+
+        routeDetails.push_back(ftxui::text(route));
+        routeDetails.push_back(ftxui::separatorEmpty());
+
+        std::string previous = "Actual";
+
+        for (std::size_t i = 0; i < report.recommended_order.size(); ++i) {
+            const std::string destination =
+                targetName(report.recommended_order[i]);
+
+            routeDetails.push_back(
+                ftxui::text(
+                    previous + " -> " + destination +
+                    ": " + std::to_string(report.segment_costs[i]) +
+                    " de energia"
+                )
+            );
+
+            previous = destination;
+        }
+    }
+
+    ftxui::Elements energyDetails;
+
+    energyDetails.push_back(
+        ftxui::text( "Energia actual: " + std::to_string(report.current_energy))
+    );
+
+    if (report.total_cost.has_value()) {
+        const int totalCost = *report.total_cost;
+
+        const long long remainingEnergy =
+            static_cast<long long>(report.current_energy) - totalCost;
+
+        energyDetails.push_back(
+            ftxui::text("Costo total: " + std::to_string(totalCost))
+        );
+
+        energyDetails.push_back(
+            ftxui::text("Saldo estimado: " + std::to_string(remainingEnergy))
+        );
+
+        if (report.current_energy > totalCost) {
+            energyDetails.push_back(
+                ftxui::text("Energia suficiente para este recorrido sin recargas.")
+                    | ftxui::color(ftxui::Color::Green)
+            );
+
+        } else if (report.current_energy == totalCost) {
+            energyDetails.push_back(
+                ftxui::text("Llegarias con energia cero: no permite ganar.")
+                    | ftxui::color(ftxui::Color::Yellow)
+            );
+
+        } else {
+            energyDetails.push_back(
+                ftxui::text("Energia insuficiente para este recorrido sin recargas.")
+                    | ftxui::color(ftxui::Color::Red)
+            );
+        }
+
+    } else {
+        energyDetails.push_back(
+            ftxui::text("Destino inaccesible: no se puede estimar el saldo.")
+                | ftxui::color(ftxui::Color::Red)
+        );
+    }
+
+    energyDetails.push_back(ftxui::separatorEmpty());
+
+    energyDetails.push_back(
+        ftxui::text("El calculo no anticipa al vigilante ni las recargas.")
+    );
+
+    energyDetails.push_back(
+        ftxui::text("El recorrido no garantiza una victoria.")
+    );
+
     return ftxui::window(
         ftxui::text(" AYUDA DE ENERGIA ")
             | ftxui::bold
@@ -120,7 +227,13 @@ ftxui::Element Help::RenderGame(const HelpReport& report) const {
 
             row("Salida",
                 exitState,
-                costText(report.exit_goal))
+                costText(report.exit_goal)),
+
+            ftxui::separator(),
+            ftxui::vbox(routeDetails),
+
+            ftxui::separator(),
+            ftxui::vbox(energyDetails)
         })
     );
 }

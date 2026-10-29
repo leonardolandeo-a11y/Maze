@@ -67,6 +67,7 @@ add_executable(Maze_test
     tests/event_test.cpp
     tests/console_render_test.cpp
     tests/map_generation/map_selector_test.cpp
+    tests/help_test.cpp
 )
 
 target_link_libraries(Maze_test PRIVATE Maze_core)
