@@ -62,6 +62,14 @@ private:
         const Project2Session& session,
         std::span<const Position> highlighted,
         int board_width, int board_height) const;
+    ftxui::Element render_project2_fitted_map(
+        const Project2Session& session,
+        std::span<const Position> highlighted,
+        int board_width, int board_height) const;
+    ftxui::Element render_project2_zoom_detail(
+        const Project2Session& session,
+        std::span<const Position> highlighted,
+        int board_width, int board_height) const;
     ftxui::Element render_project2_cell(
         const Project2Session& session,
         Position position,

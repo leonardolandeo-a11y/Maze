@@ -443,12 +443,112 @@ ftxui::Element ConsoleUI::render_project2_scaled_overview(
     return vbox(std::move(lines));
 }
 
+// Display every tile of small maps while retaining the original symbols.
+// Unlike the compact 40x60 overview, this never replaces items with color dots.
+ftxui::Element ConsoleUI::render_project2_fitted_map(
+    const Project2Session& session,
+    std::span<const Position> highlighted,
+    int board_width, int board_height) const {
+    using namespace ftxui;
+    const auto& grid = session.map().grid;
+    const int rows = static_cast<int>(grid.rows());
+    const int columns = static_cast<int>(grid.columns());
+    const int cell_width = std::clamp(board_width / columns, 2, 8);
+    const int cell_height = std::clamp(board_height / rows, 1, 4);
+
+    Elements board_rows;
+    for (int row = 0; row < rows; ++row) {
+        Elements board_columns;
+        for (int column = 0; column < columns; ++column) {
+            const Position position{static_cast<std::size_t>(row),
+                                    static_cast<std::size_t>(column)};
+            board_columns.push_back(
+                render_project2_cell(session, position, highlighted)
+                | center
+                | size(WIDTH, EQUAL, cell_width)
+                | size(HEIGHT, EQUAL, cell_height));
+        }
+        board_rows.push_back(hbox(std::move(board_columns)));
+    }
+    return vbox(std::move(board_rows));
+}
+
+// Player-centered zoom for small maps. Movement changes only the viewport;
+// it never changes the map, player state, or turn count.
+ftxui::Element ConsoleUI::render_project2_zoom_detail(
+    const Project2Session& session,
+    std::span<const Position> highlighted,
+    int board_width, int board_height) const {
+    using namespace ftxui;
+    const auto& grid = session.map().grid;
+    const Position player = session.state().player;
+    const int rows = static_cast<int>(grid.rows());
+    const int columns = static_cast<int>(grid.columns());
+    const int cell_width = std::min(board_width, board_width >= 90 ? 8 : 6);
+    const int cell_height = std::min(board_height, board_height >= 32 ? 4 : 3);
+    const int visible_columns = std::clamp(board_width / cell_width, 1, columns);
+    const int visible_rows = std::clamp(board_height / cell_height, 1, rows);
+    const int first_row = std::clamp(
+        static_cast<int>(player.row) - visible_rows / 2, 0, rows - visible_rows);
+    const int first_column = std::clamp(
+        static_cast<int>(player.column) - visible_columns / 2, 0, columns - visible_columns);
+
+    // Fill the entire enlarged tile, not just its centered emoji. Otherwise
+    // neighboring passages look disconnected when zoomed to multiple columns
+    // and rows. The original emoji remains visible in the tile's center.
+    const auto tile_background = [&](Position position) -> Color {
+        if (std::find(highlighted.begin(), highlighted.end(), position) != highlighted.end()) {
+            return Color::RGB(30, 83, 141);
+        }
+        if (position == session.state().player) return Color::RGB(23, 96, 117);
+        if (position == session.state().guard) return Color::RGB(88, 45, 110);
+        if (session.resource_collected(position) || session.battery_consumed(position)) {
+            return Color::RGB(73, 80, 91);
+        }
+        return std::visit([](const auto& cell) -> Color {
+            using CellType = std::decay_t<decltype(cell)>;
+            if constexpr (std::is_same_v<CellType, Wall>) return Color::RGB(14, 17, 24);
+            else if constexpr (std::is_same_v<CellType, RoughTerrain>) return Color::RGB(109, 70, 57);
+            else if constexpr (std::is_same_v<CellType, ResourceCell<int>>) return Color::RGB(35, 79, 98);
+            else if constexpr (std::is_same_v<CellType, Battery>) return Color::RGB(106, 82, 35);
+            else if constexpr (std::is_same_v<CellType, Trap>) return Color::RGB(106, 44, 56);
+            else if constexpr (std::is_same_v<CellType, Exit>) return Color::RGB(37, 88, 59);
+            else if constexpr (std::is_same_v<CellType, Switch>) return Color::RGB(104, 77, 38);
+            else return Color::RGB(73, 80, 91);
+        }, grid.at(position));
+    };
+
+    Elements board_rows;
+    for (int row = 0; row < visible_rows; ++row) {
+        Elements board_columns;
+        for (int column = 0; column < visible_columns; ++column) {
+            const Position position{static_cast<std::size_t>(first_row + row),
+                                    static_cast<std::size_t>(first_column + column)};
+            board_columns.push_back(
+                render_project2_cell(session, position, highlighted)
+                | center
+                | size(WIDTH, EQUAL, cell_width)
+                | size(HEIGHT, EQUAL, cell_height)
+                | bgcolor(tile_background(position)));
+        }
+        board_rows.push_back(hbox(std::move(board_columns)));
+    }
+    return vbox(std::move(board_rows));
+}
+
 ftxui::Element ConsoleUI::render_project2_board(
     const Project2Session& session,
     std::span<const Position> highlighted,
     Project2MapView view,
     int board_width, int board_height) const {
     const auto& map = session.map();
+    // Keep the existing 40x60 views intact; only improve 10x15 and 20x30.
+    const bool small_map = map.grid.rows() <= 20 && map.grid.columns() <= 30;
+    if (small_map && board_width > 0 && board_height > 0) {
+        return view == Project2MapView::overview
+            ? render_project2_fitted_map(session, highlighted, board_width, board_height)
+            : render_project2_zoom_detail(session, highlighted, board_width, board_height);
+    }
     if (view == Project2MapView::overview && board_width > 0 && board_height > 0) {
         return render_project2_scaled_overview(session, highlighted, board_width, board_height);
     }
@@ -529,8 +629,10 @@ ftxui::Element ConsoleUI::render_project2(
 
     // All map views share one fixed-size board slot. Zoom and help update
     // its contents instead of moving the surrounding game panels.
+    const bool small_map = map.grid.rows() <= 20 && map.grid.columns() <= 30;
     auto map_content = render_project2_board(session, highlighted, view,
-        spacious ? panel_width - 6 : 0, spacious ? board_height : 0);
+        small_map || spacious ? panel_width - 6 : 0,
+        small_map || spacious ? board_height : 0);
     // Center the contents in the same slot, independently of Z and H.
     auto board = vbox({
         filler(),

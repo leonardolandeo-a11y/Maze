@@ -254,6 +254,52 @@ void project2_stable_layout_test() {
     assert(state.turn == 0 && state.energy == 100);
 }
 
+void project2_small_map_zoom_test() {
+    ConsoleUI ui(RenderMode::emoji);
+    for (const auto& [rows, columns] : {
+            std::pair<std::size_t, std::size_t>{10, 15}, {20, 30}}) {
+        SavedMap map = make_fixture(rows, columns);
+        map.grid.at({0, 0}) = ResourceCell<int>{10, false};
+        Project2Session session(std::move(map));
+        auto overview = ui.render_project2_board(session, {},
+            Project2MapView::overview, 70, 22);
+        auto detail = ui.render_project2_board(session, {},
+            Project2MapView::detail, 70, 22);
+        overview->ComputeRequirement();
+        detail->ComputeRequirement();
+        assert(overview->requirement().min_x == 60);
+        assert(overview->requirement().min_y == 20);
+        assert(detail->requirement().min_x == 66);
+        assert(detail->requirement().min_y == 21);
+        // The full map retains the original item symbol rather than a color-only dot.
+        assert(render_to_string(overview).find("💎") != std::string::npos);
+        assert(render_to_string(detail).find("🤖") != std::string::npos);
+
+        const auto before = session.state();
+        auto full_screen = ui.render_project2(session, Project2MapView::overview,
+            {}, {}, ftxui::Dimensions{90, 35});
+        auto detail_screen = ui.render_project2(session, Project2MapView::detail,
+            {}, {}, ftxui::Dimensions{90, 35});
+        full_screen->ComputeRequirement();
+        detail_screen->ComputeRequirement();
+        assert(full_screen->requirement().min_x == detail_screen->requirement().min_x);
+        assert(full_screen->requirement().min_y == detail_screen->requirement().min_y);
+        assert(session.state().turn == before.turn);
+        assert(session.state().energy == before.energy);
+    }
+
+    // The previously working 40x60 overview and detail are unchanged.
+    Project2Session large(make_fixture(40, 60));
+    auto overview = ui.render_project2_board(large, {}, Project2MapView::overview);
+    auto detail = ui.render_project2_board(large, {}, Project2MapView::detail);
+    overview->ComputeRequirement();
+    detail->ComputeRequirement();
+    assert(overview->requirement().min_x == 60);
+    assert(overview->requirement().min_y == 20);
+    assert(detail->requirement().min_x == 60);
+    assert(detail->requirement().min_y == 20);
+}
+
 void project2_responsive_layout_test() {
     ConsoleUI ui(RenderMode::emoji);
     for (const auto& [rows, columns] : {
@@ -282,7 +328,7 @@ void project2_responsive_layout_test() {
         auto board = ui.render_project2_board(session, {}, Project2MapView::overview,
             expected_width - 6, 44);
         const std::string map_text = render_to_string(board);
-        assert(map_text.find("@") != std::string::npos);
+        assert(map_text.find(rows <= 20 && columns <= 30 ? "\xF0\x9F\xA4\x96" : "@") != std::string::npos);
         assert(map_text.find("00   05") == std::string::npos);
         board->ComputeRequirement();
         assert(board->requirement().min_x <= expected_width - 6);
@@ -521,6 +567,7 @@ void run_project2_integration_tests() {
     project2_compact_player_row_test();
     project2_overview_palette_test();
     project2_stable_layout_test();
+    project2_small_map_zoom_test();
     project2_responsive_layout_test();
     assert(Menus(true).selectedDifficulty() == Difficulty::easy);
     assert(Menus(false).selectedDifficulty() == Difficulty::standard);
