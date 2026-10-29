@@ -115,7 +115,9 @@ while ($queue.Count -gt 0) {
 
 $previousPath = $env:Path
 try {
-    $env:Path = "$binaryDirectory;$compilerDirectory;$env:Path"
+    # Run with only the staged binaries and Windows system directories.
+    # Otherwise the compiler directory could mask a missing packaged DLL.
+    $env:Path = "$binaryDirectory;$env:WINDIR\System32;$env:WINDIR"
     foreach ($name in $executables) {
         & (Join-Path $binaryDirectory $name) --help | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Staged $name failed its startup check" }

@@ -117,6 +117,7 @@ install(FILES README.md DESTINATION . COMPONENT Runtime)
 install(FILES
     installer/launch-game.cmd
     installer/launch-generator.cmd
+    installer/launch-generated-game.cmd
     DESTINATION .
     COMPONENT Runtime
 )

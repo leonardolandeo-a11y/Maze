@@ -27,6 +27,7 @@ Section "Install"
   CreateDirectory "$SMPROGRAMS\Circuito de Escape"
   CreateShortcut "$SMPROGRAMS\Circuito de Escape\Jugar.lnk" "$INSTDIR\launch-game.cmd"
   CreateShortcut "$SMPROGRAMS\Circuito de Escape\Generar mapas.lnk" "$INSTDIR\launch-generator.cmd"
+  CreateShortcut "$SMPROGRAMS\Circuito de Escape\Jugar mapas generados.lnk" "$INSTDIR\launch-generated-game.cmd"
   CreateShortcut "$SMPROGRAMS\Circuito de Escape\Desinstalar.lnk" "$INSTDIR\Uninstall.exe"
   CreateShortcut "$DESKTOP\Circuito de Escape.lnk" "$INSTDIR\launch-game.cmd"
 
