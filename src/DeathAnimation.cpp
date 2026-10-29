@@ -1021,7 +1021,7 @@ ftxui::Element DeathAnimation::RenderGameOver(
         | ftxui::center
     );
 
-    titleLines.push_back(ftxui::text(""));
+
 
 
 
@@ -1109,7 +1109,7 @@ ftxui::Element DeathAnimation::RenderGameOver(
         titleLines.push_back(ftxui::text(""));
 
         titleLines.push_back(
-            ftxui::text("ENTER - PLAY AGAIN    Q - EXIT")
+            ftxui::text("ENTER - MAIN MENU    Q - EXIT")
             | ftxui::color(ftxui::Color::GrayLight)
             | ftxui::center
         );

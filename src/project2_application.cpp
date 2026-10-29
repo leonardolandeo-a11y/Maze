@@ -215,8 +215,8 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
         }
         if (victory_active || death_active) {
             const bool animation_complete = victory_active
-                ? victory_frame >= VictoryAnimation::maxFrames
-                : death_frame >= DeathAnimation::maxFrames;
+                ? victory_frame >= VictoryAnimation::maxFrames - 1
+                : death_frame >= DeathAnimation::maxFrames - 1;
             if (animation_complete &&
                 (event == Event::Return || event == Event::Character('r') || event == Event::Character('R'))) {
                 victory_active = false;
