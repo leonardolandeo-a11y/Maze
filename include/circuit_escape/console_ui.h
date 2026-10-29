@@ -6,6 +6,10 @@
 #include <optional>
 #include <span>
 
+//Agregados para obtener los contratos necesarios para renderizar: gamesymbol
+#include "circuit_escape/project2_contracts.h"
+#include <string>
+
 enum class RenderMode {
     emoji,
     ascii
@@ -38,6 +42,8 @@ private:
     */
     ftxui::Element CoordinateCell(const std::string& label) const;
     std::string EventMessage(const NavigationEvent& event) const;
+    //Determina el simbolo que se escogera para renderizar
+    std::string symbol_for(GameSymbol symbol) const;
 public:
     explicit ConsoleUI(RenderMode mode = RenderMode::emoji);
 

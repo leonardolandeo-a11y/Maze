@@ -2,6 +2,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <iostream>
 
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/screen/screen.hpp>
@@ -21,6 +23,13 @@ NavigationEnvironment<20, 30> createRenderTestEnvironment() {
     grid.at({0, 4}) = Battery{3, false};
     grid.at({0, 5}) = Trap{};
     grid.at({0, 6}) = Exit{};
+
+    // Celdas que funcionan como los interruptores
+    grid.at({0, 7}) = Switch{SwitchId::a, false};
+    grid.at({0, 8}) = Switch{SwitchId::a, true};
+
+    grid.at({0, 9}) = Switch{SwitchId::b, false};
+    grid.at({0, 10}) = Switch{SwitchId::b, true};
 
     GameRules rules = rulesFor(Difficulty::standard);
 
@@ -139,7 +148,7 @@ void test_ascii_renders_all_cell_types() {
     assert(output.find('#') != std::string::npos);
     assert(output.find('~') != std::string::npos);
     assert(output.find('R') != std::string::npos);
-    assert(output.find('B') != std::string::npos);
+    assert(output.find('+') != std::string::npos);
     assert(output.find('T') != std::string::npos);
     assert(output.find('S') != std::string::npos);
 }
@@ -223,6 +232,35 @@ void test_emoji_board_has_20_rows_and_30_cells() {
     assert(boardRows == 20);
 }
 
+void test_switches_render() {
+    auto environment = createRenderTestEnvironment();
+
+    for (RenderMode mode : {RenderMode::ascii, RenderMode::emoji}) {
+        ConsoleUI ui(mode);
+
+        std::string output = renderToString(ui, environment);
+
+        // Quitamos los espacios de separación entre las celdas.
+        output.erase(
+            std::remove(output.begin(), output.end(), ' '),
+            output.end()
+        );
+
+        const std::string expected =
+            mode == RenderMode::ascii
+                ? "AaBb"
+                : "🔴🟢🟥🟩";
+
+        if (output.find(expected) == std::string::npos) {
+            std::cerr << "\nEsperado: [" << expected << "]\n";
+            std::cerr << "Renderizado:\n" << output << "\n";
+        }
+
+        assert(output.find(expected) != std::string::npos);
+        assert(output.find(expected) != std::string::npos);
+    }
+}
+
 
 // Punto de entrada para integrarlo con tests/test_main.cpp.
 void run_console_render_tests() {
@@ -231,4 +269,5 @@ void run_console_render_tests() {
 
     test_emoji_renders_all_cell_types();
     test_emoji_board_has_20_rows_and_30_cells();
+    test_switches_render();
 }

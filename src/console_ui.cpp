@@ -2,7 +2,7 @@
 #include <variant>
 #include <type_traits>
 #include <array>
-
+#include <stdexcept>
 
 
 ConsoleUI::ConsoleUI(RenderMode mode): mode_(mode){};
@@ -348,99 +348,123 @@ ftxui::Element ConsoleUI::render(
     | center;
 }
 
+/*---------------------------------------------------------------------
+symbol_for() -> Dependendiendo del objeto que reciba, escoge como se
+debería renderizar (ya ase en modo ascii o emoji)
+---------------------------------------------------------------------*/
+std::string ConsoleUI::symbol_for(GameSymbol symbol) const {
+    const bool IsAscii = mode_ == RenderMode::ascii;
+
+    switch (symbol) {
+        case GameSymbol::player:
+            return IsAscii ? "@" : "🤖";
+
+        case GameSymbol::empty:
+            return IsAscii ? "." : "⬜";
+
+        case GameSymbol::wall:
+            return IsAscii ? "#" : "⬛";
+
+        case GameSymbol::rough_terrain:
+            return IsAscii ? "~" : "🟫";
+
+        case GameSymbol::resource:
+            return IsAscii ? "R" : "💎";
+
+        case GameSymbol::battery:
+            return IsAscii ? "+" : "⚡";
+
+        case GameSymbol::trap:
+            return IsAscii ? "T" : "💥";
+
+        case GameSymbol::exit:
+            return IsAscii ? "S" : "🏁";
+
+        case GameSymbol::switch_a_pending:
+            return IsAscii ? "A" : "🔴";
+
+        case GameSymbol::switch_a_active:
+            return IsAscii ? "a" : "🟢";
+
+        case GameSymbol::switch_b_pending:
+            return IsAscii ? "B" : "🟥";
+
+        case GameSymbol::switch_b_active:
+            return IsAscii ? "b" : "🟩";
+
+        case GameSymbol::guard:
+            return IsAscii ? "V" : "👮"; 
+    }
+
+    throw std::invalid_argument("Simbolo de juego desconocido");
+}
+
 
 /*---------------------------------------------------------------------
 RenderCell() -> Convierte una Cell en su representación ASCII o emoji.
 
 El agente tiene prioridad visual sobre la celda que ocupa.
 Para el resto de casos, std::visit identifica el tipo almacenado
-en Cell y selecciona su símbolo. Recursos y baterías consumidos
-se muestran como celdas vacías.
+en Cell y selecciona su símbolo usando la funcion aux symbol_for
 ---------------------------------------------------------------------*/
-ftxui::Element ConsoleUI::RenderCell(const Cell& cell, bool IsAgent) const{
-    if (IsAgent){
-        if (mode_ == RenderMode::emoji){
-            return ftxui::text("🤖");
-        }else{
-            return ftxui::text("@");
-        }
+ftxui::Element ConsoleUI::RenderCell( const Cell& cell, bool IsAgent) const {
+
+    // El jugador tiene prioridad sobre la casilla que ocupa.
+    if (IsAgent) {
+        return ftxui::text(symbol_for(GameSymbol::player));
     }
 
     return std::visit(
-        [this] (const auto& CurrentCell ) ->ftxui::Element{
-            using CellType = std::remove_const_t<std::remove_reference_t<decltype(CurrentCell)>>;
-            
-            if constexpr(std::is_same_v<CellType, Empty>){
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("⬜");
-                }else{
-                    return ftxui::text(".");
-                }
-            }
-            if constexpr(std::is_same_v<CellType,Wall>){
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("⬛");
-                }else{
-                    return ftxui::text("#");
-                }
-            }
-            if constexpr(std::is_same_v<CellType,RoughTerrain>){
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("🟫");
-                }else{
-                    return ftxui::text("~");
-                }
-            }
-            // Los recursos recolectados se representan visualmente como celdas vacías.
-            if constexpr(std::is_same_v<CellType,ResourceCell<int>>){
-                if (CurrentCell.collected){
-                    if (mode_ == RenderMode::emoji){
-                        return ftxui::text("⬜");
-                    }else{
-                        return ftxui::text(".");
-                    }
-                }
+        [this](const auto& currentCell) -> ftxui::Element {
+            using CellType = std::decay_t<decltype(currentCell)>;
 
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("💎");
-                }else{
-                    return ftxui::text("R");
-                }
-            }
-            // Las baterías consumidas se representan visualmente como celdas vacías.
-            if constexpr(std::is_same_v<CellType, Battery>){
-                if (CurrentCell.consumed){
-                    if (mode_ == RenderMode::emoji){
-                        return ftxui::text("⬜");
-                    }else{
-                        return ftxui::text(".");
-                    }
-                }
+            GameSymbol symbol = GameSymbol::empty;
 
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("⚡");
-                }else{
-                    return ftxui::text("B");
-                }
-            }
-            if constexpr(std::is_same_v<CellType,Trap>){
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("💥");
-                }else{
-                    return ftxui::text("T");
-                }
-            }
-            if constexpr(std::is_same_v<CellType,Exit>){
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("🏁");
-                }else{
-                    return ftxui::text("S");
-                }
-            }   
+            if constexpr (std::is_same_v<CellType, Empty>) {
+                symbol = GameSymbol::empty;
 
-        }
-        
-        ,cell);
+            } else if constexpr (std::is_same_v<CellType, Wall>) {
+                symbol = GameSymbol::wall;
+
+            } else if constexpr (
+                std::is_same_v<CellType, RoughTerrain>
+            ) {
+                symbol = GameSymbol::rough_terrain;
+
+            } else if constexpr (
+                std::is_same_v<CellType, ResourceCell<int>>
+            ) {
+                symbol = currentCell.collected
+                    ? GameSymbol::empty
+                    : GameSymbol::resource;
+
+            } else if constexpr (std::is_same_v<CellType, Battery>) {
+                symbol = currentCell.consumed
+                    ? GameSymbol::empty
+                    : GameSymbol::battery;
+
+            } else if constexpr (std::is_same_v<CellType, Trap>) {
+                symbol = GameSymbol::trap;
+
+            } else if constexpr (std::is_same_v<CellType, Exit>) {
+                symbol = GameSymbol::exit;
+
+            } else if constexpr (std::is_same_v<CellType, Switch>) {
+                if (currentCell.id == SwitchId::a) {
+                    symbol = currentCell.pressed
+                        ? GameSymbol::switch_a_active
+                        : GameSymbol::switch_a_pending;
+                } else {
+                    symbol = currentCell.pressed
+                        ? GameSymbol::switch_b_active
+                        : GameSymbol::switch_b_pending;
+                }
+            }
+
+            return ftxui::text(symbol_for(symbol));
+        },
+        cell
+    );
 }
 
 /*---------------------------------------------------------------------

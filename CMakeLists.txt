@@ -20,6 +20,7 @@ add_library(Maze_core
     src/controllers.cpp
     src/game_rules.cpp
     src/console_ui.cpp
+    src/help.cpp
     src/types.cpp
     src/GameApplication.cpp
     src/menus.cpp
