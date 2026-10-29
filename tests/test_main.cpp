@@ -11,6 +11,7 @@ void run_event_tests();
 void run_console_render_tests();
 void run_map_selector_tests();
 void run_graph_tests();
+void run_disjoint_set_tests();
 
 int main() {
 
@@ -28,5 +29,6 @@ int main() {
     run_map_selector_tests();
     run_graph_tests();
 
+    run_disjoint_set_tests();
     return 0;
 }
