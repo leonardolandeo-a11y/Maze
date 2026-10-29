@@ -25,6 +25,15 @@ struct Trap {
 };
 struct Exit {};
 
+enum class SwitchId {
+    a,
+    b
+};
+
+struct Switch {
+    SwitchId id{SwitchId::a}; //El switch por defecto es A
+    bool pressed{false};
+};
 
 template<typename CellType>
 struct CellTraits {
@@ -44,7 +53,7 @@ struct CellTraits<ResourceCell<Reward>> {
     static constexpr bool resource = true;
 };
 
-using Cell = std::variant<Empty, Wall, RoughTerrain, ResourceCell<int>, Battery, Trap, Exit>;
+using Cell = std::variant<Empty, Wall, RoughTerrain, ResourceCell<int>, Battery, Trap, Switch, Exit>;
 
 //Funcion aux para verificar si la celda es atravesable 
 inline bool isTraversable(const Cell& cell) {

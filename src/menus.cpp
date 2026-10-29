@@ -1,10 +1,12 @@
 #include "circuit_escape/menus.h"
 #include "circuit_escape/menusArt.h"
+#include "circuit_escape/help.h"
 
 #include <sstream>
 #include <string>
 
 #include <ftxui/dom/elements.hpp>
+
 
 namespace {
 
@@ -295,7 +297,12 @@ ftxui::Element Menus::Render() const {
         separatorEmpty(),
         menuOptions,
     });
-    auto rightPanel = filler();
+    ftxui::Element rightPanel = filler();
+
+    if (currentScreen_ == MenuScreen::Help) {
+        Help helpView;
+        rightPanel = helpView.RenderMenu();
+    }
 
     return hbox({
         text("                        "), // 24 columnas
