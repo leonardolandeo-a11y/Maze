@@ -228,6 +228,24 @@ class NavigationEnvironment {
                 "Initial energy must be positive"
             );
         }
+
+        if (agent.getMaximumEnergy() <= 0 ||
+            agent.getEnergy() > agent.getMaximumEnergy()) {
+            throw std::invalid_argument(
+                "Initial energy exceeds maximum energy"
+            );
+        }
+
+        if (rules.initialEnergy <= 0 || rules.maximumEnergy <= 0 ||
+            rules.initialEnergy > rules.maximumEnergy ||
+            rules.normalCellCost < 0 || rules.roughTerrainCost < 0 ||
+            rules.waitOrInvalidCost < 0 || rules.resourcePoints < 0 ||
+            rules.batteryRecharge < 0 || rules.trapEnergyPenalty < 0 ||
+            rules.trapScorePenalty < 0) {
+            throw std::invalid_argument(
+                "Invalid navigation rules"
+            );
+        }
         
         if (rules.turnLimit == 0) {
             throw std::invalid_argument(

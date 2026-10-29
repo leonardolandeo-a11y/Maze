@@ -820,7 +820,41 @@ void test_runtime_environment_validates_start_and_exit() {
     assert(rejected);
 }
 
+void test_environment_rejects_inconsistent_energy() {
+    Grid<Cell, 1, 3> grid;
+    grid.at({0, 2}) = Exit{};
+    bool rejected = false;
+    try {
+        NavigationEnvironment<1, 3> environment(
+            grid, Agent({0, 0}, 10, 5), testRules()
+        );
+        (void)environment;
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    assert(rejected);
+}
+
+void test_environment_rejects_negative_movement_cost() {
+    Grid<Cell, 1, 3> grid;
+    grid.at({0, 2}) = Exit{};
+    GameRules rules = testRules();
+    rules.normalCellCost = -1;
+    bool rejected = false;
+    try {
+        NavigationEnvironment<1, 3> environment(
+            grid, Agent({0, 0}, 4, 10), rules
+        );
+        (void)environment;
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    assert(rejected);
+}
+
 void run_environment_tests() {
+    test_environment_rejects_inconsistent_energy();
+    test_environment_rejects_negative_movement_cost();
     test_runtime_environment_dimensions();
     test_runtime_environment_interactions_and_reset();
     test_runtime_environment_validates_start_and_exit();
