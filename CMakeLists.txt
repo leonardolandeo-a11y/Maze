@@ -29,6 +29,7 @@ add_library(Maze_core
     src/DeathAnimation.cpp
     src/VictoryAnimation.cpp
     src/map_generation/map_selector.cpp
+        src/graph.cpp
     src/graph/disjoint_set.cpp
 )
 # Include headers
@@ -43,6 +44,7 @@ target_link_libraries(Maze_core PUBLIC
 # Create the executable game
 add_executable(Maze
         app/main.cpp
+        include/circuit_escape/graph.h
 )
 
 target_link_libraries(Maze PRIVATE
@@ -67,6 +69,7 @@ add_executable(Maze_test
     tests/event_test.cpp
     tests/console_render_test.cpp
     tests/map_generation/map_selector_test.cpp
+        tests/graph_test.cpp
     tests/graph/disjoint_set_test.cpp
 )
 
