@@ -1,11 +1,13 @@
 #include "circuit_escape/console_ui.h"
 #include "circuit_escape/project2_session.h"
-#include <variant>
-#include <type_traits>
-#include <array>
-#include <algorithm>
-#include <ftxui/screen/terminal.hpp>
+#include "circuit_escape/help.h"
 
+#include <algorithm>
+#include <array>
+#include <stdexcept>
+#include <type_traits>
+#include <variant>
+#include <ftxui/screen/terminal.hpp>
 
 
 ConsoleUI::ConsoleUI(RenderMode mode): mode_(mode){};
@@ -39,7 +41,7 @@ std::optional<UICommand> ConsoleUI::KeyMapping(const ftxui::Event& event)const{
     if (event == ftxui::Event::Character('q')|| event == ftxui::Event::Character('Q')){
         return UICommand::quit;
     }
-    if (event == ftxui::Event::Character('e')|| event == ftxui::Event::Character('E')){ 
+    if (event == ftxui::Event::Character('e')|| event == ftxui::Event::Character('E')){
         return UICommand::wait;
     }
     return std::nullopt;
@@ -53,133 +55,74 @@ Mientras help_ esté activo, render() muestra esta vista en lugar
 del tablero principal.
 ---------------------------------------------------------------------*/
 ftxui::Element ConsoleUI::help() const {
-    using namespace ftxui;
+    Help helpView;
 
-    const std::array<std::string, 6> controlsTitle = {
-        " ██████╗ ██████╗ ███╗   ██╗████████╗██████╗  ██████╗ ██╗     ███████╗",
-        "██╔════╝██╔═══██╗████╗  ██║╚══██╔══╝██╔══██╗██╔═══██╗██║     ██╔════╝",
-        "██║     ██║   ██║██╔██╗ ██║   ██║   ██████╔╝██║   ██║██║     ███████╗",
-        "██║     ██║   ██║██║╚██╗██║   ██║   ██╔══██╗██║   ██║██║     ╚════██║",
-        "╚██████╗╚██████╔╝██║ ╚████║   ██║   ██║  ██║╚██████╔╝███████╗███████║",
-        " ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝"
-    };
+    if (!helpReport_.has_value()) {
+        return ftxui::vbox({
+            helpView.RenderMenu(),
 
-    Elements titleLines;
+            ftxui::separatorEmpty(),
 
-    for (const auto& line : controlsTitle){
-        titleLines.push_back(
-            text(line)
-            | color(Color::CyanLight)
-            | bold
-            | center
-        );
+            ftxui::text("La ayuda de energia aun no esta disponible.")
+                | ftxui::color(ftxui::Color::Yellow),
+
+            ftxui::separatorEmpty(),
+
+            ftxui::text("H - Volver a la partida")
+        });
     }
 
-    auto movement = vbox({
-        hbox({
-            text("W / ↑") | bold | color(Color::CyanLight),
-            text("    MOVE UP")
-        }),
-        hbox({
-            text("S / ↓") | bold | color(Color::CyanLight),
-            text("    MOVE DOWN")
-        }),
-        hbox({
-            text("A / ←") | bold | color(Color::CyanLight),
-            text("    MOVE LEFT")
-        }),
-        hbox({
-            text("D / →") | bold | color(Color::CyanLight),
-            text("    MOVE RIGHT")
-        })
+    return ftxui::vbox({
+        helpView.RenderGame(*helpReport_),
+
+        ftxui::separatorEmpty(),
+
+        ftxui::text("H - Volver a la partida")
     });
-
-    auto actions = vbox({
-        hbox({
-            text("E") | bold | color(Color::CyanLight),
-            text("        WAIT ONE TURN")
-        }),
-        hbox({
-            text("H") | bold | color(Color::CyanLight),
-            text("        CLOSE HELP")
-        }),
-        hbox({
-            text("Q") | bold | color(Color::CyanLight),
-            text("        EXIT")
-        })
-    });
-
-    auto content = vbox({
-        text("MOVEMENT")
-        | bold
-        | color(Color::CyanLight),
-
-        separatorEmpty(),
-        movement,
-        separatorEmpty(),
-
-        separator(),
-
-        text("ACTIONS")
-        | bold
-        | color(Color::CyanLight),
-
-        separatorEmpty(),
-        actions,
-        separatorEmpty()
-    });
-
-    auto controlsWindow = window(
-        text(" COMMAND REFERENCE ")
-        | bold
-        | color(Color::CyanLight),
-
-        hbox({
-            text("  "),
-            content,
-            text("  ")
-        })
-    );
-
-    return vbox({
-        filler(),
-
-        vbox(titleLines),
-
-        text("INPUT PROTOCOL // COMMAND REFERENCE")
-        | color(Color::White)
-        | bold
-        | center,
-
-        separatorEmpty(),
-        separatorEmpty(),
-
-        controlsWindow
-        | size(WIDTH, EQUAL, 52)
-        | center,
-
-        separatorEmpty(),
-
-        text("H - RETURN TO GAME")
-        | color(Color::GrayLight)
-        | center,
-
-        filler()
-    })
-    | bgcolor(Color::Black);
 }
 /*---------------------------------------------------------------------
 RenderSupBar() -> Construye la barra de estado con turno, energía, puntaje y recursos.
 
 ---------------------------------------------------------------------*/
-ftxui::Element ConsoleUI::RenderSupBar(const Observation& observation) const {
+ftxui::Element ConsoleUI::RenderSupBar( const Observation& observation) const {
 
-    return ftxui::text(
-        "Turn " + std::to_string(observation.turn) + "/" + std::to_string(observation.turnLimit) +
-        " | Energy " + std::to_string(observation.energy) + "/" + std::to_string(observation.maximumEnergy) +
-        " | Score " + std::to_string(observation.score) +
-        " | Resources " +std::to_string(observation.collectedResources)
+    HudReport report = hudReport_.value_or(HudReport{});
+
+    // datos ya disponibles en el estado real del juego
+    report.turn = observation.turn;
+    report.turn_limit = observation.turnLimit;
+    report.energy = observation.energy;
+    report.maximum_energy = observation.maximumEnergy;
+
+    const auto lines = format_status(report);
+
+    ftxui::Elements content;
+
+    content.push_back(
+        ftxui::text(
+            lines[0] + " | " +
+            lines[1] +
+            " | Score: " + std::to_string(observation.score) +
+            " | Resources: " +
+            std::to_string(observation.collectedResources)
+        )
     );
+
+    if (hudReport_.has_value()) {
+        content.push_back(
+            ftxui::text(lines[2] + " | " + lines[3])
+        );
+
+        content.push_back(
+            ftxui::text(lines[4])
+        );
+    } else {
+        content.push_back(
+            ftxui::text("A/B y vigilante: datos pendientes de integrar")
+        );
+    }
+
+    return ftxui::vbox(content);
 }
 
 ftxui::Element ConsoleUI::CoordinateCell(const std::string& label) const {
@@ -198,7 +141,15 @@ ftxui::Element ConsoleUI::RenderBoard(
     const NavigationEnvironment<20, 30>& environment,
     const Observation& observation) const {
     return render_board_area(20, 30, observation.agent, [&](Position position) {
-        return RenderCell(environment.grid().at(position), observation.agent == position);
+        const bool is_player = observation.agent == position;
+        const bool is_guard = guardPosition_.has_value() && *guardPosition_ == position;
+        auto cell = RenderCell(environment.grid().at(position), is_player, is_guard);
+        if (std::find(highlightedPath_.begin(), highlightedPath_.end(), position)
+            != highlightedPath_.end()) {
+            cell = cell | ftxui::bgcolor(ftxui::Color::Blue)
+                | ftxui::color(ftxui::Color::White);
+        }
+        return cell;
     });
 }
 
@@ -659,7 +610,28 @@ ftxui::Element ConsoleUI::render(
     using namespace ftxui;
 
     if (help_) {
-        return help();
+        // Mientras no haya reporte, mostramos la ayuda general.
+        if (!helpReport_.has_value()) {
+            return help();
+        }
+
+        const Observation observation = environment.state();
+
+        auto boardWindow = ftxui::window(
+            ftxui::text(" MAPA Y RUTA ")
+                | ftxui::bold
+                | ftxui::color(ftxui::Color::CyanLight),
+
+            RenderBoard(environment, observation)
+        );
+
+        return ftxui::vbox({
+            help(),
+
+            ftxui::separatorEmpty(),
+
+            boardWindow
+        }) | ftxui::center;
     }
 
     Observation observation = environment.state();
@@ -707,99 +679,128 @@ ftxui::Element ConsoleUI::render(
     | center;
 }
 
+/*---------------------------------------------------------------------
+symbol_for() -> Dependendiendo del objeto que reciba, escoge como se
+debería renderizar (ya ase en modo ascii o emoji)
+---------------------------------------------------------------------*/
+std::string ConsoleUI::symbol_for(GameSymbol symbol) const {
+    const bool IsAscii = mode_ == RenderMode::ascii;
+
+    switch (symbol) {
+        case GameSymbol::player:
+            return IsAscii ? "@" : "🤖";
+
+        case GameSymbol::empty:
+            return IsAscii ? "." : "⬜";
+
+        case GameSymbol::wall:
+            return IsAscii ? "#" : "⬛";
+
+        case GameSymbol::rough_terrain:
+            return IsAscii ? "~" : "🟫";
+
+        case GameSymbol::resource:
+            return IsAscii ? "R" : "💎";
+
+        case GameSymbol::battery:
+            return IsAscii ? "+" : "⚡";
+
+        case GameSymbol::trap:
+            return IsAscii ? "T" : "💥";
+
+        case GameSymbol::exit:
+            return IsAscii ? "S" : "🏁";
+
+        case GameSymbol::switch_a_pending:
+            return IsAscii ? "A" : "🔴";
+
+        case GameSymbol::switch_a_active:
+            return IsAscii ? "a" : "🟢";
+
+        case GameSymbol::switch_b_pending:
+            return IsAscii ? "B" : "🟥";
+
+        case GameSymbol::switch_b_active:
+            return IsAscii ? "b" : "🟩";
+
+        case GameSymbol::guard:
+            return IsAscii ? "V" : "👮";
+    }
+
+    throw std::invalid_argument("Simbolo de juego desconocido");
+}
+
 
 /*---------------------------------------------------------------------
 RenderCell() -> Convierte una Cell en su representación ASCII o emoji.
 
 El agente tiene prioridad visual sobre la celda que ocupa.
 Para el resto de casos, std::visit identifica el tipo almacenado
-en Cell y selecciona su símbolo. Recursos y baterías consumidos
-se muestran como celdas vacías.
+en Cell y selecciona su símbolo usando la funcion aux symbol_for
 ---------------------------------------------------------------------*/
-ftxui::Element ConsoleUI::RenderCell(const Cell& cell, bool IsAgent) const{
-    if (IsAgent){
-        if (mode_ == RenderMode::emoji){
-            return ftxui::text("🤖");
-        }else{
-            return ftxui::text("@");
-        }
+ftxui::Element ConsoleUI::RenderCell( const Cell& cell, bool IsAgent, bool IsGuardian) const {
+
+    // El jugador tiene prioridad sobre la casilla que ocupa.
+    //El vigilante igual
+    if (IsAgent) {
+        return ftxui::text(symbol_for(GameSymbol::player));
+    }
+
+    if (IsGuardian) {
+        return ftxui::text(symbol_for(GameSymbol::guard));
     }
 
     return std::visit(
-        [this] (const auto& CurrentCell ) ->ftxui::Element{
-            using CellType = std::remove_const_t<std::remove_reference_t<decltype(CurrentCell)>>;
-            
-            if constexpr(std::is_same_v<CellType, Empty>){
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("⬜");
-                }else{
-                    return ftxui::text(".");
-                }
-            }
-            if constexpr(std::is_same_v<CellType,Wall>){
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("⬛");
-                }else{
-                    return ftxui::text("#");
-                }
-            }
-            if constexpr(std::is_same_v<CellType,RoughTerrain>){
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("🟫");
-                }else{
-                    return ftxui::text("~");
-                }
-            }
-            // Los recursos recolectados se representan visualmente como celdas vacías.
-            if constexpr(std::is_same_v<CellType,ResourceCell<int>>){
-                if (CurrentCell.collected){
-                    if (mode_ == RenderMode::emoji){
-                        return ftxui::text("⬜");
-                    }else{
-                        return ftxui::text(".");
-                    }
-                }
+        [this](const auto& currentCell) -> ftxui::Element {
+            using CellType = std::decay_t<decltype(currentCell)>;
 
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("💎");
-                }else{
-                    return ftxui::text("R");
-                }
-            }
-            // Las baterías consumidas se representan visualmente como celdas vacías.
-            if constexpr(std::is_same_v<CellType, Battery>){
-                if (CurrentCell.consumed){
-                    if (mode_ == RenderMode::emoji){
-                        return ftxui::text("⬜");
-                    }else{
-                        return ftxui::text(".");
-                    }
-                }
+            GameSymbol symbol = GameSymbol::empty;
 
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("⚡");
-                }else{
-                    return ftxui::text("B");
-                }
-            }
-            if constexpr(std::is_same_v<CellType,Trap>){
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("💥");
-                }else{
-                    return ftxui::text("T");
-                }
-            }
-            if constexpr(std::is_same_v<CellType,Exit>){
-                if (mode_ == RenderMode::emoji){
-                    return ftxui::text("🏁");
-                }else{
-                    return ftxui::text("S");
-                }
-            }   
+            if constexpr (std::is_same_v<CellType, Empty>) {
+                symbol = GameSymbol::empty;
 
-        }
-        
-        ,cell);
+            } else if constexpr (std::is_same_v<CellType, Wall>) {
+                symbol = GameSymbol::wall;
+
+            } else if constexpr (
+                std::is_same_v<CellType, RoughTerrain>
+            ) {
+                symbol = GameSymbol::rough_terrain;
+
+            } else if constexpr (
+                std::is_same_v<CellType, ResourceCell<int>>
+            ) {
+                symbol = currentCell.collected
+                    ? GameSymbol::empty
+                    : GameSymbol::resource;
+
+            } else if constexpr (std::is_same_v<CellType, Battery>) {
+                symbol = currentCell.consumed
+                    ? GameSymbol::empty
+                    : GameSymbol::battery;
+
+            } else if constexpr (std::is_same_v<CellType, Trap>) {
+                symbol = GameSymbol::trap;
+
+            } else if constexpr (std::is_same_v<CellType, Exit>) {
+                symbol = GameSymbol::exit;
+
+            } else if constexpr (std::is_same_v<CellType, Switch>) {
+                if (currentCell.id == SwitchId::a) {
+                    symbol = currentCell.pressed
+                        ? GameSymbol::switch_a_active
+                        : GameSymbol::switch_a_pending;
+                } else {
+                    symbol = currentCell.pressed
+                        ? GameSymbol::switch_b_active
+                        : GameSymbol::switch_b_pending;
+                }
+            }
+
+            return ftxui::text(symbol_for(symbol));
+        },
+        cell
+    );
 }
 
 /*---------------------------------------------------------------------
@@ -817,8 +818,8 @@ std::string ConsoleUI::EventMessage(
             using EventType = std::decay_t<decltype(currentEvent)>;
             if constexpr (std::is_same_v<EventType, MovedEvent>) {
                 return
-                    "Moved to (" + 
-                        std::to_string(currentEvent.to.row) + "," + std::to_string(currentEvent.to.column) + 
+                    "Moved to (" +
+                        std::to_string(currentEvent.to.row) + "," + std::to_string(currentEvent.to.column) +
                     ")";
             }
             else if constexpr (std::is_same_v<EventType,MovementRejectedEvent>) {
@@ -827,7 +828,7 @@ std::string ConsoleUI::EventMessage(
             else if constexpr (
                 std::is_same_v<EventType, ResourceCollectedEvent>) {
                 return
-                    "Resource +" + std::to_string(currentEvent.points) + " at (" + 
+                    "Resource +" + std::to_string(currentEvent.points) + " at (" +
                         std::to_string(currentEvent.at.row) + "," + std::to_string(currentEvent.at.column) +
                     ")";
             }
@@ -860,3 +861,58 @@ std::string ConsoleUI::EventMessage(
     );
 }
 
+/*---------------------------------------------------------------------
+format_Status() -> Establece el formato con el que se renderizara
+el reporte de estaod:
+
+1. Turno
+2. Energia
+3. Estado de los switches A y B
+4. Movimientos del vigilante
+---------------------------------------------------------------------*/
+std::vector<std::string> ConsoleUI::format_status(
+    const HudReport& report
+) const {
+    return {
+        "Turno: " +
+            std::to_string(report.turn) + "/" +
+            std::to_string(report.turn_limit),
+
+        "Energia: " +
+            std::to_string(report.energy) + "/" +
+            std::to_string(report.maximum_energy),
+
+        std::string("A: ") +
+            (report.switch_a_activated ? "Activado" : "Pendiente"),
+
+        std::string("B: ") +
+            (report.switch_b_activated ? "Activado" : "Pendiente"),
+
+        report.guard_moves_next_turn
+            ? "Vigilante: avanzara despues de tu siguiente accion."
+            : "Vigilante: permanecera quieto despues de tu siguiente accion."
+    };
+}
+
+void ConsoleUI::highlightHelpPath(
+    const HelpReport& report,
+    HelpPathSelection selection
+) {
+    switch (selection) {
+        case HelpPathSelection::none:
+            clearHighlightedPath();
+            break;
+
+        case HelpPathSelection::to_a:
+            setHighlightedPath(report.path_to_a);
+            break;
+
+        case HelpPathSelection::to_b:
+            setHighlightedPath(report.path_to_b);
+            break;
+
+        case HelpPathSelection::complete:
+            setHighlightedPath(report.complete_path);
+            break;
+    }
+}

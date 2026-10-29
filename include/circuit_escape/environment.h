@@ -296,6 +296,10 @@ class NavigationEnvironment {
                                   return rules.normalCellCost;
                               },
 
+                              [&](const Switch &) {
+                                  return rules.normalCellCost;
+                              },
+
                               [&](const Exit &) {
                                   return rules.normalCellCost;
                               },

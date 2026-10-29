@@ -5,42 +5,22 @@
 #include "circuit_escape/project2_contracts.h"
 
 #include <cstddef>
-#include <variant>
+#include <vector>
 
-// Builds the same four-directional graph for map generation, loading, and pathfinding.
-// Entering a cell determines its energy cost; walls have no outgoing connections.
-inline GraphData graph_from_grid(const Grid<Cell>& grid) {
-    GraphData graph;
-    graph.rows = grid.rows();
-    graph.columns = grid.columns();
-    const std::size_t vertex_count = graph.rows * graph.columns;
-    graph.neighbors.resize(vertex_count);
-    graph.blocked.resize(vertex_count);
-    graph.entry_costs.resize(vertex_count, 1);
+// Builds an adjacency-list graph; neighbors are in deterministic
+// up, left, right, down order, matching existing guard behavior.
+GraphData build_graph(
+    std::size_t rows,
+    std::size_t columns,
+    const std::vector<bool>& blocked,
+    const std::vector<int>& entry_costs
+);
 
-    for (std::size_t row = 0; row < graph.rows; ++row) {
-        for (std::size_t column = 0; column < graph.columns; ++column) {
-            const std::size_t vertex = row * graph.columns + column;
-            const Cell& cell = grid.at({row, column});
-            graph.blocked[vertex] = !isTraversable(cell);
-            if (const auto* rough = std::get_if<RoughTerrain>(&cell)) {
-                graph.entry_costs[vertex] = rough->energyCost;
-            }
-            if (graph.blocked[vertex]) {
-                continue;
-            }
+// Convert the existing Grid<Cell> without duplicating graph construction.
+GraphData graph_from_grid(const Grid<Cell>& grid);
 
-            const auto connect = [&](std::size_t adjacent_row, std::size_t adjacent_column) {
-                if (isTraversable(grid.at({adjacent_row, adjacent_column}))) {
-                    graph.neighbors[vertex].push_back(adjacent_row * graph.columns + adjacent_column);
-                }
-            };
-            // Keep existing order for deterministic BFS decisions: up, left, right, down.
-            if (row > 0) connect(row - 1, column);
-            if (column > 0) connect(row, column - 1);
-            if (column + 1 < graph.columns) connect(row, column + 1);
-            if (row + 1 < graph.rows) connect(row + 1, column);
-        }
-    }
-    return graph;
-}
+// Throws std::out_of_range for an invalid vertex.
+const std::vector<std::size_t>& graph_neighbors(
+    const GraphData& graph,
+    std::size_t vertex
+);
