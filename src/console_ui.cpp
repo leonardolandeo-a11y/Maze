@@ -8,8 +8,6 @@
 #include <type_traits>
 #include <variant>
 #include <ftxui/screen/terminal.hpp>
-
-
 ConsoleUI::ConsoleUI(RenderMode mode): mode_(mode){};
 
 /*---------------------------------------------------------------------
@@ -352,95 +350,376 @@ ftxui::Element ConsoleUI::render_project2_overview(
 ftxui::Element ConsoleUI::render_project2_scaled_overview(
     const Project2Session& session,
     std::span<const Position> highlighted,
-    int board_width, int board_height) const {
+    int board_width,
+    int board_height) const {
+
     using namespace ftxui;
+
     const auto& map = session.map();
     const auto& state = session.state();
-    const int rows = static_cast<int>(map.grid.rows());
-    const int columns = static_cast<int>(map.grid.columns());
-    const int available_height = std::max(1, board_height - 2);
-    const bool full_rows = rows <= available_height;
-    const int rendered_rows = full_rows ? rows : (rows + 1) / 2;
-    const int row_repeat = std::clamp(available_height / rendered_rows, 1, 5);
-    const int cell_width = std::clamp(board_width / columns, 1, 8);
+
+    const int rows =
+        static_cast<int>(map.grid.rows());
+
+    const int columns =
+        static_cast<int>(map.grid.columns());
+
+    const int available_width =
+        std::max(1, board_width);
+
+    const int available_height =
+        std::max(1, board_height);
+
+    // Use the available horizontal space, but don't stretch cells too much.
+    const bool portrait_map =
+        rows > columns;
+
+    const int max_cell_width =
+        portrait_map ? 3 : 2;
+
+    const int cell_width =
+        std::clamp(
+            available_width / std::max(1, columns),
+            1,
+            max_cell_width
+        );
 
     auto color_at = [&](Position position) -> Color {
-        if (position == state.player) return Color::RGB(15, 110, 157);
-        if (position == state.guard) return Color::RGB(155, 62, 174);
-        if (position == map.input.switch_a) return Color::RGB(154, 115, 12);
-        if (position == map.input.switch_b) return Color::RGB(170, 89, 20);
-        if (position == map.input.exit) return Color::RGB(25, 120, 69);
-        if (std::find(highlighted.begin(), highlighted.end(), position) != highlighted.end()) {
+        if (position == state.player)
+            return Color::RGB(15, 110, 157);
+
+        if (position == state.guard)
+            return Color::RGB(155, 62, 174);
+
+        if (position == map.input.switch_a)
+            return Color::RGB(154, 115, 12);
+
+        if (position == map.input.switch_b)
+            return Color::RGB(170, 89, 20);
+
+        if (position == map.input.exit)
+            return Color::RGB(25, 120, 69);
+
+        if (std::find(
+                highlighted.begin(),
+                highlighted.end(),
+                position
+            ) != highlighted.end()) {
+
             return Color::RGB(33, 83, 160);
         }
-        if (session.resource_collected(position) || session.battery_consumed(position)) {
+
+        if (session.resource_collected(position) ||
+            session.battery_consumed(position)) {
+
             return Color::RGB(214, 218, 223);
         }
-        return std::visit([](const auto& value) -> Color {
-            using T = std::decay_t<decltype(value)>;
-            if constexpr (std::is_same_v<T, Wall>) return Color::RGB(42, 47, 55);
-            else if constexpr (std::is_same_v<T, RoughTerrain>) return Color::RGB(133, 82, 65);
-            else if constexpr (std::is_same_v<T, ResourceCell<int>>) return Color::RGB(14, 119, 145);
-            else if constexpr (std::is_same_v<T, Battery>) return Color::RGB(167, 118, 11);
-            else if constexpr (std::is_same_v<T, Trap>) return Color::RGB(170, 41, 57);
-            else if constexpr (std::is_same_v<T, Exit>) return Color::RGB(25, 120, 69);
-            else return Color::RGB(214, 218, 223);
-        }, map.grid.at(position));
+
+        return std::visit(
+            [](const auto& value) -> Color {
+                using T =
+                    std::decay_t<decltype(value)>;
+
+                if constexpr (std::is_same_v<T, Wall>)
+                    return Color::RGB(42, 47, 55);
+
+                else if constexpr (
+                    std::is_same_v<T, RoughTerrain>)
+                    return Color::RGB(133, 82, 65);
+
+                else if constexpr (
+                    std::is_same_v<T, ResourceCell<int>>)
+                    return Color::RGB(14, 119, 145);
+
+                else if constexpr (
+                    std::is_same_v<T, Battery>)
+                    return Color::RGB(167, 118, 11);
+
+                else if constexpr (
+                    std::is_same_v<T, Trap>)
+                    return Color::RGB(170, 41, 57);
+
+                else if constexpr (
+                    std::is_same_v<T, Exit>)
+                    return Color::RGB(25, 120, 69);
+
+                else
+                    return Color::RGB(214, 218, 223);
+            },
+            map.grid.at(position)
+        );
     };
+
     auto marker_at = [&](Position position) -> char {
-        if (position == state.player) return '@';
-        if (position == state.guard) return 'V';
-        if (position == map.input.switch_a) return state.switch_a_active ? 'a' : 'A';
-        if (position == map.input.switch_b) return state.switch_b_active ? 'b' : 'B';
-        if (position == map.input.exit) return 'S';
+        if (position == state.player)
+            return '@';
+
+        if (position == state.guard)
+            return 'V';
+
+        if (position == map.input.switch_a)
+            return state.switch_a_active ? 'a' : 'A';
+
+        if (position == map.input.switch_b)
+            return state.switch_b_active ? 'b' : 'B';
+
+        if (position == map.input.exit)
+            return 'S';
+
         return '\0';
     };
-    auto marker_cell = [&](char marker, Color background, Color foreground) -> Element {
-        std::string glyph(static_cast<std::size_t>(cell_width), ' ');
-        glyph[static_cast<std::size_t>((cell_width - 1) / 2)] = marker;
-        return text(std::move(glyph)) | color(foreground) | bgcolor(background);
+
+    auto marker_cell =
+        [&](char marker,
+            Color foreground,
+            Color background) -> Element {
+
+        std::string glyph(
+            static_cast<std::size_t>(cell_width),
+            ' '
+        );
+
+        glyph[
+            static_cast<std::size_t>(
+                (cell_width - 1) / 2
+            )
+        ] = marker;
+
+        return text(std::move(glyph))
+            | color(foreground)
+            | bgcolor(background)
+            | bold;
     };
 
-    Elements lines;
+    Elements output;
 
-    for (int visual_row = 0; visual_row < rendered_rows; ++visual_row) {
-        const int real_row = full_rows ? visual_row : visual_row * 2;
-        for (int repetition = 0; repetition < row_repeat; ++repetition) {
+    // =========================================================
+    // CASE 1:
+    // Every real map row fits.
+    // Do NOT compress vertically.
+    // =========================================================
+    if (rows <= available_height) {
+
+        for (int row = 0; row < rows; ++row) {
+
+            Elements cells;
+
+            for (int column = 0;
+                 column < columns;
+                 ++column) {
+
+                const Position position{
+                    static_cast<std::size_t>(row),
+                    static_cast<std::size_t>(column)
+                };
+
+                const Color background =
+                    color_at(position);
+
+                const char marker =
+                    marker_at(position);
+
+                if (marker != '\0') {
+
+                    cells.push_back(
+                        marker_cell(
+                            marker,
+                            Color::White,
+                            background
+                        )
+                    );
+
+                } else {
+
+                    cells.push_back(
+                        text(
+                            std::string(
+                                static_cast<std::size_t>(
+                                    cell_width
+                                ),
+                                ' '
+                            )
+                        )
+                        | bgcolor(background)
+                    );
+                }
+            }
+
+            output.push_back(
+                hbox(std::move(cells))
+            );
+        }
+
+        return vbox(std::move(output));
+    }
+
+    // =========================================================
+    // CASE 2:
+    // Two real map rows fit inside one terminal row.
+    //
+    // Example:
+    //
+    // 70 real rows -> 35 terminal rows.
+    //
+    // No map information is discarded.
+    // =========================================================
+    if ((rows + 1) / 2 <= available_height) {
+
+        for (int row = 0; row < rows; row += 2) {
+
+            Elements cells;
+
+            for (int column = 0;
+                 column < columns;
+                 ++column) {
+
+                const Position upper{
+                    static_cast<std::size_t>(row),
+                    static_cast<std::size_t>(column)
+                };
+
+                const bool has_lower =
+                    row + 1 < rows;
+
+                const Position lower{
+                    static_cast<std::size_t>(
+                        has_lower ? row + 1 : row
+                    ),
+                    static_cast<std::size_t>(column)
+                };
+
+                const Color upper_color =
+                    color_at(upper);
+
+                const Color lower_color =
+                    has_lower
+                        ? color_at(lower)
+                        : Color::RGB(23, 35, 54);
+
+                const char upper_marker =
+                    marker_at(upper);
+
+                const char lower_marker =
+                    has_lower
+                        ? marker_at(lower)
+                        : '\0';
+
+                // Upper marker has priority.
+                if (upper_marker != '\0') {
+
+                    cells.push_back(
+                        marker_cell(
+                            upper_marker,
+                            Color::White,
+                            lower_color
+                        )
+                    );
+
+                } else if (lower_marker != '\0') {
+
+                    cells.push_back(
+                        marker_cell(
+                            lower_marker,
+                            lower_color,
+                            upper_color
+                        )
+                    );
+
+                } else {
+
+                    std::string blocks;
+
+                    for (int i = 0;
+                         i < cell_width;
+                         ++i) {
+
+                        blocks += "▀";
+                    }
+
+                    cells.push_back(
+                        text(std::move(blocks))
+                        | color(upper_color)
+                        | bgcolor(lower_color)
+                    );
+                }
+            }
+
+            output.push_back(
+                hbox(std::move(cells))
+            );
+        }
+
+        return vbox(std::move(output));
+    }
+
+    // =========================================================
+    // CASE 3:
+    // The map is physically too tall even when using 2 rows
+    // per terminal row.
+    //
+    // Only here do we perform real sampling/compression.
+    // =========================================================
+
+    const int rendered_rows =
+        available_height;
+
+    for (int visual_row = 0;
+         visual_row < rendered_rows;
+         ++visual_row) {
+
         Elements cells;
 
-        for (int column = 0; column < columns; ++column) {
-            Position upper{static_cast<std::size_t>(real_row), static_cast<std::size_t>(column)};
-            const bool has_lower = !full_rows && real_row + 1 < rows;
-            Position lower{static_cast<std::size_t>(std::min(real_row + 1, rows - 1)),
-                static_cast<std::size_t>(column)};
-            const Color top_color = color_at(upper);
-            const Color bottom_color = has_lower ? color_at(lower) : top_color;
-            const char top_marker = marker_at(upper);
-            const char bottom_marker = has_lower ? marker_at(lower) : '\0';
-            if (upper == state.player || (has_lower && lower == state.player)) {
-                const bool player_upper = upper == state.player;
-                cells.push_back(marker_cell('@', player_upper ? Color::RGB(15, 110, 157)
-                    : Color::RGB(23, 35, 54), player_upper ? Color::White
-                    : Color::RGB(29, 215, 252)));
-            } else if (top_marker != '\0' || bottom_marker != '\0') {
-                const char marker = top_marker != '\0' ? top_marker : bottom_marker;
-                const Color background = top_marker != '\0' ? bottom_color : top_color;
-                cells.push_back(marker_cell(marker, background,
-                    top_marker != '\0' ? top_color : bottom_color));
-            } else if (full_rows) {
-                cells.push_back(text(std::string(static_cast<std::size_t>(cell_width), ' '))
-                    | bgcolor(top_color));
+        const int source_row =
+            visual_row * rows /
+            rendered_rows;
+
+        for (int column = 0;
+             column < columns;
+             ++column) {
+
+            const Position position{
+                static_cast<std::size_t>(source_row),
+                static_cast<std::size_t>(column)
+            };
+
+            const Color background =
+                color_at(position);
+
+            const char marker =
+                marker_at(position);
+
+            if (marker != '\0') {
+
+                cells.push_back(
+                    marker_cell(
+                        marker,
+                        Color::White,
+                        background
+                    )
+                );
+
             } else {
-                std::string blocks;
-                for (int part = 0; part < cell_width; ++part) blocks += "▀";
-                cells.push_back(text(std::move(blocks))
-                    | color(top_color) | bgcolor(bottom_color));
+
+                cells.push_back(
+                    text(
+                        std::string(
+                            static_cast<std::size_t>(
+                                cell_width
+                            ),
+                            ' '
+                        )
+                    )
+                    | bgcolor(background)
+                );
             }
         }
-        lines.push_back(hbox(std::move(cells)));
-        }
+
+        output.push_back(
+            hbox(std::move(cells))
+        );
     }
-    return vbox(std::move(lines));
+
+    return vbox(std::move(output));
 }
 
 // Display every tile of small maps while retaining the original symbols.
@@ -535,34 +814,88 @@ ftxui::Element ConsoleUI::render_project2_zoom_detail(
     }
     return vbox(std::move(board_rows));
 }
-
 ftxui::Element ConsoleUI::render_project2_board(
     const Project2Session& session,
     std::span<const Position> highlighted,
     Project2MapView view,
-    int board_width, int board_height) const {
-    const auto& map = session.map();
-    // Keep the existing 40x60 views intact; only improve 10x15 and 20x30.
-    const bool small_map = map.grid.rows() <= 20 && map.grid.columns() <= 30;
-    if (small_map && board_width > 0 && board_height > 0) {
-        return view == Project2MapView::overview
-            ? render_project2_fitted_map(session, highlighted, board_width, board_height)
-            : render_project2_zoom_detail(session, highlighted, board_width, board_height);
-    }
-    if (view == Project2MapView::overview && board_width > 0 && board_height > 0) {
-        return render_project2_scaled_overview(session, highlighted, board_width, board_height);
-    }
-    if (view == Project2MapView::overview &&
-        (map.grid.rows() > 20 || map.grid.columns() > 30) &&
-        map.grid.rows() <= 40 && map.grid.columns() <= 60) {
-        return render_project2_overview(session, highlighted);
-    }
-    return render_board_area(map.grid.rows(), map.grid.columns(),
-        session.state().player, [&](Position position) {
-            return render_project2_cell(session, position, highlighted);
-        }, true, false);
-}
+    int board_width,
+    int board_height) const {
 
+    const auto& map = session.map();
+
+    const int rows =
+        static_cast<int>(map.grid.rows());
+
+    const int columns =
+        static_cast<int>(map.grid.columns());
+
+    // DETAIL is ALWAYS a real player-centered zoom.
+    if (view == Project2MapView::detail &&
+        board_width > 0 &&
+        board_height > 0) {
+
+        return render_project2_zoom_detail(
+            session,
+            highlighted,
+            board_width,
+            board_height
+        );
+    }
+
+    if (view == Project2MapView::overview &&
+        board_width > 0 &&
+        board_height > 0) {
+
+        const bool normal_fits =
+            columns * 2 <= board_width &&
+            rows <= board_height;
+
+        if (normal_fits) {
+            return render_project2_fitted_map(
+                session,
+                highlighted,
+                board_width,
+                board_height
+            );
+        }
+
+        // Generic adaptive FULL MAP.
+        return render_project2_scaled_overview(
+            session,
+            highlighted,
+            board_width,
+            board_height
+        );
+    }
+
+    // Preserve the old direct-call behavior used by some tests.
+    if (view == Project2MapView::overview &&
+        (map.grid.rows() > 20 ||
+         map.grid.columns() > 30) &&
+        map.grid.rows() <= 40 &&
+        map.grid.columns() <= 60) {
+
+        return render_project2_overview(
+            session,
+            highlighted
+        );
+    }
+
+    return render_board_area(
+        map.grid.rows(),
+        map.grid.columns(),
+        session.state().player,
+        [&](Position position) {
+            return render_project2_cell(
+                session,
+                position,
+                highlighted
+            );
+        },
+        true,
+        false
+    );
+}
 ftxui::Element ConsoleUI::render_project2(
     const Project2Session& session,
     Project2MapView view,
@@ -599,19 +932,92 @@ ftxui::Element ConsoleUI::render_project2(
     const ftxui::Dimensions terminal = terminal_size.value_or(ftxui::Terminal::Size());
     // Keep the interface proportional to the actual map instead of
     // stretching empty panel borders to the entire terminal width.
-    const bool spacious = terminal.dimx >= 105 && terminal.dimy >= 43;
-    const int map_columns = static_cast<int>(map.grid.columns());
-    const int target_cell_width = map_columns >= 55 ? 2 : (map_columns >= 25 ? 3 : 4);
-    const int ideal_panel_width = std::clamp(map_columns * target_cell_width + 8, 76, 132);
-    const int panel_width = spacious
-        ? std::min(terminal.dimx - 8, ideal_panel_width) : 76;
-    const int ideal_board_height = map.grid.rows() <= 10 ? 34 : 44;
-    const int board_height = spacious
-        ? std::min(terminal.dimy - 18, ideal_board_height) : 22;
+    const bool spacious =
+        terminal.dimx >= 105 &&
+        terminal.dimy >= 43;
+
+    const int map_rows =
+        static_cast<int>(map.grid.rows());
+
+    const int map_columns =
+        static_cast<int>(map.grid.columns());
+
+    const int target_cell_width =
+        map_columns >= 55 ? 2 :
+        (map_columns >= 25 ? 3 : 4);
+
+    const int desired_panel_width =
+        std::max(
+            76,
+            map_columns *
+                target_cell_width + 8
+        );
+
+    const int available_panel_width =
+        std::max(
+            20,
+            terminal.dimx - 8
+        );
+
+    const int panel_width =
+        spacious
+            ? std::min(
+                available_panel_width,
+                desired_panel_width
+            )
+            : std::min(
+                76,
+                available_panel_width
+            );
+
+    const int board_width =
+        std::max(
+            1,
+            panel_width - 6
+        );
+
+    const bool normal_width_fits =
+        board_width >=
+        map_columns * 2;
+
+    int ideal_board_height;
+
+    if (map_rows <= 10 &&
+        normal_width_fits) {
+
+        ideal_board_height = 34;
+
+    } else if (
+        map_rows <= 20 &&
+        normal_width_fits) {
+
+        ideal_board_height = 44;
+
+    } else {
+
+        ideal_board_height =
+            std::clamp(
+                map_rows + 4,
+                12,
+                44
+            );
+    }
+
+    const int board_height =
+        spacious
+            ? std::min(
+                terminal.dimy - 18,
+                ideal_board_height
+            )
+            : 22;
     constexpr int footer_height = 7;
-    const bool compact = view == Project2MapView::overview &&
-        (map.grid.rows() > 20 || map.grid.columns() > 30) &&
-        map.grid.rows() <= 40 && map.grid.columns() <= 60;
+    const bool can_render_full_tiles =
+        board_width >= map_columns * 2 &&
+        board_height >= map_rows;
+
+    const bool compact =
+        view == Project2MapView::overview &&
+        !can_render_full_tiles;
 
     auto sup_window = window(
         text(" STATUS ") | bold | color(Color::CyanLight),
@@ -629,10 +1035,13 @@ ftxui::Element ConsoleUI::render_project2(
 
     // All map views share one fixed-size board slot. Zoom and help update
     // its contents instead of moving the surrounding game panels.
-    const bool small_map = map.grid.rows() <= 20 && map.grid.columns() <= 30;
-    auto map_content = render_project2_board(session, highlighted, view,
-        small_map || spacious ? panel_width - 6 : 0,
-        small_map || spacious ? board_height : 0);
+    auto map_content = render_project2_board(
+        session,
+        highlighted,
+        view,
+        panel_width - 6,
+        board_height
+    );
     // Center the contents in the same slot, independently of Z and H.
     auto board = vbox({
         filler(),
