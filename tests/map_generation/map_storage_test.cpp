@@ -1,4 +1,5 @@
 #include "circuit_escape/map_generation/map_storage.h"
+#include "circuit_escape/project2_session.h"
 
 #include <cassert>
 #include <filesystem>
@@ -240,6 +241,31 @@ void selected_maps_test(const std::filesystem::path& folder) {
         assert(map.seed == entry.seed);
         assert(map.minimum_energy_cost == entry.route_validation->recommended->total_energy_cost);
         assert(map.winning_actions == entry.winning_game->actions);
+
+        // Replay the saved winning sequence using the actual Project 2 game engine,
+        // not just the independent map verifier used during generation.
+        Project2Session session(map);
+        bool visited_a = false;
+        bool visited_b = false;
+        for (std::size_t turn = 0; turn < map.winning_actions.size(); ++turn) {
+            const GameState state = session.step(map.winning_actions[turn]);
+            visited_a = visited_a || state.switch_a_active;
+            visited_b = visited_b || state.switch_b_active;
+            if (turn + 1 < map.winning_actions.size()) {
+                assert(state.outcome == GameOutcome::in_progress);
+            }
+        }
+        const GameState& won = session.state();
+        assert(visited_a && visited_b);
+        assert(won.switch_a_active && won.switch_b_active);
+        assert(won.outcome == GameOutcome::victory);
+        assert(won.player == map.input.exit);
+        assert(won.energy > 0);
+        assert(won.turn == map.winning_actions.size());
+        session.reset();
+        assert(session.state().outcome == GameOutcome::in_progress);
+        assert(session.state().turn == 0);
+        assert(!session.state().switch_a_active && !session.state().switch_b_active);
     };
     check("mapa_facil.txt", result.selection->easy_id, SavedDifficulty::easy);
     check("mapa_medio.txt", result.selection->medium_id, SavedDifficulty::medium);
