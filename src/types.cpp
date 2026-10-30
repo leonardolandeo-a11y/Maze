@@ -1,5 +1,7 @@
 #include "circuit_escape/types.h"
 
+#include <limits>
+
 
 
 std::optional<Position> neighbor(Position origin, Action action){
@@ -10,6 +12,9 @@ std::optional<Position> neighbor(Position origin, Action action){
         return Position{origin.row-1,origin.column};
         
     }else if (action == Action::down){
+        if (origin.row == std::numeric_limits<std::size_t>::max()) {
+            return std::nullopt;
+        }
         return Position{origin.row+1, origin.column};
 
     }else if (action == Action::left){
@@ -19,6 +24,9 @@ std::optional<Position> neighbor(Position origin, Action action){
         return Position{origin.row, origin.column-1};
 
     }else if (action == Action::right){
+        if (origin.column == std::numeric_limits<std::size_t>::max()) {
+            return std::nullopt;
+        }
         return Position{origin.row, origin.column+1};
 
     }else if (action == Action::wait){

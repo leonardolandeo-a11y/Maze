@@ -32,6 +32,15 @@ add_library(Maze_core
     src/map_generation/map_selector.cpp
         src/graph.cpp
     src/graph/disjoint_set.cpp
+    src/map_generation/kruskal.cpp
+    src/pathfinding/dijkstra.cpp
+    src/map_generation/map_validator.cpp
+    src/map_generation/game_verifier.cpp
+    src/map_generation/map_batch.cpp
+    src/map_generation/map_storage.cpp
+    src/map_generation/map_generator_cli.cpp
+    src/project2_session.cpp
+    src/project2_application.cpp
 )
 # Include headers
 target_include_directories(Maze_core PUBLIC include)
@@ -52,13 +61,23 @@ target_link_libraries(Maze PRIVATE
         Maze_core
 )
 
+add_executable(map_generator
+    app/map_generator_main.cpp
+)
+target_link_libraries(map_generator PRIVATE Maze_core)
+
+add_executable(escape_circuit app/escape_circuit_main.cpp)
+target_link_libraries(escape_circuit PRIVATE Maze_core)
+
 #Tests
 
 enable_testing()
 
 add_executable(Maze_test
     tests/test_main.cpp
-    tests/grid_test.cpp 
+    tests/grid_test.cpp
+    tests/types_test.cpp
+    tests/agent_test.cpp
     tests/environment_test.cpp
     tests/interactions_test.cpp
     tests/controllers_test.cpp
@@ -71,10 +90,34 @@ add_executable(Maze_test
     tests/console_render_test.cpp
     tests/map_generation/map_selector_test.cpp
     tests/help_test.cpp
+    tests/menus_test.cpp
+    tests/animations_test.cpp
         tests/graph_test.cpp
     tests/graph/disjoint_set_test.cpp
+    tests/map_generation/kruskal_test.cpp
+    tests/pathfinding/dijkstra_test.cpp
+    tests/map_generation/map_validator_test.cpp
+    tests/map_generation/game_verifier_test.cpp
+    tests/map_generation/map_batch_test.cpp
+    tests/map_generation/map_storage_test.cpp
+    tests/map_generation/map_generator_cli_test.cpp
+    tests/project2_integration_test.cpp
 )
 
 target_link_libraries(Maze_test PRIVATE Maze_core)
 
 add_test(NAME Maze_test COMMAND Maze_test)
+
+# Runtime distribution for Windows installer.
+install(TARGETS map_generator escape_circuit
+    RUNTIME DESTINATION bin
+    COMPONENT Runtime
+)
+install(FILES README.md DESTINATION . COMPONENT Runtime)
+install(FILES
+    installer/launch-game.cmd
+    installer/launch-generator.cmd
+    installer/launch-generated-game.cmd
+    DESTINATION .
+    COMPONENT Runtime
+)

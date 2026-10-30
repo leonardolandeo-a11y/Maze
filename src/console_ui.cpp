@@ -1,10 +1,13 @@
 #include "circuit_escape/console_ui.h"
+#include "circuit_escape/project2_session.h"
 #include "circuit_escape/help.h"
-#include <variant>
-#include <type_traits>
+
+#include <algorithm>
 #include <array>
 #include <stdexcept>
-#include <algorithm>
+#include <type_traits>
+#include <variant>
+#include <ftxui/screen/terminal.hpp>
 
 
 ConsoleUI::ConsoleUI(RenderMode mode): mode_(mode){};
@@ -38,7 +41,7 @@ std::optional<UICommand> ConsoleUI::KeyMapping(const ftxui::Event& event)const{
     if (event == ftxui::Event::Character('q')|| event == ftxui::Event::Character('Q')){
         return UICommand::quit;
     }
-    if (event == ftxui::Event::Character('e')|| event == ftxui::Event::Character('E')){ 
+    if (event == ftxui::Event::Character('e')|| event == ftxui::Event::Character('E')){
         return UICommand::wait;
     }
     return std::nullopt;
@@ -135,102 +138,552 @@ También se agregan las coordenadas de filas y columnas y se mantiene
 un ancho fijo por celda para conservar la forma de la cuadrícula.
 ---------------------------------------------------------------------*/
 ftxui::Element ConsoleUI::RenderBoard(
-    const NavigationEnvironment<20, 30>& environment, 
+    const NavigationEnvironment<20, 30>& environment,
     const Observation& observation) const {
+    return render_board_area(20, 30, observation.agent, [&](Position position) {
+        const bool is_player = observation.agent == position;
+        const bool is_guard = guardPosition_.has_value() && *guardPosition_ == position;
+        auto cell = RenderCell(environment.grid().at(position), is_player, is_guard);
+        if (std::find(highlightedPath_.begin(), highlightedPath_.end(), position)
+            != highlightedPath_.end()) {
+            cell = cell | ftxui::bgcolor(ftxui::Color::Blue)
+                | ftxui::color(ftxui::Color::White);
+        }
+        return cell;
+    });
+}
 
-    constexpr int cellVisualWidth = 2;
+ftxui::Element ConsoleUI::render_board_area(
+    std::size_t rows_count,
+    std::size_t columns_count,
+    Position player,
+    const std::function<ftxui::Element(Position)>& cell_renderer,
+    bool numeric_coordinates,
+    bool show_coordinates) const {
+    using namespace ftxui;
 
-    const std::array<std::string, 10> emojiDigits{
-        "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣",
-        "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"
+    constexpr std::size_t viewport_rows = 20;
+    constexpr std::size_t viewport_columns = 30;
+    constexpr int cell_visual_width = 2;
+
+    const std::size_t visible_rows = std::min(rows_count, viewport_rows);
+    const std::size_t visible_columns = std::min(columns_count, viewport_columns);
+    const std::size_t first_row = std::min(
+        player.row > visible_rows / 2 ? player.row - visible_rows / 2 : std::size_t{0},
+        rows_count - visible_rows);
+    const std::size_t first_column = std::min(
+        player.column > visible_columns / 2 ? player.column - visible_columns / 2 : std::size_t{0},
+        columns_count - visible_columns);
+
+    const std::size_t top_padding = (viewport_rows - visible_rows) / 2;
+    const std::size_t left_padding = (viewport_columns - visible_columns) / 2;
+
+    const std::array<std::string, 10> emoji_digits{
+        "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"
+    };
+    auto coordinate_label = [&](std::size_t value) {
+        return !numeric_coordinates && mode_ == RenderMode::emoji
+            ? emoji_digits[value % emoji_digits.size()]
+            : std::to_string(value % 10);
+    };
+    auto empty_space = [] {
+        return text("  ") | size(WIDTH, EQUAL, cell_visual_width);
     };
 
-    std::vector<ftxui::Element> rows;
-
-    // -------------------------
-    // Coordenadas horizontales
-    // -------------------------
-    std::vector<ftxui::Element> horizontalLabels;
-
-    for (std::size_t column = 0; column < 30; ++column) {
-        std::string label;
-
-        if (mode_ == RenderMode::emoji) {label = emojiDigits[column % 10];}
-        else {label = std::to_string(column % 10);}
-
-        horizontalLabels.push_back(CoordinateCell(label));
+    Elements rows;
+    Elements horizontal_labels;
+    for (std::size_t view_column = 0; view_column < viewport_columns; ++view_column) {
+        if (view_column >= left_padding &&
+            view_column < left_padding + visible_columns) {
+            horizontal_labels.push_back(CoordinateCell(coordinate_label(
+                first_column + view_column - left_padding)));
+        } else {
+            horizontal_labels.push_back(empty_space());
+        }
+    }
+    if (show_coordinates) {
+        rows.push_back(hbox({
+            CoordinateCell(mode_ == RenderMode::emoji ? "⬜" : "."),
+            hbox(std::move(horizontal_labels))
+        }));
     }
 
-
-    const std::string corner = mode_ == RenderMode::emoji ? "⬜" : ".";
-
-    rows.push_back(
-        ftxui::hbox({
-            CoordinateCell(corner),
-            ftxui::hbox(std::move(horizontalLabels))
-        })
-    );
-
-
-    // -------------------------
-    // Filas del tablero
-    // -------------------------
-    for (std::size_t row = 0; row < 20; ++row) {
-
-        std::vector<ftxui::Element> columns;
-
-        // Coordenada vertical
-        std::string rowLabel;
-        if (mode_ == RenderMode::emoji) {rowLabel = emojiDigits[row % 10];}
-        else {rowLabel = std::to_string(row % 10);}
-
-        columns.push_back(CoordinateCell(rowLabel));
-
-        // Celdas
-        for (std::size_t column = 0; column < 30; ++column) {
-            Position position{row, column};
-
-            const Cell& cell = environment.grid().at(position);
-
-            const bool isAgent = observation.agent == position;
-
-            const bool isGuard =
-                guardPosition_.has_value() &&
-                *guardPosition_ == position;
-
-            auto cellElement =
-                RenderCell(cell, isAgent, isGuard)
-                    | ftxui::size(
-                        ftxui::WIDTH,
-                        ftxui::EQUAL,
-                        cellVisualWidth
-                    )
-                    | ftxui::center;
-
-            const bool isOnPath =
-                std::find(
-                    highlightedPath_.begin(),
-                    highlightedPath_.end(),
-                    position
-                ) != highlightedPath_.end();
-
-            if (isOnPath) {
-                cellElement =
-                    cellElement
-                        | ftxui::bgcolor(ftxui::Color::Blue)
-                        | ftxui::color(ftxui::Color::White);
+    for (std::size_t view_row = 0; view_row < viewport_rows; ++view_row) {
+        Elements columns;
+        const bool row_in_map = view_row >= top_padding &&
+            view_row < top_padding + visible_rows;
+        const std::size_t map_row = row_in_map
+            ? first_row + view_row - top_padding : 0;
+        if (show_coordinates) {
+            columns.push_back(row_in_map
+                ? CoordinateCell(coordinate_label(map_row)) : empty_space());
+        }
+        for (std::size_t view_column = 0; view_column < viewport_columns; ++view_column) {
+            if (row_in_map && view_column >= left_padding &&
+                view_column < left_padding + visible_columns) {
+                const Position position{map_row,
+                    first_column + view_column - left_padding};
+                columns.push_back(cell_renderer(position)
+                    | size(WIDTH, EQUAL, cell_visual_width) | center);
+            } else {
+                columns.push_back(empty_space());
             }
-
-            columns.push_back(cellElement);
-        } // Fin del recorrido de columnas.
-
-        rows.push_back(
-            ftxui::hbox(std::move(columns))
-        );
-    } // Fin del recorrido de filas.
-
-    return ftxui::vbox(std::move(rows));
+        }
+        rows.push_back(hbox(std::move(columns)));
+    }
+    return vbox(std::move(rows));
 }
+
+ftxui::Element ConsoleUI::render_project2_cell(
+    const Project2Session& session,
+    Position position,
+    std::span<const Position> highlighted) const {
+    using namespace ftxui;
+    const auto& state = session.state();
+    const auto& map = session.map();
+    const bool emoji = mode_ == RenderMode::emoji;
+    Element result;
+
+    if (position == state.player) {
+        result = RenderCell(map.grid.at(position), true);
+    } else if (position == state.guard) {
+        result = text(emoji ? "👀" : "V") | color(Color::RedLight);
+    } else if (position == map.input.switch_a) {
+        result = text(state.switch_a_active ? "a" : "A")
+            | color(Color::YellowLight) | bold;
+    } else if (position == map.input.switch_b) {
+        result = text(state.switch_b_active ? "b" : "B")
+            | color(Color::YellowLight) | bold;
+    } else if (session.battery_consumed(position) || session.resource_collected(position)) {
+        result = RenderCell(::Cell{Empty{}}, false);
+    } else {
+        result = RenderCell(map.grid.at(position), false);
+    }
+
+    if (std::find(highlighted.begin(), highlighted.end(), position) != highlighted.end()) {
+        result = result | bgcolor(Color::Blue);
+    }
+    return result;
+}
+
+ftxui::Element ConsoleUI::render_project2_overview(
+    const Project2Session& session,
+    std::span<const Position> highlighted) const {
+    using namespace ftxui;
+    const auto& map = session.map();
+    const auto& state = session.state();
+    const std::size_t rows = map.grid.rows();
+    const std::size_t columns = map.grid.columns();
+
+    auto color_at = [&](Position position) -> Color {
+        if (position == state.player) return Color::RGB(44, 191, 255);
+        if (position == state.guard) return Color::RGB(155, 62, 174);
+        if (position == map.input.switch_a) return Color::RGB(154, 115, 12);
+        if (position == map.input.switch_b) return Color::RGB(170, 89, 20);
+        if (position == map.input.exit) return Color::RGB(25, 120, 69);
+        if (std::find(highlighted.begin(), highlighted.end(), position) != highlighted.end()) {
+            return Color::RGB(33, 83, 160);
+        }
+        if (session.resource_collected(position) || session.battery_consumed(position)) {
+            return Color::RGB(214, 218, 223);
+        }
+        const ::Cell& cell = map.grid.at(position);
+        return std::visit([](const auto& value) -> Color {
+            using T = std::decay_t<decltype(value)>;
+            if constexpr (std::is_same_v<T, Wall>) return Color::RGB(42, 47, 55);
+            else if constexpr (std::is_same_v<T, RoughTerrain>) return Color::RGB(133, 82, 65);
+            else if constexpr (std::is_same_v<T, ResourceCell<int>>) return Color::RGB(14, 119, 145);
+            else if constexpr (std::is_same_v<T, Battery>) return Color::RGB(167, 118, 11);
+            else if constexpr (std::is_same_v<T, Trap>) return Color::RGB(170, 41, 57);
+            else if constexpr (std::is_same_v<T, Exit>) return Color::RGB(25, 120, 69);
+            else return Color::RGB(214, 218, 223);
+        }, cell);
+    };
+
+    auto marker_at = [&](Position position) -> char {
+        if (position == state.player) return '@';
+        if (position == state.guard) return 'V';
+        if (position == map.input.switch_a) return state.switch_a_active ? 'a' : 'A';
+        if (position == map.input.switch_b) return state.switch_b_active ? 'b' : 'B';
+        if (position == map.input.exit) return 'S';
+        return '\0';
+    };
+
+    // Two map rows share one terminal row, without numerical rulers.
+    Elements lines;
+    for (std::size_t row = 0; row < rows; row += 2) {
+        Elements cells;
+
+        for (std::size_t column = 0; column < columns; ++column) {
+            const Position upper{row, column};
+            const Position lower{std::min(row + 1, rows - 1), column};
+            const Color upper_color = color_at(upper);
+            const Color lower_color = row + 1 < rows
+                ? color_at(lower) : Color::RGB(20, 24, 30);
+            const char top_marker = marker_at(upper);
+            const char bottom_marker = row + 1 < rows ? marker_at(lower) : '\0';
+            if (upper == state.player || (row + 1 < rows && lower == state.player)) {
+                const bool in_upper_half = upper == state.player;
+                cells.push_back(text("@")
+                    | color(in_upper_half
+                        ? Color::RGB(255, 255, 255) : Color::RGB(29, 215, 252))
+                    | bgcolor(in_upper_half
+                        ? Color::RGB(15, 110, 157) : Color::RGB(23, 35, 54))
+                    | size(WIDTH, EQUAL, 1));
+            } else if (top_marker != '\0' || bottom_marker != '\0') {
+                const char marker = top_marker != '\0' ? top_marker : bottom_marker;
+                cells.push_back(text(std::string(1, marker))
+                    | color(top_marker != '\0' ? upper_color : lower_color)
+                    | bgcolor(top_marker != '\0' ? lower_color : upper_color)
+                    | size(WIDTH, EQUAL, 1));
+            } else {
+                cells.push_back(text("▀") | color(upper_color)
+                    | bgcolor(lower_color) | size(WIDTH, EQUAL, 1));
+            }
+        }
+        lines.push_back(hbox(std::move(cells)));
+    }
+    return vbox(std::move(lines));
+}
+
+// Scale the complete map to the available terminal area. Use one terminal
+// row per map row when there is room; otherwise retain both map rows using
+// the upper/lower half-block representation.
+ftxui::Element ConsoleUI::render_project2_scaled_overview(
+    const Project2Session& session,
+    std::span<const Position> highlighted,
+    int board_width, int board_height) const {
+    using namespace ftxui;
+    const auto& map = session.map();
+    const auto& state = session.state();
+    const int rows = static_cast<int>(map.grid.rows());
+    const int columns = static_cast<int>(map.grid.columns());
+    const int available_height = std::max(1, board_height - 2);
+    const bool full_rows = rows <= available_height;
+    const int rendered_rows = full_rows ? rows : (rows + 1) / 2;
+    const int row_repeat = std::clamp(available_height / rendered_rows, 1, 5);
+    const int cell_width = std::clamp(board_width / columns, 1, 8);
+
+    auto color_at = [&](Position position) -> Color {
+        if (position == state.player) return Color::RGB(15, 110, 157);
+        if (position == state.guard) return Color::RGB(155, 62, 174);
+        if (position == map.input.switch_a) return Color::RGB(154, 115, 12);
+        if (position == map.input.switch_b) return Color::RGB(170, 89, 20);
+        if (position == map.input.exit) return Color::RGB(25, 120, 69);
+        if (std::find(highlighted.begin(), highlighted.end(), position) != highlighted.end()) {
+            return Color::RGB(33, 83, 160);
+        }
+        if (session.resource_collected(position) || session.battery_consumed(position)) {
+            return Color::RGB(214, 218, 223);
+        }
+        return std::visit([](const auto& value) -> Color {
+            using T = std::decay_t<decltype(value)>;
+            if constexpr (std::is_same_v<T, Wall>) return Color::RGB(42, 47, 55);
+            else if constexpr (std::is_same_v<T, RoughTerrain>) return Color::RGB(133, 82, 65);
+            else if constexpr (std::is_same_v<T, ResourceCell<int>>) return Color::RGB(14, 119, 145);
+            else if constexpr (std::is_same_v<T, Battery>) return Color::RGB(167, 118, 11);
+            else if constexpr (std::is_same_v<T, Trap>) return Color::RGB(170, 41, 57);
+            else if constexpr (std::is_same_v<T, Exit>) return Color::RGB(25, 120, 69);
+            else return Color::RGB(214, 218, 223);
+        }, map.grid.at(position));
+    };
+    auto marker_at = [&](Position position) -> char {
+        if (position == state.player) return '@';
+        if (position == state.guard) return 'V';
+        if (position == map.input.switch_a) return state.switch_a_active ? 'a' : 'A';
+        if (position == map.input.switch_b) return state.switch_b_active ? 'b' : 'B';
+        if (position == map.input.exit) return 'S';
+        return '\0';
+    };
+    auto marker_cell = [&](char marker, Color background, Color foreground) -> Element {
+        std::string glyph(static_cast<std::size_t>(cell_width), ' ');
+        glyph[static_cast<std::size_t>((cell_width - 1) / 2)] = marker;
+        return text(std::move(glyph)) | color(foreground) | bgcolor(background);
+    };
+
+    Elements lines;
+
+    for (int visual_row = 0; visual_row < rendered_rows; ++visual_row) {
+        const int real_row = full_rows ? visual_row : visual_row * 2;
+        for (int repetition = 0; repetition < row_repeat; ++repetition) {
+        Elements cells;
+
+        for (int column = 0; column < columns; ++column) {
+            Position upper{static_cast<std::size_t>(real_row), static_cast<std::size_t>(column)};
+            const bool has_lower = !full_rows && real_row + 1 < rows;
+            Position lower{static_cast<std::size_t>(std::min(real_row + 1, rows - 1)),
+                static_cast<std::size_t>(column)};
+            const Color top_color = color_at(upper);
+            const Color bottom_color = has_lower ? color_at(lower) : top_color;
+            const char top_marker = marker_at(upper);
+            const char bottom_marker = has_lower ? marker_at(lower) : '\0';
+            if (upper == state.player || (has_lower && lower == state.player)) {
+                const bool player_upper = upper == state.player;
+                cells.push_back(marker_cell('@', player_upper ? Color::RGB(15, 110, 157)
+                    : Color::RGB(23, 35, 54), player_upper ? Color::White
+                    : Color::RGB(29, 215, 252)));
+            } else if (top_marker != '\0' || bottom_marker != '\0') {
+                const char marker = top_marker != '\0' ? top_marker : bottom_marker;
+                const Color background = top_marker != '\0' ? bottom_color : top_color;
+                cells.push_back(marker_cell(marker, background,
+                    top_marker != '\0' ? top_color : bottom_color));
+            } else if (full_rows) {
+                cells.push_back(text(std::string(static_cast<std::size_t>(cell_width), ' '))
+                    | bgcolor(top_color));
+            } else {
+                std::string blocks;
+                for (int part = 0; part < cell_width; ++part) blocks += "▀";
+                cells.push_back(text(std::move(blocks))
+                    | color(top_color) | bgcolor(bottom_color));
+            }
+        }
+        lines.push_back(hbox(std::move(cells)));
+        }
+    }
+    return vbox(std::move(lines));
+}
+
+// Display every tile of small maps while retaining the original symbols.
+// Unlike the compact 40x60 overview, this never replaces items with color dots.
+ftxui::Element ConsoleUI::render_project2_fitted_map(
+    const Project2Session& session,
+    std::span<const Position> highlighted,
+    int board_width, int board_height) const {
+    using namespace ftxui;
+    const auto& grid = session.map().grid;
+    const int rows = static_cast<int>(grid.rows());
+    const int columns = static_cast<int>(grid.columns());
+    const int cell_width = std::clamp(board_width / columns, 2, 8);
+    const int cell_height = std::clamp(board_height / rows, 1, 4);
+
+    Elements board_rows;
+    for (int row = 0; row < rows; ++row) {
+        Elements board_columns;
+        for (int column = 0; column < columns; ++column) {
+            const Position position{static_cast<std::size_t>(row),
+                                    static_cast<std::size_t>(column)};
+            board_columns.push_back(
+                render_project2_cell(session, position, highlighted)
+                | center
+                | size(WIDTH, EQUAL, cell_width)
+                | size(HEIGHT, EQUAL, cell_height));
+        }
+        board_rows.push_back(hbox(std::move(board_columns)));
+    }
+    return vbox(std::move(board_rows));
+}
+
+// Player-centered zoom for small maps. Movement changes only the viewport;
+// it never changes the map, player state, or turn count.
+ftxui::Element ConsoleUI::render_project2_zoom_detail(
+    const Project2Session& session,
+    std::span<const Position> highlighted,
+    int board_width, int board_height) const {
+    using namespace ftxui;
+    const auto& grid = session.map().grid;
+    const Position player = session.state().player;
+    const int rows = static_cast<int>(grid.rows());
+    const int columns = static_cast<int>(grid.columns());
+    const int cell_width = std::min(board_width, board_width >= 90 ? 8 : 6);
+    const int cell_height = std::min(board_height, board_height >= 32 ? 4 : 3);
+    const int visible_columns = std::clamp(board_width / cell_width, 1, columns);
+    const int visible_rows = std::clamp(board_height / cell_height, 1, rows);
+    const int first_row = std::clamp(
+        static_cast<int>(player.row) - visible_rows / 2, 0, rows - visible_rows);
+    const int first_column = std::clamp(
+        static_cast<int>(player.column) - visible_columns / 2, 0, columns - visible_columns);
+
+    // Fill the entire enlarged tile, not just its centered emoji. Otherwise
+    // neighboring passages look disconnected when zoomed to multiple columns
+    // and rows. The original emoji remains visible in the tile's center.
+    const auto tile_background = [&](Position position) -> Color {
+        if (std::find(highlighted.begin(), highlighted.end(), position) != highlighted.end()) {
+            return Color::RGB(30, 83, 141);
+        }
+        if (position == session.state().player) return Color::RGB(23, 96, 117);
+        if (position == session.state().guard) return Color::RGB(88, 45, 110);
+        if (session.resource_collected(position) || session.battery_consumed(position)) {
+            return Color::RGB(73, 80, 91);
+        }
+        return std::visit([](const auto& cell) -> Color {
+            using CellType = std::decay_t<decltype(cell)>;
+            if constexpr (std::is_same_v<CellType, Wall>) return Color::RGB(14, 17, 24);
+            else if constexpr (std::is_same_v<CellType, RoughTerrain>) return Color::RGB(109, 70, 57);
+            else if constexpr (std::is_same_v<CellType, ResourceCell<int>>) return Color::RGB(35, 79, 98);
+            else if constexpr (std::is_same_v<CellType, Battery>) return Color::RGB(106, 82, 35);
+            else if constexpr (std::is_same_v<CellType, Trap>) return Color::RGB(106, 44, 56);
+            else if constexpr (std::is_same_v<CellType, Exit>) return Color::RGB(37, 88, 59);
+            else if constexpr (std::is_same_v<CellType, Switch>) return Color::RGB(104, 77, 38);
+            else return Color::RGB(73, 80, 91);
+        }, grid.at(position));
+    };
+
+    Elements board_rows;
+    for (int row = 0; row < visible_rows; ++row) {
+        Elements board_columns;
+        for (int column = 0; column < visible_columns; ++column) {
+            const Position position{static_cast<std::size_t>(first_row + row),
+                                    static_cast<std::size_t>(first_column + column)};
+            board_columns.push_back(
+                render_project2_cell(session, position, highlighted)
+                | center
+                | size(WIDTH, EQUAL, cell_width)
+                | size(HEIGHT, EQUAL, cell_height)
+                | bgcolor(tile_background(position)));
+        }
+        board_rows.push_back(hbox(std::move(board_columns)));
+    }
+    return vbox(std::move(board_rows));
+}
+
+ftxui::Element ConsoleUI::render_project2_board(
+    const Project2Session& session,
+    std::span<const Position> highlighted,
+    Project2MapView view,
+    int board_width, int board_height) const {
+    const auto& map = session.map();
+    // Keep the existing 40x60 views intact; only improve 10x15 and 20x30.
+    const bool small_map = map.grid.rows() <= 20 && map.grid.columns() <= 30;
+    if (small_map && board_width > 0 && board_height > 0) {
+        return view == Project2MapView::overview
+            ? render_project2_fitted_map(session, highlighted, board_width, board_height)
+            : render_project2_zoom_detail(session, highlighted, board_width, board_height);
+    }
+    if (view == Project2MapView::overview && board_width > 0 && board_height > 0) {
+        return render_project2_scaled_overview(session, highlighted, board_width, board_height);
+    }
+    if (view == Project2MapView::overview &&
+        (map.grid.rows() > 20 || map.grid.columns() > 30) &&
+        map.grid.rows() <= 40 && map.grid.columns() <= 60) {
+        return render_project2_overview(session, highlighted);
+    }
+    return render_board_area(map.grid.rows(), map.grid.columns(),
+        session.state().player, [&](Position position) {
+            return render_project2_cell(session, position, highlighted);
+        }, true, false);
+}
+
+ftxui::Element ConsoleUI::render_project2(
+    const Project2Session& session,
+    Project2MapView view,
+    std::span<const Position> highlighted,
+    std::span<const std::string> help_lines,
+    std::optional<ftxui::Dimensions> terminal_size) const {
+    using namespace ftxui;
+    const auto& state = session.state();
+    const auto& map = session.map();
+    std::string difficulty;
+    switch (map.difficulty) {
+        case SavedDifficulty::easy: difficulty = "EASY"; break;
+        case SavedDifficulty::medium: difficulty = "MEDIUM"; break;
+        case SavedDifficulty::hard: difficulty = "HARD"; break;
+    }
+
+    const std::string turns = "Turn " + std::to_string(state.turn) + "/" +
+        std::to_string(map.input.turn_limit);
+    const std::string energy = "Energy " + std::to_string(state.energy) + "/" +
+        std::to_string(map.input.maximum_energy);
+    const std::string score = "Score " + std::to_string(state.score);
+    const std::string resources = "Resources " + std::to_string(state.resource_count) +
+        "/" + std::to_string(map.effects.resources.size());
+    const std::string switches = std::string("Switch A ") +
+        (state.switch_a_active ? "ON" : "OFF") + " | B " +
+        (state.switch_b_active ? "ON" : "OFF");
+    const std::string player = "Player (" + std::to_string(state.player.row) + "," +
+        std::to_string(state.player.column) + ")";
+    const std::string guard = "Guard (" + std::to_string(state.guard.row) + "," +
+        std::to_string(state.guard.column) + ")";
+    const std::string next_guard_turn = "Next move: turn " +
+        std::to_string(state.turn % 2 == 0 ? state.turn + 2 : state.turn + 1);
+
+    const ftxui::Dimensions terminal = terminal_size.value_or(ftxui::Terminal::Size());
+    // Keep the interface proportional to the actual map instead of
+    // stretching empty panel borders to the entire terminal width.
+    const bool spacious = terminal.dimx >= 105 && terminal.dimy >= 43;
+    const int map_columns = static_cast<int>(map.grid.columns());
+    const int target_cell_width = map_columns >= 55 ? 2 : (map_columns >= 25 ? 3 : 4);
+    const int ideal_panel_width = std::clamp(map_columns * target_cell_width + 8, 76, 132);
+    const int panel_width = spacious
+        ? std::min(terminal.dimx - 8, ideal_panel_width) : 76;
+    const int ideal_board_height = map.grid.rows() <= 10 ? 34 : 44;
+    const int board_height = spacious
+        ? std::min(terminal.dimy - 18, ideal_board_height) : 22;
+    constexpr int footer_height = 7;
+    const bool compact = view == Project2MapView::overview &&
+        (map.grid.rows() > 20 || map.grid.columns() > 30) &&
+        map.grid.rows() <= 40 && map.grid.columns() <= 60;
+
+    auto sup_window = window(
+        text(" STATUS ") | bold | color(Color::CyanLight),
+        hbox({
+            text(" "),
+            vbox({
+                text(turns + " | " + energy + " | " + score + " | " + resources),
+                text(difficulty + " | " + std::to_string(map.grid.rows()) + "x" +
+                     std::to_string(map.grid.columns()) + " | " + switches),
+                text(player + " | " + guard + " | " + next_guard_turn)
+            }),
+            text(" ")
+        })
+    ) | size(WIDTH, EQUAL, panel_width);
+
+    // All map views share one fixed-size board slot. Zoom and help update
+    // its contents instead of moving the surrounding game panels.
+    const bool small_map = map.grid.rows() <= 20 && map.grid.columns() <= 30;
+    auto map_content = render_project2_board(session, highlighted, view,
+        small_map || spacious ? panel_width - 6 : 0,
+        small_map || spacious ? board_height : 0);
+    // Center the contents in the same slot, independently of Z and H.
+    auto board = vbox({
+        filler(),
+        hbox({filler(), std::move(map_content), filler()}),
+        filler()
+    }) | size(WIDTH, EQUAL, panel_width - 4) | size(HEIGHT, EQUAL, board_height);
+    auto board_window = window(
+        text(" MAZE ") | bold | color(Color::CyanLight),
+        hbox({text(" "), std::move(board), filler()})
+    ) | size(WIDTH, EQUAL, panel_width);
+
+    Elements footer_lines;
+    if (!help_lines.empty()) {
+        for (const auto& line : help_lines) {
+            footer_lines.push_back(text(" " + line));
+        }
+    } else {
+        footer_lines.push_back(text(" Move: WASD/arrows (S = down) | Wait: E | Zoom: Z"));
+        footer_lines.push_back(text(std::string(" View: ") +
+            (view == Project2MapView::overview ? "FULL MAP" : "DETAIL") +
+            " | Help: H | Quit: Q"));
+        const bool ascii_legend = mode_ == RenderMode::ascii;
+        footer_lines.push_back(compact
+            ? text(" @ player | V guard | A/B switches | S = goal tile")
+            : ascii_legend
+                ? text(" A/B switches | V guard | @ player | S exit")
+                : text(" A/B switches | Guard: eyes | S = down; goal is on the map"));
+        footer_lines.push_back(compact
+            ? text(" Colors: teal resource | amber battery | burgundy trap | green goal")
+            : ascii_legend
+                ? text(" Resources: R | Batteries: + | Traps: T | Walls: #")
+                : text(" Resources: diamonds | Batteries: lightning | Traps: explosions"));
+    }
+    while (footer_lines.size() < 5) {
+        footer_lines.push_back(text(" "));
+    }
+    auto inf_window = window(
+        text(help_lines.empty() ? " EVENTS / CONTROLS " : " DIJKSTRA ENERGY HELP ")
+            | bold | color(Color::CyanLight),
+        vbox(std::move(footer_lines))
+    ) | size(WIDTH, EQUAL, panel_width) | size(HEIGHT, EQUAL, footer_height);
+
+    return vbox({
+        std::move(sup_window),
+        separatorEmpty(),
+        std::move(board_window),
+        separatorEmpty(),
+        std::move(inf_window)
+    });
+}
+
 /*---------------------------------------------------------------------
 RenderInfBar() -> Construye el footer de la partida.
 
@@ -287,7 +740,7 @@ ftxui::Element ConsoleUI::render(
             boardWindow
         }) | ftxui::center;
     }
-    
+
     Observation observation = environment.state();
 
     auto SupWindow = window(
@@ -378,7 +831,7 @@ std::string ConsoleUI::symbol_for(GameSymbol symbol) const {
             return IsAscii ? "b" : "🟩";
 
         case GameSymbol::guard:
-            return IsAscii ? "V" : "👮"; 
+            return IsAscii ? "V" : "👮";
     }
 
     throw std::invalid_argument("Simbolo de juego desconocido");
@@ -472,8 +925,8 @@ std::string ConsoleUI::EventMessage(
             using EventType = std::decay_t<decltype(currentEvent)>;
             if constexpr (std::is_same_v<EventType, MovedEvent>) {
                 return
-                    "Moved to (" + 
-                        std::to_string(currentEvent.to.row) + "," + std::to_string(currentEvent.to.column) + 
+                    "Moved to (" +
+                        std::to_string(currentEvent.to.row) + "," + std::to_string(currentEvent.to.column) +
                     ")";
             }
             else if constexpr (std::is_same_v<EventType,MovementRejectedEvent>) {
@@ -482,7 +935,7 @@ std::string ConsoleUI::EventMessage(
             else if constexpr (
                 std::is_same_v<EventType, ResourceCollectedEvent>) {
                 return
-                    "Resource +" + std::to_string(currentEvent.points) + " at (" + 
+                    "Resource +" + std::to_string(currentEvent.points) + " at (" +
                         std::to_string(currentEvent.at.row) + "," + std::to_string(currentEvent.at.column) +
                     ")";
             }

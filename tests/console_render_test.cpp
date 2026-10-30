@@ -527,13 +527,13 @@ void test_help_report_integration(
     report.recommended_order = {HelpTarget::exit};
     report.segment_costs = {3};
 
-    
+
     report.complete_path = {
         {0, 7}, {0, 8}, {0, 9}, {0, 10}
     };
-    
+
     ui.setHelpReport(report);
-    
+
     ui.highlightHelpPath(
         report,
         HelpPathSelection::complete

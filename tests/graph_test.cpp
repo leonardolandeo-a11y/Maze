@@ -39,12 +39,12 @@ void check_connections(const GraphData& graph) {
 
             if (row > 0 && !graph.blocked[id - graph.columns])
                 expected.push_back(id - graph.columns); // Up
+            if (col > 0 && !graph.blocked[id - 1])
+                expected.push_back(id - 1);             // Left
             if (col + 1 < graph.columns && !graph.blocked[id + 1])
                 expected.push_back(id + 1);             // Right
             if (row + 1 < graph.rows && !graph.blocked[id + graph.columns])
                 expected.push_back(id + graph.columns); // Down
-            if (col > 0 && !graph.blocked[id - 1])
-                expected.push_back(id - 1);             // Left
         }
 
         require_graph(actual == expected,
@@ -74,12 +74,30 @@ void run_graph_tests() {
     require_graph(graph.entry_costs == costs, "Incorrect entry costs");
     require_graph(blocked == original_blocked && costs == original_costs,
                   "The original data was changed");
-    require_graph(graph_neighbors(graph, 4) == std::vector<std::size_t>{1, 7, 3},
+    require_graph(graph_neighbors(graph, 4) == std::vector<std::size_t>{1, 3, 7},
                   "Wrong neighbor order for center cell");
     require_graph(graph_neighbors(graph, 0) == std::vector<std::size_t>{1, 3},
                   "Wrong neighbors for corner cell");
     require_graph(graph_neighbors(graph, 5).empty(), "Wall should not have neighbors");
     check_connections(graph);
+
+    // The Grid adapter must use the same validated adjacency construction.
+    Grid<Cell> grid(3, 3);
+    grid.at({1, 2}) = Wall{};
+    grid.at({0, 2}) = RoughTerrain{4};
+    const GraphData adapted = graph_from_grid(grid);
+    const std::vector<bool> grid_blocked = {
+        false, false, false,
+        false, false, true,
+        false, false, false
+    };
+    const std::vector<int> grid_costs = {1, 1, 4, 1, 1, 1, 1, 1, 1};
+    const GraphData rebuilt = build_graph(3, 3, grid_blocked, grid_costs);
+    require_graph(adapted.neighbors == rebuilt.neighbors &&
+                  adapted.blocked == rebuilt.blocked &&
+                  adapted.entry_costs == rebuilt.entry_costs,
+                  "Grid conversion must match the common graph builder");
+    check_connections(adapted);
 
     // Celda única con mapa cuadrado
     const auto single = build_graph(1, 1, {false}, {0});
@@ -88,7 +106,7 @@ void run_graph_tests() {
 
     const auto rectangle = build_graph(4, 5, std::vector<bool>(20, false),
                                        std::vector<int>(20, 1));
-    require_graph(graph_neighbors(rectangle, 7) == std::vector<std::size_t>{2, 8, 12, 6},
+    require_graph(graph_neighbors(rectangle, 7) == std::vector<std::size_t>{2, 6, 8, 12},
                   "Wrong neighbors for a 4x5 map");
     check_connections(rectangle);
 

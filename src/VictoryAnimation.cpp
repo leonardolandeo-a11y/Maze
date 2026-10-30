@@ -692,7 +692,7 @@ ftxui::Element VictoryAnimation::RenderVictoryScreen(
 
         titleLines.push_back(
             ftxui::text(
-                "ENTER - PLAY AGAIN    Q - EXIT"
+                "ENTER - MAIN MENU    Q - EXIT"
             )
             | ftxui::color(ftxui::Color::GrayLight)
             | ftxui::center

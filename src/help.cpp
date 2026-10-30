@@ -51,7 +51,7 @@ ftxui::Element Help::RenderMenu() const {
 /*---------------------------------------------------------------------
 RenderGame() -> Renderiza la información reicibida de HelpReport
 
-1. cosText es un lambda que convierte y guarda el costo/estado como string 
+1. cosText es un lambda que convierte y guarda el costo/estado como string
 2. activeA/B guardan el estado de los bottones y exitState el estado de la salida en string
 3. row define como se componene las filas
 4. return -> la ventana con todo la información necesaria
@@ -79,10 +79,10 @@ ftxui::Element Help::RenderGame(const HelpReport& report) const {
 
     std::string exitState;
 
-    if (report.exit_goal.status == ObjectiveStatus::enabled) { exitState = "Habilitada"; } 
-    else if (!activeA && !activeB) { exitState = "Requiere A y B";} 
-    else if (!activeA) { exitState = "Requiere A"; } 
-    else if (!activeB) { exitState = "Requiere B"; } 
+    if (report.exit_goal.status == ObjectiveStatus::enabled) { exitState = "Habilitada"; }
+    else if (!activeA && !activeB) { exitState = "Requiere A y B";}
+    else if (!activeA) { exitState = "Requiere A"; }
+    else if (!activeB) { exitState = "Requiere B"; }
     else { exitState = "Bloqueada"; }
 
     auto row = [](const std::string& objective,
@@ -118,7 +118,7 @@ ftxui::Element Help::RenderGame(const HelpReport& report) const {
 
     if (!report.total_cost.has_value()) {
         routeDetails.push_back( ftxui::text("No hay un recorrido completo.") );
-    
+
     } else if ( report.recommended_order.empty() || report.recommended_order.size() != report.segment_costs.size()) {
         routeDetails.push_back( ftxui::text("Datos del recorrido incompletos.") );
 

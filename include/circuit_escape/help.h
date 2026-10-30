@@ -5,9 +5,9 @@
 
 class Help {
 public:
-    // Ayuda general: instrucciones, controles y objetivos del juego 
+    // Ayuda general: instrucciones, controles y objetivos del juego
     ftxui::Element RenderMenu() const;
 
-    // Ayuda durante la partida: objetivos, costos y recorrido 
+    // Ayuda durante la partida: objetivos, costos y recorrido
     ftxui::Element RenderGame(const HelpReport& report) const;
 };

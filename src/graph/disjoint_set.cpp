@@ -2,121 +2,52 @@
 
 #include <numeric>
 #include <stdexcept>
+#include <utility>
 
-
-DisjointSet::DisjointSet(
-    std::size_t size
-)
-    : parent_(size),
-      rank_(size, 0),
-      set_count_(size)
-{
-    std::iota(
-        parent_.begin(),
-        parent_.end(),
-        0
-    );
+DisjointSet::DisjointSet(std::size_t element_count)
+    : parent_(element_count), sizes_(element_count, 1), component_count_(element_count) {
+    std::iota(parent_.begin(), parent_.end(), std::size_t{0});
 }
 
-
-void DisjointSet::validate_index(
-    std::size_t value
-) const {
-
-    if (value >= parent_.size()) {
-
-        throw std::out_of_range(
-            "DisjointSet index out of range"
-        );
-    }
-}
-
-
-std::size_t DisjointSet::find(
-    std::size_t value
-) {
-
-    validate_index(value);
-
-
-    if (parent_[value] != value) {
-
-        parent_[value] =
-            find(parent_[value]);
+std::size_t DisjointSet::find(std::size_t element) {
+    if (element >= parent_.size()) {
+        throw std::out_of_range("DisjointSet element out of range");
     }
 
-
-    return parent_[value];
+    while (element != parent_[element]) {
+        parent_[element] = parent_[parent_[element]];
+        element = parent_[element];
+    }
+    return element;
 }
 
-
-bool DisjointSet::unite(
-    std::size_t first,
-    std::size_t second
-) {
-
-    const std::size_t first_root =
-        find(first);
-
-    const std::size_t second_root =
-        find(second);
-
-
-    if (first_root == second_root) {
+bool DisjointSet::unite(std::size_t first, std::size_t second) {
+    first = find(first);
+    second = find(second);
+    if (first == second) {
         return false;
     }
-
-
-    if (
-        rank_[first_root] <
-        rank_[second_root]
-    ) {
-
-        parent_[first_root] =
-            second_root;
+    if (sizes_[first] < sizes_[second]) {
+        std::swap(first, second);
     }
-
-    else if (
-        rank_[first_root] >
-        rank_[second_root]
-    ) {
-
-        parent_[second_root] =
-            first_root;
-    }
-
-    else {
-
-        parent_[second_root] =
-            first_root;
-
-        ++rank_[first_root];
-    }
-
-
-    --set_count_;
-
+    parent_[second] = first;
+    sizes_[first] += sizes_[second];
+    --component_count_;
     return true;
 }
 
-
-bool DisjointSet::connected(
-    std::size_t first,
-    std::size_t second
-) {
-
-    return find(first) == find(second);
+std::size_t DisjointSet::component_count() const noexcept {
+    return component_count_;
 }
 
-
 std::size_t DisjointSet::size() const noexcept {
-
     return parent_.size();
 }
 
+bool DisjointSet::connected(std::size_t first, std::size_t second) {
+    return find(first) == find(second);
+}
 
-std::size_t
-DisjointSet::set_count() const noexcept {
-
-    return set_count_;
+std::size_t DisjointSet::set_count() const noexcept {
+    return component_count_;
 }

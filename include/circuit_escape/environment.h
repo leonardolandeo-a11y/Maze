@@ -7,6 +7,8 @@
 #include "circuit_escape/generic_functions.h"
 
 #include <iterator> 
+#include <optional>
+#include <span>
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -34,7 +36,8 @@ enum class EndReason {
     none,
     goalReached,
     noEnergy,
-    turnLimit
+    turnLimit,
+    captured
 };
 
 // Representa una posible condición de término y el motivo asociado.
@@ -77,6 +80,25 @@ Snapshot del estado observable del entorno.
 Los controladores reciben este struct para tomar decisiones
 sin obtener acceso directo al estado interno de NavigationEnvironment.
 ---------------------------------------------------------------------*/
+// Non-owning, read-only view of the live grid. The owner must outlive this
+// view; reacquire it after reset() because the storage may be replaced.
+struct ReadOnlyMapView {
+    std::span<const Cell> cells{};
+    std::size_t rows{};
+    std::size_t columns{};
+
+    [[nodiscard]] bool contains(Position position) const noexcept {
+        return position.row < rows && position.column < columns;
+    }
+
+    [[nodiscard]] const Cell& at(Position position) const {
+        if (!contains(position)) {
+            throw std::out_of_range("Observation map position out of range");
+        }
+        return cells[position.row * columns + position.column];
+    }
+};
+
 struct Observation {
     Position agent;
     Position goal;
@@ -87,6 +109,12 @@ struct Observation {
     std::size_t turn{};
     std::size_t turnLimit{};
     std::vector<Action> availableActions;
+
+    // Project 2 additions; defaults keep existing Project 1 controllers valid.
+    ReadOnlyMapView map{};
+    bool switchAActive{false};
+    bool switchBActive{false};
+    std::optional<Position> guardPosition{};
 };
 
 /*---------------------------------------------------------------------
@@ -144,6 +172,14 @@ Resultado completo de ejecutar una acción.
 Contiene el nuevo estado observable, los eventos producidos durante
 el turno y la información de término de la partida.
 ---------------------------------------------------------------------*/
+// Project 2 uses the original navigation engine for movement and cell effects.
+// Its game session determines capture, switches, and final outcome afterward.
+// Default options preserve the Project 1 behavior without changes.
+struct NavigationOptions {
+    bool deferTermination{false};
+    bool useCellValues{false};
+};
+
 struct StepResult {
     Observation observation;
     std::vector<NavigationEvent> events;
@@ -171,7 +207,8 @@ solamente consulta su estado y le entrega acciones.
 initialGrid_ e initialAgent_ conservan el estado inicial para que
 reset() pueda reproducir una nueva simulación.
 ---------------------------------------------------------------------*/
-template<std::size_t Rows, std::size_t Columns>
+// Omitted dimensions select the runtime-sized Grid<Cell> specialization.
+template<std::size_t Rows = 0, std::size_t Columns = 0>
 class NavigationEnvironment {
     Grid<Cell, Rows, Columns> initialGrid_;
     Grid<Cell, Rows, Columns> grid_;
@@ -180,6 +217,7 @@ class NavigationEnvironment {
     Agent agent;
     GameRules rules;
     std::size_t turn{0};
+    NavigationOptions options_{};
 
     /*---------------------------------------------------------------------
     Verifica las invariantes necesarias para crear un entorno válido:
@@ -215,6 +253,24 @@ class NavigationEnvironment {
         if (agent.getEnergy() <= 0) {
             throw std::invalid_argument(
                 "Initial energy must be positive"
+            );
+        }
+
+        if (agent.getMaximumEnergy() <= 0 ||
+            agent.getEnergy() > agent.getMaximumEnergy()) {
+            throw std::invalid_argument(
+                "Initial energy exceeds maximum energy"
+            );
+        }
+
+        if (rules.initialEnergy <= 0 || rules.maximumEnergy <= 0 ||
+            rules.initialEnergy > rules.maximumEnergy ||
+            rules.normalCellCost < 0 || rules.roughTerrainCost < 0 ||
+            rules.waitOrInvalidCost < 0 || rules.resourcePoints < 0 ||
+            rules.batteryRecharge < 0 || rules.trapEnergyPenalty < 0 ||
+            rules.trapScorePenalty < 0) {
+            throw std::invalid_argument(
+                "Invalid navigation rules"
             );
         }
         
@@ -253,8 +309,8 @@ class NavigationEnvironment {
             );
 
         return Position{
-            index/Columns, 
-            index%Columns 
+            index / grid_.columns(),
+            index % grid_.columns()
         };
     }
     /*---------------------------------------------------------------------
@@ -269,8 +325,8 @@ class NavigationEnvironment {
                                   return rules.normalCellCost;
                               },
 
-                              [&](const RoughTerrain &) {
-                                  return rules.roughTerrainCost;
+                              [&](const RoughTerrain &terrain) {
+                                  return options_.useCellValues ? terrain.energyCost : rules.roughTerrainCost;
                               },
 
                               [&](const ResourceCell<int> &) {
@@ -320,13 +376,14 @@ class NavigationEnvironment {
                         return;
                     }
 
-                    agent.addScore(rules.resourcePoints);
+                    const int points = options_.useCellValues ? resource.reward : rules.resourcePoints;
+                    agent.addScore(points);
                     agent.addcollectedResources(1);
                     resource.collected = true;
 
                     events.push_back(
                         ResourceCollectedEvent{
-                            agent.getPosition(), rules.resourcePoints
+                            agent.getPosition(), points
                     }
                 );
     },
@@ -338,7 +395,7 @@ class NavigationEnvironment {
 
                            const int previousEnergy = agent.getEnergy();
                            
-                           agent.addEnergy(rules.batteryRecharge);
+                           agent.addEnergy(options_.useCellValues ? battery.energy : rules.batteryRecharge);
                            battery.consumed = true;
 
                            if (agent.getEnergy() != previousEnergy) {
@@ -352,10 +409,12 @@ class NavigationEnvironment {
                        },
 
                        
-                       [&](Trap &) {
+                       [&](Trap &trap) {
                            const int previousEnergy = agent.getEnergy();
-                           agent.setEnergy(agent.getEnergy() - rules.trapEnergyPenalty);
-                           agent.addScore(-rules.trapScorePenalty);
+                           const int energyPenalty = options_.useCellValues ? trap.energyPenalty : rules.trapEnergyPenalty;
+                           const int scorePenalty = options_.useCellValues ? trap.scorePenalty : rules.trapScorePenalty;
+                           agent.setEnergy(agent.getEnergy() - energyPenalty);
+                           agent.addScore(-scorePenalty);
 
                            if (agent.getEnergy() != previousEnergy) {
                                events.push_back(
@@ -395,7 +454,7 @@ class NavigationEnvironment {
                     grid_.at(agent.getPosition())
                 );
         
-        const EndReason reason = evaluateTermination(
+        const EndReason reason = options_.deferTermination ? EndReason::none : evaluateTermination(
             agentOnExit,
             agent.getEnergy(),
             turn,
@@ -426,13 +485,15 @@ public:
     NavigationEnvironment(
         grid_type initialGrid,
         Agent agent_,
-        GameRules rules_
+        GameRules rules_,
+        NavigationOptions options = {}
     )
         : initialGrid_(initialGrid),
           grid_(initialGrid),
           initialAgent_(agent_),
           agent(agent_),
-          rules(rules_) {
+          rules(rules_),
+          options_(options) {
         validateInitialState();
     }
     /*---------------------------------------------------------------------
@@ -500,7 +561,7 @@ public:
     a los miembros internos del entorno.
     ---------------------------------------------------------------------*/
     [[nodiscard]] Observation state() const {
-        return Observation{
+        Observation observation{
             agent.getPosition(),
             goalPosition(),
             agent.getEnergy(),
@@ -511,6 +572,12 @@ public:
             rules.turnLimit,
             availableActions()
         };
+        observation.map = ReadOnlyMapView{
+            std::span<const Cell>{grid_.cbegin(), grid_.cend()},
+            grid_.rows(),
+            grid_.columns()
+        };
+        return observation;
     }
 
     [[nodiscard]] bool isFinished() const noexcept {
@@ -518,6 +585,12 @@ public:
     }
     [[nodiscard]] const grid_type &grid() const noexcept {
         return grid_;
+    }
+
+    // The Project 2 session applies its own termination priority (capture first).
+    // The original engine remains responsible for executing every player action.
+    void finish() noexcept {
+        agent.finish();
     }
 
     

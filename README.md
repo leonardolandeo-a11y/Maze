@@ -2,6 +2,8 @@
 
 Motor de navegación por turnos desarrollado en **C++20** para el curso **CS2013 — Programación III**. El proyecto separa el motor de simulación de la interfaz de consola, utiliza **CMake** para la construcción y **FTXUI** para la presentación interactiva.
 
+**Guía de lectura:** las secciones numeradas **1–24 describen principalmente la primera entrega (Proyecto 1)**. Las secciones tituladas **Proyecto 2** documentan la ampliación vigente: dimensiones dinámicas, Kruskal, Dijkstra, vigilante BFS, concurrencia, ayuda H y distribución para Windows. Las exclusiones y el tag `proyecto-1-entrega` que aparecen en la parte histórica no describen el alcance ni la etiqueta final del Proyecto 2.
+
 ---
 
 ## 1. Información del proyecto
@@ -861,9 +863,9 @@ El README concentra la información necesaria para compilar, ejecutar, probar y 
 
 ---
 
-## 22. Alcance y exclusiones
+## 22. Alcance y exclusiones del Proyecto 1
 
-No forman parte del alcance de esta etapa:
+En la primera entrega no formaban parte del alcance:
 
 - interfaz gráfica;
 - juego en red;
@@ -880,9 +882,9 @@ La arquitectura mantiene el motor separado del controlador para facilitar futura
 
 ---
 
-## 23. Verificación previa a la entrega
+## 23. Verificación de la entrega del Proyecto 1
 
-Antes de crear el tag final, la versión evaluada debe comprobarse desde un clon limpio siguiendo únicamente las instrucciones de este README:
+Para la entrega original, la versión evaluada debía comprobarse desde un clon limpio siguiendo las instrucciones de esta sección:
 
 ```bash
 git clone https://github.com/leonardolandeo-a11y/Maze.git Maze-verificacion
@@ -918,3 +920,149 @@ ctest --test-dir build --output-on-failure
 ```
 
 **Circuito de Escape** integra un motor de navegación por turnos desacoplado de la interfaz, reglas configurables, templates, especializaciones, concepts, eventos tipados, polimorfismo dinámico, controladores intercambiables y simulaciones reproducibles dentro de una aplicación de consola construida con C++20.
+
+---
+
+## Proyecto 2 — Reutilización comprobable (criterio 1 de la rúbrica)
+
+La segunda entrega **extiende**, en lugar de duplicar, el motor de la primera. La siguiente tabla presenta la evidencia solicitada por el enunciado: **componente original → adaptación → uso actual → prueba**.
+
+| Componente original | Adaptación para el Proyecto 2 | Uso actual | Prueba o evidencia en el repositorio |
+|---|---|---|---|
+| `Grid`, `Position`, vecindad e iteradores | Especialización `Grid<Cell>` con filas y columnas dinámicas, conservando `at`, `contains`, iteración y coordenadas. | Mapas configurables; conversión de celdas al grafo de caminos. | `tests/grid_test.cpp`, `tests/project2_integration_test.cpp`, `src/graph.cpp`. |
+| `NavigationEnvironment`, `Agent`, `GameRules`, `reset`, `state` y `step` | `NavigationOptions` permite mantener los efectos originales y posponer la terminación; `Observation` incorpora una vista de mapa de solo lectura, A/B y posición del vigilante. | `Project2Session` delega movimiento, turnos, energía, recursos, baterías y trampas al motor original; añade objetivos y captura. | `tests/environment_test.cpp`, `tests/interactions_test.cpp`, `tests/project2_integration_test.cpp`. |
+| `IController`, `NavigationPolicy` y `PolicyController<Policy>` | Nueva `GuardBfsPolicy` con acciones legales y persecución por BFS. | `GameVerifier::guard_next_step` adapta la posición del vigilante y la del jugador a `Observation` y reutiliza `PolicyController<GuardBfsPolicy>`. | `tests/controllers_test.cpp`, `tests/map_generation/game_verifier_test.cpp`. |
+| Utilidades genéricas `countMatching` y `LinearSearch` | Se conservan para recorridos de celdas con los iteradores de `Grid`. | Validaciones y localización de la salida en `NavigationEnvironment`. | `tests/generic_functions_test.cpp`, `tests/environment_test.cpp`. |
+| `ConsoleUI`, `Menus`, animaciones y FTXUI | Se agregan selección de dificultad, modo ASCII/emoji, tablero dinámico, vista FULL MAP/DETAIL, símbolos A/B, vigilante y rutas Dijkstra. | `Project2Application` conecta el motor nuevo con la presentación y navegación existentes. | `tests/console_ui_test.cpp`, `tests/project2_integration_test.cpp`, `tests/menus_test.cpp`, `tests/animations_test.cpp`. |
+| CMake, CTest y semillas reproducibles | Se agregan los ejecutables `map_generator` y `escape_circuit`, pruebas de grafos y lotes deterministas. | Construcción de mapas por Kruskal, validación paralela y partida interactiva; empaquetado con NSIS. | `CMakeLists.txt`, `tests/map_generation/map_batch_test.cpp`, `tests/map_generation/kruskal_test.cpp`, `installer/build-installer.ps1`. |
+
+### Evidencias específicas de algoritmos y reglas
+
+| Requisito | Implementación | Pruebas |
+|---|---|---|
+| Grafo propio, `DisjointSet`, Kruskal, árbol y aperturas adicionales | `src/graph.cpp`, `src/graph/disjoint_set.cpp`, `src/map_generation/kruskal.cpp` | `tests/graph_test.cpp`, `tests/graph/disjoint_set_test.cpp`, `tests/map_generation/kruskal_test.cpp` |
+| Dijkstra, dos órdenes A/B, costos y energía | `src/pathfinding/dijkstra.cpp`, `src/map_generation/map_validator.cpp` | `tests/pathfinding/dijkstra_test.cpp`, `tests/map_generation/map_validator_test.cpp` |
+| Niveles fácil/medio/difícil y victoria reproducible | `src/map_generation/map_selector.cpp`, `src/map_generation/game_verifier.cpp` | `tests/map_generation/map_selector_test.cpp`, `tests/map_generation/game_verifier_test.cpp` |
+| Vigilante BFS, interruptores y reglas de turnos | `src/controllers.cpp`, `src/project2_session.cpp` | `tests/controllers_test.cpp`, `tests/project2_integration_test.cpp` |
+| Construcción y validación paralelas con resultados deterministas | `src/map_generation/map_batch.cpp` | `tests/map_generation/map_batch_test.cpp` |
+| Guardar y cargar los tres mapas | `src/map_generation/map_storage.cpp` | `tests/map_generation/map_storage_test.cpp` |
+| Ayuda H y visualización de recorridos sin consumir turnos | `src/project2_session.cpp`, `src/project2_application.cpp` | `tests/project2_integration_test.cpp`, `tests/help_test.cpp` |
+
+`ctest --test-dir cmake-build-debug --output-on-failure` ejecuta `Maze_test`, que agrupa muchas comprobaciones internas. Por eso **1/1 en CTest significa un ejecutable de pruebas aprobado**, no una única aserción.
+
+---
+
+## Proyecto 2 — Generador de mapas (etapa 9)
+
+El ejecutable independiente `map_generator` prepara hasta diez alternativas mediante Kruskal, valida sus rutas y energía con Dijkstra, comprueba partidas ganadoras y selecciona un mapa por dificultad. Construcción y validación se realizan en fases paralelas separadas mediante `std::jthread`; se informan sus tiempos individuales.
+
+```powershell
+cmake -S . -B cmake-build-debug
+cmake --build cmake-build-debug --target map_generator
+.\cmake-build-debug\map_generator.exe --help
+.\cmake-build-debug\map_generator.exe --rows 10 --columns 15 --seed 12345 --workers 4 --candidates 10 --output assets/maps
+```
+
+La salida utiliza tres archivos de texto: `mapa_facil.txt`, `mapa_medio.txt` y `mapa_dificil.txt`. Cada uno registra las dimensiones, celdas, costos, posiciones iniciales, reglas de energía, identificador, semilla, dificultad, costo mínimo y una secuencia ganadora reproducible. El formato `CIRCUIT_ESCAPE_MAP 1` se lee y valida con `load_map`; para generar otra configuración hay que repetir la preparación. El generador no sustituye el ejecutable del juego.
+
+Si un lote no tiene al menos tres costos distintos entre los mapas con victoria comprobada, el programa devuelve el código `2` sin guardar niveles incompletos. Un error de argumentos o de archivos devuelve `1`. La opción `--help` devuelve `0`.
+
+---
+
+## Proyecto 2 — Juego integrado con la interfaz original (etapa 10)
+
+`Maze` conserva el flujo del Proyecto 1: `GameApplication`, `ConsoleUI`, los escenarios originales, los menús y las animaciones. El ejecutable independiente `escape_circuit` carga los mapas generados, utiliza los mismos componentes de `ConsoleUI` para dibujar celdas y coordenadas, y ejecuta las reglas del Proyecto 2 mediante `Project2Session` y `GameVerifier`.
+
+```powershell
+cmake -S . -B cmake-build-debug
+cmake --build cmake-build-debug --target Maze Maze_test map_generator escape_circuit
+ctest --test-dir cmake-build-debug --output-on-failure
+.\cmake-build-debug\map_generator.exe --rows 10 --columns 15 --seed 12345 --workers 4 --candidates 10 --output .\cmake-build-debug\stage9-maps
+.\cmake-build-debug\escape_circuit.exe --maps .\cmake-build-debug\stage9-maps
+```
+
+También puede iniciarse directamente con `--difficulty easy`, `medium` o `hard`. El menú reutiliza el arte del Proyecto 1 y ofrece selección de dificultad y modo ASCII/emoji. `WASD` y las flechas mueven al jugador, `E` espera, `H` calcula ayuda Dijkstra sin consumir turnos y `Q` sale. Dentro de la ayuda, `1`, `2`, `3` y `0` seleccionan qué ruta resaltar; `H` o `Esc` vuelve a la partida.
+
+El tablero del Proyecto 2 reutiliza `ConsoleUI::RenderCell` y el mismo sistema de cuadrícula y coordenadas del Proyecto 1. Para mapas de más de 20 filas o 30 columnas se muestra una ventana de 20×30 que sigue al jugador; el mapa completo permanece en memoria. Los marcadores adicionales son A/B, vigilante y rutas de ayuda.
+
+Las pruebas automáticas incluyen renderizado y funciones principales del Proyecto 1, los módulos de generación y los escenarios dinámicos de 10×15, 20×30 y 40×60. La comprobación de la interfaz interactiva y de las animaciones debe realizarse también en la terminal de Windows.
+
+### Project 2 items and original status layout
+
+`escape_circuit` retains the original emoji rendering: diamonds (resources) add points once, batteries recharge once, and traps reduce energy and score on every entry. Its HUD shows turn, energy, score and collected resources first; difficulty, size and switch progress second; and the guard next.
+
+To generate a 20x30 demonstration with items from Project 1:
+
+```powershell
+.\cmake-build-debug\map_generator.exe --rows 20 --columns 30 --seed 12345 --workers 4 --candidates 10 --initial-energy 100 --maximum-energy 100 --turn-limit 240 --extra-openings 15 --search-states 30000 --resources 5 --resource-points 10 --batteries 3 --battery-recharge 5 --traps 3 --trap-penalty 2 --trap-score-penalty 1 --output .\cmake-build-debug\stage10-maps-items
+.\cmake-build-debug\escape_circuit.exe --maps .\cmake-build-debug\stage10-maps-items
+```
+
+All item placement is seeded and written in the map text files. Older version-1 map files without these items remain readable. The game is won by activating both switches and reaching the exit with positive energy within the turn limit; points are recorded but do not change the winning conditions.
+
+### Project 2 viewport
+
+The interactive Project 2 uses a fixed **20 x 30-cell viewport**, independent
+of the scenario dimensions. For smaller maps, the entire map is centered inside
+the viewport, and the unused area is blank (it is not traversable). A 20 x 30
+map fills the viewport. On larger maps, the camera follows the player while
+showing global row and column coordinates modulo ten. The simulation retains
+the actual dimensions and is never resized or cropped in memory.
+
+The application already uses FTXUI fullscreen. Resize the terminal to show at
+least 20 map rows plus the status and controls; a smaller terminal may clip the
+screen. Emoji mode needs a terminal with Unicode double-width character
+support; select ASCII mode from the menu otherwise.
+
+### Project 2: full-map overview (phase 1)
+
+Press `Z` to switch between the full-map overview and the detailed camera;
+view changes do not consume turns or energy. The overview displays maps up to
+40 x 60 in the same terminal area. Large maps use two vertically adjacent
+map cells per terminal row: the foreground of `▀` represents the upper cell
+and its background the lower cell. The full-map overview keeps every row
+and column visible. Colors distinguish terrain, resources, batteries, traps
+and route highlights. The markers `@`, `V`, `A`, `B` and `S` identify the
+player, guard, switches and exit. If two markers share one compressed pair,
+the upper marker takes precedence; their cell colors remain available.
+
+For 10 x 15 and 20 x 30, the overview retains the original emoji board.
+The detailed view preserves the 20 x 30 camera that follows the player,
+including the original tile glyphs. On terminal windows that cannot display
+colored half blocks, the detailed view remains available via `Z`. Maps
+larger than 40 x 60 retain the camera view as a safe fallback.
+
+This phase changes presentation only; `Z` also works on the Dijkstra help
+screen without advancing the game. Intro/outro animations are unchanged.
+
+---
+
+## Proyecto 2: instalador Windows (NSIS)
+
+La plataforma objetivo para la entrega es Windows 11 de 64 bits. El instalador contiene ambos ejecutables (`escape_circuit.exe` y `map_generator.exe`), tres mapas validados y sus dependencias MinGW. No requiere CLion ni CMake en el equipo donde se instala.
+
+Para prepararlo en la computadora de desarrollo, instalar NSIS y ejecutar desde PowerShell en la raíz del repositorio:
+
+```powershell
+# Requiere un directorio de CMake ya configurado, MinGW y NSIS en el equipo de desarrollo.
+# Si cmake.exe y makensis.exe estan en PATH, los parametros -CMake y -NSIS son opcionales.
+.\installer\build-installer.ps1 `
+    -BuildDirectory "cmake-build-debug" `
+    -MapsDirectory "cmake-build-debug\stage10-maps-items" `
+    -CMake "RUTA_AL_EJECUTABLE\cmake.exe" `
+    -NSIS "RUTA_AL_EJECUTABLE\makensis.exe"
+```
+
+Sustituir las dos rutas de ejemplo por las de la computadora de desarrollo; el instalador resultante **no necesita** CMake, NSIS ni MinGW en el equipo del usuario.
+
+Se pueden indicar otros escenarios validados con `-MapsDirectory`; el script copia `mapa_facil.txt`, `mapa_medio.txt` y `mapa_dificil.txt` desde esa carpeta y no modifica los originales. Usa la configuración ya preparada de CMake, recompila los dos ejecutables, copia las DLL de MinGW que necesiten, verifica que `--help` funcione y llama a `makensis.exe`.
+
+El instalador resultante se guarda en `dist/CircuitoEscape-Setup.exe`. Tras instalar, el menú Inicio incluye **Jugar**, **Generar mapas**, **Jugar mapas generados** y **Desinstalar**, y se crea un acceso directo en el escritorio. **Jugar** utiliza los tres mapas validados incluidos en el instalador, sin compilación. **Generar mapas** guarda los tres mapas nuevos en `%LOCALAPPDATA%\CircuitoEscape\generated-maps` y solo anuncia éxito si la generación finaliza correctamente. **Jugar mapas generados** carga los nuevos mapas desde esa carpeta sin sobrescribir los incluidos. Antes de generar el primer lote, muestra un aviso si faltan archivos. La carpeta de mapas generados se conserva tras la desinstalación.
+
+Antes de entregar: comprobar instalación, juego (tres dificultades), ayuda H, ejecución del generador desde el menú Inicio, los archivos producidos y desinstalación. El script de creación y la comprobación `--help` no sustituyen la prueba de instalación real.
+
+### Comprobación de entrega del Proyecto 2
+
+Desde una compilación del Proyecto 2, ejecutar `Maze_test` y comprobar los ejecutables independientes. Para una demostración en Windows, crear `dist/CircuitoEscape-Setup.exe`, instalarlo y probar **Jugar**, **Generar mapas** y **Jugar mapas generados** con los archivos de fácil/medio/difícil. Finalmente ejecutar **Desinstalar**, comprobar que desaparecen programa y accesos directos y que los mapas propios del usuario en `%LOCALAPPDATA%\CircuitoEscape\generated-maps` se conservan.
+
+La entrega debe incluir **código fuente C++20, `CMakeLists.txt`, pruebas, instalador de Windows, README y demostración**. La participación individual en la exposición es obligatoria según la rúbrica. Esta sección no afirma que exista un tag del Proyecto 2: el equipo debe acordar la rama y el identificador definitivos después de integrar y validar `main`.

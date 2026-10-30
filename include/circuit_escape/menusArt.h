@@ -63,6 +63,11 @@ namespace MenuArt {
 ┣╸ ┣━┫┗━┓┗┳┛
 ┗━╸╹ ╹┗━┛ ╹
 )";
+ inline constexpr std::string_view MEDIUM = R"(
+┏┳┓┏━╸╺┳┓╻╻ ╻┏┳┓
+┃┃┃┣╸  ┃┃┃┃ ┃┃┃┃
+╹ ╹┗━╸╺┻┛╹┗━┛╹ ╹
+)";
  inline constexpr std::string_view STANDARD = R"(
 ┏━┓╺┳╸┏━┓┏┓╻╺┳┓┏━┓┏━┓╺┳╸
 ┗━┓ ┃ ┣━┫┃┗┫ ┃┃┣━┫┣┳┛ ┃
