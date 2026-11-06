@@ -1,6 +1,7 @@
 #include "circuit_escape/map_generation/map_storage.h"
 #include "circuit_escape/project2_session.h"
 
+#include <algorithm>
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -104,10 +105,16 @@ void compare_maps(const SavedMap& source, const SavedMap& loaded) {
     assert(source.input.graph.neighbors == loaded.input.graph.neighbors);
     assert(source.input.graph.blocked == loaded.input.graph.blocked);
     assert(source.input.graph.entry_costs == loaded.input.graph.entry_costs);
-    assert(source.effects.batteries == loaded.effects.batteries);
-    assert(source.effects.traps == loaded.effects.traps);
-    assert(source.effects.resources == loaded.effects.resources);
-    assert(source.effects.trap_score_penalties == loaded.effects.trap_score_penalties);
+    // Storage reconstructs item lists in row order; positions and values must match,
+    // while generation order is deliberately not part of the file contract.
+    assert(std::is_permutation(source.effects.batteries.begin(), source.effects.batteries.end(),
+        loaded.effects.batteries.begin(), loaded.effects.batteries.end()));
+    assert(std::is_permutation(source.effects.traps.begin(), source.effects.traps.end(),
+        loaded.effects.traps.begin(), loaded.effects.traps.end()));
+    assert(std::is_permutation(source.effects.resources.begin(), source.effects.resources.end(),
+        loaded.effects.resources.begin(), loaded.effects.resources.end()));
+    assert(std::is_permutation(source.effects.trap_score_penalties.begin(), source.effects.trap_score_penalties.end(),
+        loaded.effects.trap_score_penalties.begin(), loaded.effects.trap_score_penalties.end()));
     assert(source.effects.battery_recharge == loaded.effects.battery_recharge);
     assert(source.effects.trap_energy_penalty == loaded.effects.trap_energy_penalty);
     assert(source.effects.wait_energy_cost == loaded.effects.wait_energy_cost);
@@ -305,12 +312,81 @@ void selected_maps_test(const std::filesystem::path& folder) {
     expect_failure([&] { (void)make_saved_map(unverified, SavedDifficulty::easy); });
 }
 
+// Exercise real generated geometry, not a hand-built winning corridor.
+void delivery_acceptance_test(const std::filesystem::path& folder) {
+    const auto replay = [](const SavedMap& map) {
+        Project2Session session(map);
+        for (Action action : map.winning_actions) {
+            assert(session.state().outcome == GameOutcome::in_progress);
+            (void)session.step(action);
+        }
+        assert(session.state().outcome == GameOutcome::victory);
+        assert(session.state().switch_a_active && session.state().switch_b_active);
+        assert(session.state().energy > 0);
+        assert(session.state().turn <= map.input.turn_limit);
+    };
+    for (const auto& [rows, columns] : {
+            std::pair<std::size_t, std::size_t>{10, 15}, {20, 30}, {40, 60}}) {
+        MapBatchConfig config;
+        config.rows = rows;
+        config.columns = columns;
+        config.base_seed = rows == 40 ? 42 : 12345;
+        config.initial_energy = config.maximum_energy = 1000;
+        config.turn_limit = 2000;
+        config.extra_openings = 15;
+        config.maximum_search_states = 100;
+        const auto batch = run_map_batch(config);
+        assert(batch.selection);
+        const auto directory = folder / std::to_string(rows);
+        save_selected_maps(batch, directory);
+        int previous_cost = -1;
+        for (const auto& [name, difficulty] : {
+                std::pair{"mapa_facil.txt", SavedDifficulty::easy},
+                {"mapa_medio.txt", SavedDifficulty::medium},
+                {"mapa_dificil.txt", SavedDifficulty::hard}}) {
+            const auto loaded = load_map(directory / name);
+            assert(loaded.grid.rows() == rows && loaded.grid.columns() == columns);
+            assert(loaded.difficulty == difficulty);
+            assert(loaded.minimum_energy_cost > previous_cost);
+            previous_cost = loaded.minimum_energy_cost;
+            const auto& entry = batch.entries.at(loaded.id - 1);
+            compare_maps(make_saved_map(entry, difficulty), loaded);
+            replay(loaded);
+        }
+    }
+
+    // The exact delivery assets must stay reproducible and playable after checkout.
+    MapBatchConfig config;
+    config.rows = 20;
+    config.columns = 30;
+    config.turn_limit = 240;
+    config.extra_openings = 15;
+    config.maximum_search_states = 30000;
+    config.resource_count = 5;
+    config.battery_count = 3;
+    config.battery_recharge = 5;
+    config.trap_count = 3;
+    const auto batch = run_map_batch(config);
+    assert(batch.selection);
+    const std::filesystem::path assets = MAZE_DEFAULT_MAPS_DIRECTORY;
+    const std::size_t ids[] = {batch.selection->easy_id,
+        batch.selection->medium_id, batch.selection->hard_id};
+    std::size_t index = 0;
+    for (const char* name : {"mapa_facil.txt", "mapa_medio.txt", "mapa_dificil.txt"}) {
+        const auto map = load_map(assets / name);
+        assert(map.id == ids[index++]);
+        compare_maps(make_saved_map(batch.entries.at(map.id - 1), map.difficulty), map);
+        replay(map);
+    }
+}
+
 }
 
 void run_map_storage_tests() {
     const auto folder = std::filesystem::temp_directory_path() / "maze_project2_storage_tests";
     std::filesystem::remove_all(folder);
     std::filesystem::create_directories(folder);
+    delivery_acceptance_test(folder);
     round_trip_dimensions_test(folder);
     reject_invalid_input_test(folder);
     selected_maps_test(folder);

@@ -26,6 +26,7 @@ add_library(Maze_core
     src/menus.cpp
     src/scenarios/scenario_1.cpp
     src/scenarios/scenario_2.cpp
+    src/MapGenerationAnimation.cpp
     src/StartupAnimation.cpp 
     src/DeathAnimation.cpp
     src/VictoryAnimation.cpp
@@ -39,6 +40,8 @@ add_library(Maze_core
     src/map_generation/map_batch.cpp
     src/map_generation/map_storage.cpp
     src/map_generation/map_generator_cli.cpp
+    src/map_generation/map_sizes.cpp
+    src/project2_generation.cpp
     src/project2_session.cpp
     src/project2_application.cpp
 )
@@ -101,10 +104,20 @@ add_executable(Maze_test
     tests/map_generation/map_batch_test.cpp
     tests/map_generation/map_storage_test.cpp
     tests/map_generation/map_generator_cli_test.cpp
+    tests/project2_generation_test.cpp
     tests/project2_integration_test.cpp
 )
 
 target_link_libraries(Maze_test PRIVATE Maze_core)
+# These tests use assert; keep checks active in Release builds as well.
+if(MSVC)
+    target_compile_options(Maze_test PRIVATE /UNDEBUG)
+else()
+    target_compile_options(Maze_test PRIVATE -UNDEBUG)
+endif()
+target_compile_definitions(Maze_test PRIVATE
+    MAZE_DEFAULT_MAPS_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}/assets/maps"
+)
 
 add_test(NAME Maze_test COMMAND Maze_test)
 
@@ -119,5 +132,13 @@ install(FILES
     installer/launch-generator.cmd
     installer/launch-generated-game.cmd
     DESTINATION .
+    COMPONENT Runtime
+)
+
+install(FILES
+    assets/maps/mapa_facil.txt
+    assets/maps/mapa_medio.txt
+    assets/maps/mapa_dificil.txt
+    DESTINATION assets/maps
     COMPONENT Runtime
 )

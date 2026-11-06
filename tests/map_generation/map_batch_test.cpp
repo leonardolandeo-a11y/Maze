@@ -126,6 +126,31 @@ void generated_candidate_integrity_test() {
     }
 }
 
+void compare_openings(const std::vector<WallOpening>& first,
+                      const std::vector<WallOpening>& second) {
+    assert(first.size() == second.size());
+    for (std::size_t i = 0; i < first.size(); ++i) {
+        assert(first[i].first_room == second[i].first_room);
+        assert(first[i].second_room == second[i].second_room);
+        assert(first[i].wall == second[i].wall);
+        assert(first[i].weight == second[i].weight);
+    }
+}
+
+void compare_route(const std::optional<MapRoutePlan>& first,
+                   const std::optional<MapRoutePlan>& second) {
+    assert(first.has_value() == second.has_value());
+    if (!first) return;
+    assert(first->order == second->order);
+    assert(first->total_energy_cost == second->total_energy_cost);
+    assert(first->complete_path == second->complete_path);
+    for (std::size_t i = 0; i < first->segments.size(); ++i) {
+        assert(first->segments[i].found == second->segments[i].found);
+        assert(first->segments[i].cost == second->segments[i].cost);
+        assert(first->segments[i].path == second->segments[i].path);
+    }
+}
+
 void deterministic_workers_test() {
     MapBatchConfig config;
     config.rows = 10;
@@ -170,9 +195,18 @@ void deterministic_workers_test() {
         assert(first.input.graph.neighbors == second.input.graph.neighbors);
         assert(first.input.graph.blocked == second.input.graph.blocked);
         assert(first.input.graph.entry_costs == second.input.graph.entry_costs);
-        assert(first.maze.tree_openings.size() == second.maze.tree_openings.size());
-        assert(first.maze.extra_openings.size() == second.maze.extra_openings.size());
+        compare_openings(first.maze.candidate_openings, second.maze.candidate_openings);
+        compare_openings(first.maze.tree_openings, second.maze.tree_openings);
+        compare_openings(first.maze.extra_openings, second.maze.extra_openings);
+        for (std::size_t row = 0; row < config.rows; ++row) {
+            for (std::size_t column = 0; column < config.columns; ++column) {
+                assert(first.maze.grid.at({row, column}).index() ==
+                       second.maze.grid.at({row, column}).index());
+            }
+        }
         if (a.route_validation) {
+            compare_route(a.route_validation->a_then_b, b.route_validation->a_then_b);
+            compare_route(a.route_validation->b_then_a, b.route_validation->b_then_a);
             assert(a.route_validation->status == b.route_validation->status);
             assert(a.route_validation->recommended.has_value() ==
                    b.route_validation->recommended.has_value());
@@ -276,6 +310,12 @@ void dimensions_and_rejections_test() {
     assert(!rejected.entries[0].map);
     assert(!rejected.entries[0].rejection_reason.empty());
     assert(!rejected.selection);
+    config.worker_count = 1;
+    const auto single_failure = run_map_batch(config);
+    assert(single_failure.entries[0].id == rejected.entries[0].id);
+    assert(single_failure.entries[0].seed == rejected.entries[0].seed);
+    assert(single_failure.entries[0].rejection_reason == rejected.entries[0].rejection_reason);
+    assert(!single_failure.entries[0].map && !single_failure.selection);
 }
 
 }

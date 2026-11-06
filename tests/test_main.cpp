@@ -26,7 +26,10 @@ void run_map_storage_tests();
 void run_map_generator_cli_tests();
 void run_project2_integration_tests();
 
+void run_project2_generation_tests();
+
 int main() {
+    run_project2_generation_tests();
 
     run_grid_tests();
     run_types_tests();
