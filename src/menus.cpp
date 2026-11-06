@@ -3,6 +3,8 @@
 #include "circuit_escape/help.h"
 
 #include <sstream>
+#include <algorithm>
+#include <stdexcept>
 #include <string>
 
 #include <ftxui/dom/elements.hpp>
@@ -55,7 +57,9 @@ namespace {
             case MenuScreen::Main:
                 return 6;
             case MenuScreen::MapSize:
-                return static_cast<int>(project2_map_sizes.size()) + 1;
+                return static_cast<int>(project2_map_sizes.size()) + 2;
+            case MenuScreen::CustomSize:
+                return 4;
             case MenuScreen::Scenario:
                 return 3;
             case MenuScreen::Difficulty:
@@ -85,17 +89,55 @@ opción de la partida o producir un MenuCommand para GameApplication.
 bool Menus::OnEvent(ftxui::Event event) {
     using namespace ftxui;
 
+    if (currentScreen_ == MenuScreen::CustomSize) {
+        if (event == Event::Escape) {
+            currentScreen_ = MenuScreen::MapSize;
+            selectedOption_ = 3;
+        } else if (event == Event::Tab || event == Event::ArrowDown || event == Event::ArrowRight) {
+            selectedOption_ = (selectedOption_ + 1) % 4;
+            replaceInput_ = true;
+        } else if (event == Event::TabReverse || event == Event::ArrowUp || event == Event::ArrowLeft) {
+            selectedOption_ = (selectedOption_ + 3) % 4;
+            replaceInput_ = true;
+        } else if (event == Event::Return) {
+            if (selectedOption_ < 2) { ++selectedOption_; replaceInput_ = true; }
+            else if (selectedOption_ == 3) { currentScreen_ = MenuScreen::MapSize; selectedOption_ = 3; }
+            else {
+                try {
+                    selectedMapSize_ = parse_project2_map_size(customRows_, customColumns_);
+                    mapsReady_ = false;
+                    pendingCommand_ = MenuCommand::generateMaps;
+                } catch (const std::invalid_argument&) { /* Live status explains the rejection. */ }
+            }
+        } else if (selectedOption_ < 2) {
+            auto& input = selectedOption_ == 0 ? customRows_ : customColumns_;
+            if (event == Event::Backspace || event == Event::Delete) {
+                if (replaceInput_) input.clear();
+                else if (!input.empty()) input.pop_back();
+                replaceInput_ = false;
+            } else if (event.is_character()) {
+                const auto value = event.character();
+                if (!value.empty() && std::all_of(value.begin(), value.end(), [](char c) { return c >= '0' && c <= '9'; })) {
+                    if (replaceInput_) input.clear();
+                    replaceInput_ = false;
+                    if (input.size() + value.size() <= 9) input += value;
+                }
+            }
+        }
+        return true;
+    }
+
     const int optionCount = project2_mode_ && currentScreen_ == MenuScreen::Main
         ? 5 : OptionCount(currentScreen_);
 
-    if (event == Event::ArrowDown || event == Event::Character('s') ||
+    if (event == Event::Tab || event == Event::ArrowDown || event == Event::Character('s') ||
         event == Event::Character('S')) {
         selectedOption_ =
             (selectedOption_ + 1) % optionCount;
         return true;
         }
 
-    if (event == Event::ArrowUp || event == Event::Character('w') ||
+    if (event == Event::TabReverse || event == Event::ArrowUp || event == Event::Character('w') ||
         event == Event::Character('W')) {
         selectedOption_ =
             (selectedOption_ - 1 + optionCount) % optionCount;
@@ -146,10 +188,14 @@ bool Menus::OnEvent(ftxui::Event event) {
         if (currentScreen_ == MenuScreen::MapSize) {
             if (selectedOption_ < static_cast<int>(project2_map_sizes.size())) {
                 selectedMapSize_ = project2_map_sizes[selectedOption_];
+                validate_project2_map_size(selectedMapSize_);
                 mapsReady_ = false;
                 pendingCommand_ = MenuCommand::generateMaps;
             }
-            currentScreen_ = MenuScreen::Main;
+            if (selectedOption_ == 3) {
+                currentScreen_ = MenuScreen::CustomSize;
+                replaceInput_ = true;
+            } else currentScreen_ = MenuScreen::Main;
             selectedOption_ = 0;
             return true;
         }
@@ -263,6 +309,49 @@ RenderMode Menus::selectedRenderMode() const noexcept {
 ftxui::Element Menus::Render() const {
     using namespace ftxui;
 
+    if (currentScreen_ == MenuScreen::MapSize || currentScreen_ == MenuScreen::CustomSize) {
+        const bool custom = currentScreen_ == MenuScreen::CustomSize;
+        Elements lines;
+        auto row = [&](std::string label, int index) {
+            auto element = text("  " + label + "  ");
+            return selectedOption_ == index ? element | bold | inverted | color(Color::CyanLight)
+                                          : element | color(Color::White);
+        };
+        lines.push_back(text(custom ? "CUSTOM MAP SIZE" : "SELECT MAP SIZE") | bold | center | color(Color::CyanLight));
+        lines.push_back(separator());
+        if (custom) {
+            lines.push_back(row("Rows:     [ " + customRows_ + " ]", 0));
+            lines.push_back(row("Columns:  [ " + customColumns_ + " ]", 1));
+            std::string status;
+            std::string area = "—";
+            try {
+                const auto size = parse_project2_map_size(customRows_, customColumns_);
+                area = std::to_string(size.rows * size.columns);
+                status = ConsoleUI::project2_size_error(size, Terminal::Size());
+            } catch (const std::invalid_argument& e) { status = e.what(); }
+            lines.push_back(separatorEmpty());
+            lines.push_back(text("Map cells: " + area));
+            lines.push_back(paragraph(status.empty() ? "Status: ✓ Valid size" : "Status: " + status)
+                | color(status.empty() ? Color::GreenLight : Color::RedLight));
+            lines.push_back(separatorEmpty());
+            lines.push_back(row("[ GENERATE ]", 2));
+            lines.push_back(row("[ BACK ]", 3));
+        } else {
+            constexpr const char* labels[] = {"SMALL", "RECOMMENDED", "LARGE"};
+            for (std::size_t index = 0; index < project2_map_sizes.size(); ++index) {
+                const auto size = project2_map_sizes[index];
+                lines.push_back(row(std::to_string(size.rows) + " × " + std::to_string(size.columns) +
+                    "     " + labels[index], static_cast<int>(index)));
+            }
+            lines.push_back(row("CUSTOM      CREATE YOUR SIZE", 3));
+            lines.push_back(row("BACK", 4));
+        }
+        lines.push_back(separator());
+        lines.push_back(text("Tab / arrows: select   Enter: confirm") | dim);
+        if (custom) lines.push_back(text("Type to replace • Backspace: erase • Esc: back") | dim);
+        return vbox(std::move(lines)) | size(WIDTH, LESS_THAN, 54) | borderRounded | center;
+    }
+
     auto logo = RenderArt(MenuArt::MAZE_LOGO)
               | color(Color::CyanLight);
 
@@ -290,12 +379,9 @@ ftxui::Element Menus::Render() const {
         };
             break;
 
+        case MenuScreen::CustomSize:
         case MenuScreen::MapSize:
-            options.push_back(text("SELECT MAP SIZE") | bold);
-            for (std::size_t index = 0; index < project2_map_sizes.size(); ++index)
-                options.push_back(text((selectedOption_ == static_cast<int>(index) ? "> " : "  ") +
-                    map_size_label(project2_map_sizes[index])));
-            options.push_back(text(selectedOption_ == static_cast<int>(project2_map_sizes.size()) ? "> Back" : "  Back"));
+            // Size screens render their compact panel above.
             break;
         case MenuScreen::Scenario:
             options = {

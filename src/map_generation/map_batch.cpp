@@ -16,12 +16,6 @@ namespace {
 
 void validate_config(const MapBatchConfig& config) {
     validate_project2_map_size({config.rows, config.columns});
-    if (config.rows < 3 || config.columns < 3 ||
-        config.rows > std::numeric_limits<std::size_t>::max() / config.columns ||
-        config.rows * config.columns > 1'000'000 ||
-        ((config.rows - 1) / 2) * ((config.columns - 1) / 2) < 5) {
-        throw std::invalid_argument("Map dimensions cannot accommodate five distinct room positions");
-    }
     if (config.candidate_count == 0 || config.candidate_count > 10 ||
         config.worker_count == 0 || config.maximum_search_states == 0) {
         throw std::invalid_argument("Invalid map batch size, worker count or search budget");
@@ -87,6 +81,17 @@ PreparedMap build_map(const MapBatchConfig& config, std::size_t id, std::uint32_
     );
     std::mt19937 random(seed ^ 0xA511E9B3U);
     std::vector<Position> rooms = room_positions(config.rows, config.columns);
+    // Minimum dimensions may have only four room centers. Corridors are
+    // walkable positions too; use them to place the fifth distinct actor.
+    if (rooms.size() < 5) {
+        for (std::size_t row = 1; row + 1 < config.rows; ++row)
+            for (std::size_t column = 1; column + 1 < config.columns; ++column) {
+                Position position{row, column};
+                if (!std::holds_alternative<Wall>(maze.grid.at(position)) &&
+                    std::find(rooms.begin(), rooms.end(), position) == rooms.end())
+                    rooms.push_back(position);
+            }
+    }
     shuffle_positions(rooms, random);
 
     const Position player = rooms[0];

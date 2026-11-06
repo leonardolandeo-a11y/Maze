@@ -172,11 +172,12 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
             return startup_animation.RenderStartupFrame(startup_frame);
         }
         if (generation.loading()) {
-            static constexpr const char* frames[] = {"|", "/", "-", "\\"};
-            return vbox({text("GENERATING MAPS") | bold,
-                text("Kruskal + Dijkstra + validation"),
-                text(map_size_label(menus.selectedMapSize())),
-                text(std::string(frames[loading_frame % 4]) + " Generating..."),
+            static constexpr const char* frames[] = {"⠋", "⠙", "⠹", "⠸"};
+            return vbox({text("GENERATING " + std::to_string(menus.selectedMapSize().rows) + " × " +
+                std::to_string(menus.selectedMapSize().columns) + " MAP") | bold,
+                text(std::string(frames[loading_frame % 4]) + " Building maze candidates..."),
+                text("Kruskal → Dijkstra → Validation"),
+                text("Please wait..."),
                 text("Q: quit (waits for current batch)")}) | center | bgcolor(Color::Black);
         }
         if (menu || !session) {
@@ -229,9 +230,15 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
             const bool handled = menus.OnEvent(event);
             switch (menus.takeCommand()) {
                 case MenuCommand::generateMaps:
-                    error.clear();
-                    generation.start(menus.selectedMapSize(), "generated-maps");
-                    loading_active = true;
+                    error = ConsoleUI::project2_size_error(menus.selectedMapSize(), Terminal::Size());
+                    if (!error.empty()) return true;
+                    try {
+                        generation.start(menus.selectedMapSize(), "generated-maps");
+                        loading_active = true;
+                    } catch (const std::exception& exception) {
+                        error = exception.what();
+                        menus.generationFinished(false);
+                    }
                     return true;
                 case MenuCommand::startGame:
                     load_difficulty(saved_difficulty(menus.selectedDifficulty()));

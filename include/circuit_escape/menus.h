@@ -10,6 +10,7 @@ enum class MenuScreen {
     Main,
     Scenario,
     MapSize,
+    CustomSize,
     Difficulty,
     RenderMode,
     Help
@@ -42,6 +43,9 @@ public:
 
 private:
     Project2MapSize selectedMapSize_ = project2_map_sizes.front();
+    std::string customRows_ = "20";
+    std::string customColumns_ = "30";
+    bool replaceInput_ = true;
     bool mapsReady_ = false;
     bool project2_mode_ = false;
     MenuScreen currentScreen_ = MenuScreen::Main;

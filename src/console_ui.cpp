@@ -896,40 +896,9 @@ ftxui::Element ConsoleUI::render_project2_board(
         false
     );
 }
-ftxui::Element ConsoleUI::render_project2(
-    const Project2Session& session,
-    Project2MapView view,
-    std::span<const Position> highlighted,
-    std::span<const std::string> help_lines,
-    std::optional<ftxui::Dimensions> terminal_size) const {
-    using namespace ftxui;
-    const auto& state = session.state();
-    const auto& map = session.map();
-    std::string difficulty;
-    switch (map.difficulty) {
-        case SavedDifficulty::easy: difficulty = "EASY"; break;
-        case SavedDifficulty::medium: difficulty = "MEDIUM"; break;
-        case SavedDifficulty::hard: difficulty = "HARD"; break;
-    }
-
-    const std::string turns = "Turn " + std::to_string(state.turn) + "/" +
-        std::to_string(map.input.turn_limit);
-    const std::string energy = "Energy " + std::to_string(state.energy) + "/" +
-        std::to_string(map.input.maximum_energy);
-    const std::string score = "Score " + std::to_string(state.score);
-    const std::string resources = "Resources " + std::to_string(state.resource_count) +
-        "/" + std::to_string(map.effects.resources.size());
-    const std::string switches = std::string("Switch A ") +
-        (state.switch_a_active ? "ON" : "OFF") + " | B " +
-        (state.switch_b_active ? "ON" : "OFF");
-    const std::string player = "Player (" + std::to_string(state.player.row) + "," +
-        std::to_string(state.player.column) + ")";
-    const std::string guard = "Guard (" + std::to_string(state.guard.row) + "," +
-        std::to_string(state.guard.column) + ")";
-    const std::string next_guard_turn = "Next move: turn " +
-        std::to_string(state.turn % 2 == 0 ? state.turn + 2 : state.turn + 1);
-
-    const ftxui::Dimensions terminal = terminal_size.value_or(ftxui::Terminal::Size());
+namespace {
+struct Project2Layout { int panel_width; int board_width; int board_height; };
+Project2Layout project2_layout(Project2MapSize size, ftxui::Dimensions terminal) {
     // Keep the interface proportional to the actual map instead of
     // stretching empty panel borders to the entire terminal width.
     const bool spacious =
@@ -937,10 +906,10 @@ ftxui::Element ConsoleUI::render_project2(
         terminal.dimy >= 43;
 
     const int map_rows =
-        static_cast<int>(map.grid.rows());
+        static_cast<int>(size.rows);
 
     const int map_columns =
-        static_cast<int>(map.grid.columns());
+        static_cast<int>(size.columns);
 
     const int target_cell_width =
         map_columns >= 55 ? 2 :
@@ -1010,6 +979,59 @@ ftxui::Element ConsoleUI::render_project2(
                 ideal_board_height
             )
             : 22;
+    return {panel_width, board_width, board_height};
+}
+}
+
+std::string ConsoleUI::project2_size_error(Project2MapSize size, ftxui::Dimensions terminal) {
+    const auto layout = project2_layout(size, terminal);
+    // FULL MAP supports one column per terminal cell and two rows per cell.
+    // Reserve the same HUD/footer space as render_project2; DETAIL uses its camera.
+    if (terminal.dimy < layout.board_height + 18 ||
+        layout.board_width < static_cast<int>(size.columns) ||
+        layout.board_height < static_cast<int>((size.rows + 1) / 2))
+        return "Terminal too small for FULL MAP. Enlarge the terminal and try again.";
+    return {};
+}
+
+ftxui::Element ConsoleUI::render_project2(
+    const Project2Session& session,
+    Project2MapView view,
+    std::span<const Position> highlighted,
+    std::span<const std::string> help_lines,
+    std::optional<ftxui::Dimensions> terminal_size) const {
+    using namespace ftxui;
+    const auto& state = session.state();
+    const auto& map = session.map();
+    std::string difficulty;
+    switch (map.difficulty) {
+        case SavedDifficulty::easy: difficulty = "EASY"; break;
+        case SavedDifficulty::medium: difficulty = "MEDIUM"; break;
+        case SavedDifficulty::hard: difficulty = "HARD"; break;
+    }
+
+    const std::string turns = "Turn " + std::to_string(state.turn) + "/" +
+        std::to_string(map.input.turn_limit);
+    const std::string energy = "Energy " + std::to_string(state.energy) + "/" +
+        std::to_string(map.input.maximum_energy);
+    const std::string score = "Score " + std::to_string(state.score);
+    const std::string resources = "Resources " + std::to_string(state.resource_count) +
+        "/" + std::to_string(map.effects.resources.size());
+    const std::string switches = std::string("Switch A ") +
+        (state.switch_a_active ? "ON" : "OFF") + " | B " +
+        (state.switch_b_active ? "ON" : "OFF");
+    const std::string player = "Player (" + std::to_string(state.player.row) + "," +
+        std::to_string(state.player.column) + ")";
+    const std::string guard = "Guard (" + std::to_string(state.guard.row) + "," +
+        std::to_string(state.guard.column) + ")";
+    const std::string next_guard_turn = "Next move: turn " +
+        std::to_string(state.turn % 2 == 0 ? state.turn + 2 : state.turn + 1);
+
+    const ftxui::Dimensions terminal = terminal_size.value_or(ftxui::Terminal::Size());
+    const auto [panel_width, board_width, board_height] = project2_layout(
+        {map.grid.rows(), map.grid.columns()}, terminal);
+    const int map_rows = static_cast<int>(map.grid.rows());
+    const int map_columns = static_cast<int>(map.grid.columns());
     constexpr int footer_height = 7;
     const bool can_render_full_tiles =
         board_width >= map_columns * 2 &&

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "circuit_escape/environment.h"
+#include "circuit_escape/map_generation/map_sizes.h"
 #include <ftxui/component/event.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/screen/terminal.hpp>
@@ -99,6 +100,8 @@ private:
 
     std::optional<HelpReport> helpReport_;
 public:
+    static std::string project2_size_error(Project2MapSize size, ftxui::Dimensions terminal);
+
     explicit ConsoleUI(RenderMode mode = RenderMode::emoji);
 
     ftxui::Element render(

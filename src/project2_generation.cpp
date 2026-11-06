@@ -35,6 +35,7 @@ void Project2Generation::start(Project2MapSize size, const std::filesystem::path
     if (loading()) throw std::logic_error("Map generation is already running");
     directory_.clear();
     error_.clear();
+    validate_project2_map_size(size); // Reject before launching a worker.
     future_ = std::async(std::launch::async, [size, root] { return generate_project2_maps(size, root); });
 }
 
