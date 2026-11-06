@@ -107,10 +107,40 @@ void test_project2_size_flow() {
         menu.generationFinished(false);
         choose(menu); // Main -> sizes, never gameplay after failure.
         assert(menu.takeCommand() == MenuCommand::none);
-        move_down(menu, 3);
+        move_down(menu, 4);
         choose(menu); // Back.
         assert(menu.takeCommand() == MenuCommand::none);
     }
+}
+
+void test_custom_sizes() {
+    for (const auto size : {Project2MapSize{30,40}, Project2MapSize{15,20},
+        Project2MapSize{100,150}, Project2MapSize{10,60}, Project2MapSize{40,10}}) {
+        Menus menu(true);
+        choose(menu);
+        move_down(menu, 3);
+        choose(menu);
+        menu.OnEvent(ftxui::Event::Character(std::to_string(size.rows)));
+        menu.OnEvent(ftxui::Event::Character('x')); // letters never enter the field
+        menu.OnEvent(ftxui::Event::Tab);
+        menu.OnEvent(ftxui::Event::Character(std::to_string(size.columns)));
+        choose(menu); // field -> generate
+        choose(menu);
+        const bool valid = size == Project2MapSize{30,40} || size == Project2MapSize{15,20};
+        assert(menu.takeCommand() == (valid ? MenuCommand::generateMaps : MenuCommand::none));
+        if (valid) assert(menu.selectedMapSize() == size);
+        assert(menu.Render());
+    }
+    Menus menu(true);
+    choose(menu); move_down(menu, 3); choose(menu);
+    menu.OnEvent(ftxui::Event::Backspace); // empty rows
+    choose(menu); choose(menu); choose(menu);
+    assert(menu.takeCommand() == MenuCommand::none);
+    menu.OnEvent(ftxui::Event::Escape);
+    choose(menu); // Custom again
+    menu.OnEvent(ftxui::Event::ArrowUp); // Back
+    choose(menu);
+    assert(menu.takeCommand() == MenuCommand::none);
 }
 
 void test_project1_compatibility() {
@@ -156,5 +186,6 @@ void run_menus_tests() {
     test_project2_difficulty_navigation();
     test_project2_render_mode_and_help();
     test_project2_size_flow();
+    test_custom_sizes();
     test_project1_compatibility();
 }
