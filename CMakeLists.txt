@@ -26,6 +26,7 @@ add_library(Maze_core
     src/menus.cpp
     src/scenarios/scenario_1.cpp
     src/scenarios/scenario_2.cpp
+    src/MapGenerationAnimation.cpp
     src/StartupAnimation.cpp 
     src/DeathAnimation.cpp
     src/VictoryAnimation.cpp

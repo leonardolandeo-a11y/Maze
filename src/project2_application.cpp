@@ -2,6 +2,7 @@
 
 #include "circuit_escape/project2_session.h"
 #include "circuit_escape/StartupAnimation.h"
+#include "circuit_escape/MapGenerationAnimation.h"
 #include "circuit_escape/VictoryAnimation.h"
 #include "circuit_escape/DeathAnimation.h"
 #include "circuit_escape/menus.h"
@@ -122,6 +123,7 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
     Menus menus(true);
     ConsoleUI ui(RenderMode::emoji);
     const StartupAnimation startup_animation;
+    const MapGenerationAnimation generation_animation;
     const VictoryAnimation victory_animation;
     const DeathAnimation death_animation;
     std::atomic<bool> startup_active{true};
@@ -172,13 +174,7 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
             return startup_animation.RenderStartupFrame(startup_frame);
         }
         if (generation.loading()) {
-            static constexpr const char* frames[] = {"⠋", "⠙", "⠹", "⠸"};
-            return vbox({text("GENERATING " + std::to_string(menus.selectedMapSize().rows) + " × " +
-                std::to_string(menus.selectedMapSize().columns) + " MAP") | bold,
-                text(std::string(frames[loading_frame % 4]) + " Building maze candidates..."),
-                text("Kruskal → Dijkstra → Validation"),
-                text("Please wait..."),
-                text("Q: quit (waits for current batch)")}) | center | bgcolor(Color::Black);
+            return generation_animation.RenderFrame(loading_frame, menus.selectedMapSize());
         }
         if (menu || !session) {
             return vbox({
