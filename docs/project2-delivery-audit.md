@@ -20,7 +20,7 @@ README. No hubo cambios de audio/música ni trabajo en #131.
 | Dijkstra propio | `pathfinding/dijkstra.cpp`, `map_validator.cpp`; pruebas de costo de entrada destino, ambos órdenes A/B, tramos inaccesibles, mínimo total y energía estrictamente mayor al costo. Las baterías requieren simulación, nunca pesos negativos. |
 | Selector único | `map_selector.cpp`; caso 10/18/32 (promedio 20), empates por ID menor, negativos incluso no verificados, duplicados, exclusión de no ganadores y menos de tres costos distintos. |
 | Persistencia completa | `map_storage.cpp`; dimensiones, celdas/ítems/valores, costos, posiciones, energía, turnos, ID/seed/dificultad, costo y witness. Pruebas de roundtrip y rechazo de corrupción. Los ítems se reconstruyen en orden de filas; se comparan posiciones/valores, no el orden original de generación. |
-| Mapas listos para jugar | Tres assets preparados en `assets/maps`; `Project2Application` ya carga la dificultad elegida. No genera mapas al iniciar. |
+| Mapas listos para jugar | Tres assets preparados en `assets/maps`; la carga directa por `--difficulty` los conserva. El menú interactivo genera por tamaño antes de ofrecer la dificultad. |
 | Gameplay | `GameVerifier`, `Project2Session` y motor original; switches en ambos órdenes, persistencia, salida bloqueada, BFS hacia jugador actual y orden determinista, muros/límites/sin ruta, turnos pares, captura antes de victoria, espera/acción inválida, energía, último turno y reset. Nueva regresión de captura en salida habilitada, tanto al entrar como tras mover el guardia. |
 | Ayuda H | Pruebas de ayuda inicial, tras A, tras B y tras ambos; costos/ruta/energía/estado; sin modificar partida. Handler de H/Z revisado y recorrido en pseudoterminal. |
 | FULL MAP / DETAIL | PR #130 preservado sin cambios en renderer; `project2_responsive_layout_test` cubre 10×15, 20×30, 30×40, 40×60 y otros aspectos; cámara y estado estable. |
@@ -90,3 +90,35 @@ probar en Windows limpio (instalar, tres dificultades, H/Z, generador, partida
 completa, desinstalar y conservación de mapas personales), preparar demostración
 y exposición individual, y finalmente publicar/entregar según el curso.
 No se creó Setup.exe, MSI, ZIP de entrega, GitHub Release ni paquete final.
+
+## Nuevo requisito: elección de tamaño desde la UI (#132 / #133)
+
+Flujo implementado: Main → Start Game → SELECT MAP SIZE → generación/validación
+con animación → Difficulty → gameplay. Lista central de 10x15/20x30/40x60 usada
+por Menus y validación de run_map_batch; CLI 100x150 devuelve error sin archivos.
+La generación usa exactamente el perfil de aceptación rápida de la tabla anterior.
+
+Persistencia por directorios generated-maps/<tamaño>; el worker guarda y vuelve a
+cargar los tres mapas antes de publicar éxito. Future sincroniza resultados con
+el hilo UI; temporizador de 60 ms envía Custom y solo el hilo UI avanza frames,
+menús y sesión. Entradas de gameplay se ignoran durante carga. Q espera el lote
+al salir, sin threads separados que sobrevivan a la aplicación.
+Errores de generación, costos insuficientes, escritura o carga vuelven a Main
+con mensaje. No se ofrece un directorio anterior como resultado de un fallo.
+
+Pruebas nuevas: lista exacta y Back, dificultad posterior a éxito, retorno a menú
+tras error, tamaños inválidos/100x150, configuración propagada, tres dificultades
+con costos crecientes, roundtrip de dimensiones, witness ganador, aislamiento de
+tamaños, estado loading sin directorio jugable y fallos de filesystem/asíncronos.
+Se mantiene la suite previa de H/Z y layout responsive de PR #130.
+
+Comprobación interactiva en pseudoterminal Linux 120x45: selector → carga animada →
+Easy (10x15), Medium (20x30), Hard (40x60), H, Z dentro/fuera de ayuda y Q, exit 0.
+Inspección del frame 40x60: HUD, tablero completo y controles dentro del viewport;
+DETAIL conserva zoom. No sustituye una prueba visual en terminal Windows.
+
+Sin cambios de audio/música/#131, sin makensis, instalador, ejecutable final ni
+Release. PR #133 se conserva abierto y la rama no se elimina.
+
+Validación final: configuración CMake y build correctos; Maze_test PASS; CTest
+1/1 PASS (6.20 s).
