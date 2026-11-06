@@ -315,6 +315,39 @@ namespace {
                     : "W/S or arrows: navigate   •   Enter: select   •   Q: quit");
     }
 
+    ftxui::Element Project2Row(std::string label, bool selected,
+                               std::string hint = {}) {
+        using namespace ftxui;
+        auto title = text(std::move(label)) | bold |
+            color(selected ? Color::RGB(77, 226, 232) : Color::RGB(224, 234, 238));
+        auto tail = hint.empty()
+            ? (selected ? text("ENTER") | color(Color::RGB(78, 239, 165)) : text(""))
+            : text(std::move(hint)) | color(Color::RGB(116, 137, 146));
+        return hbox({
+            text(selected ? " ● " : " ○ ") |
+                color(selected ? Color::RGB(77, 226, 232) : Color::RGB(74, 91, 99)),
+            std::move(title),
+            filler(),
+            std::move(tail),
+            text(" "),
+        }) | size(HEIGHT, EQUAL, 3) |
+            borderRounded |
+            borderStyled(selected ? Color::RGB(77, 226, 232) : Color::RGB(47, 65, 72)) |
+            bgcolor(selected ? Color::RGB(12, 39, 46) : Color::RGB(11, 18, 23));
+    }
+
+    ftxui::Element RenderOption(std::string_view art, bool selected) {
+        using namespace ftxui;
+        auto option = RenderArt(art) |
+            color(selected ? Color::CyanLight : Color::White);
+        if (!selected) return hbox({text("  "), option});
+        return hbox({
+            vbox({text(" "), text(" "), text("▸ "), text(" ")}) |
+                color(Color::CyanLight),
+            option,
+        });
+    }
+
     ftxui::Element Project2ChoiceMenu(std::string section,
                                       const std::vector<std::string>& labels,
                                       int selected_option,
