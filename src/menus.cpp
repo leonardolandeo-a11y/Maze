@@ -103,19 +103,18 @@ namespace {
         return mode == RenderMode::emoji ? "EMOJI" : "ASCII";
     }
 
-    ftxui::Element MainMenuRow(std::string label, bool selected) {
+    ftxui::Element Project2Row(std::string label, bool selected,
+                               std::string hint = {}) {
         using namespace ftxui;
         auto marker = text(selected ? "> " : "  ") |
             color(selected ? Color::CyanLight : Color::GrayLight);
         auto name = text(std::move(label)) |
             color(selected ? Color::CyanLight : Color::White);
         if (selected) name = name | bold;
-        return hbox({
-            std::move(marker),
-            std::move(name),
-            filler(),
-            selected ? text("SELECT") | color(Color::GreenLight) : text(""),
-        });
+        auto tail = hint.empty()
+            ? (selected ? text("SELECT") | color(Color::GreenLight) : text(""))
+            : text(std::move(hint)) | color(selected ? Color::GreenLight : Color::GrayLight);
+        return hbox({std::move(marker), std::move(name), filler(), std::move(tail)});
     }
 
     ftxui::Element StatusLine(std::string key, std::string value, ftxui::Color value_color) {
@@ -127,27 +126,101 @@ namespace {
         });
     }
 
+    struct Project2FrameMetrics {
+        int width;
+        int height;
+        Project2MenuLayout mode;
+        bool show_logo;
+    };
+
+    Project2FrameMetrics Project2Metrics() {
+        using namespace ftxui;
+        const auto terminal = Terminal::Size();
+        const int terminal_width = terminal.dimx > 0 ? terminal.dimx : 120;
+        const int terminal_height = terminal.dimy > 0 ? terminal.dimy : 32;
+        const auto mode = project2_menu_layout_for(terminal_width, terminal_height);
+
+        const int desired_width = std::max(40, terminal_width * 9 / 10);
+        const int frame_width = std::min({142, desired_width,
+            std::max(20, terminal_width - 2)});
+
+        const int desired_height = std::max(16, terminal_height * 4 / 5);
+        const int frame_height = std::min({38, desired_height,
+            std::max(12, terminal_height - 2)});
+
+        return {
+            frame_width,
+            frame_height,
+            mode,
+            mode != Project2MenuLayout::compact && frame_width >= 56 && frame_height >= 23
+        };
+    }
+
+    ftxui::Element Project2Shell(std::string section,
+                                 ftxui::Element body,
+                                 std::string controls,
+                                 bool show_brand = true) {
+        using namespace ftxui;
+        const auto metrics = Project2Metrics();
+        const bool compact = metrics.mode == Project2MenuLayout::compact;
+
+        Elements content;
+        if (!compact) {
+            content.push_back(hbox({
+                text("ESCAPE PROTOCOL") | bold | color(Color::CyanLight),
+                filler(),
+                text(std::move(section)) | color(Color::GrayLight),
+            }));
+            content.push_back(separator() | color(Color::Cyan));
+        }
+
+        if (show_brand) {
+            if (metrics.show_logo) {
+                content.push_back(separatorEmpty());
+                content.push_back(ArcadeLogo());
+                content.push_back(text("CIRCUITO DE ESCAPE") |
+                    hcenter | color(Color::GrayLight));
+            } else {
+                content.push_back(text("MAZE // CIRCUITO DE ESCAPE") |
+                    bold | hcenter | color(Color::CyanLight));
+            }
+        }
+
+        content.push_back(vbox({
+            filler(),
+            std::move(body),
+            filler(),
+        }) | flex);
+
+        content.push_back(separator() | color(Color::Cyan));
+        content.push_back(text(std::move(controls)) |
+            hcenter | color(Color::GrayLight));
+
+        return vbox(std::move(content)) |
+            size(WIDTH, EQUAL, metrics.width) |
+            size(HEIGHT, EQUAL, metrics.height) |
+            borderRounded |
+            color(Color::CyanLight) |
+            center |
+            bgcolor(Color::Black);
+    }
+
     ftxui::Element Project2MainMenu(Project2MapSize map_size,
                                     Difficulty difficulty,
                                     RenderMode render_mode,
                                     bool maps_ready,
                                     int selected_option) {
         using namespace ftxui;
-
-        const auto terminal = Terminal::Size();
-        const int available_width = std::max(1, terminal.dimx - 4);
-        const int frame_width = std::min(118, available_width);
-        const auto layout_mode = project2_menu_layout_for(terminal.dimx, terminal.dimy);
-        const bool compact_layout = layout_mode == Project2MenuLayout::compact;
-        const bool wide_layout = layout_mode == Project2MenuLayout::split;
-        const bool show_full_logo = !compact_layout && frame_width >= 48;
+        const auto metrics = Project2Metrics();
+        const bool split = metrics.mode == Project2MenuLayout::split;
+        const bool compact = metrics.mode == Project2MenuLayout::compact;
 
         Elements menu_rows;
         const std::array<std::string, 5> labels{
             "START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"
         };
         for (std::size_t index = 0; index < labels.size(); ++index) {
-            menu_rows.push_back(MainMenuRow(labels[index],
+            menu_rows.push_back(Project2Row(labels[index],
                 selected_option == static_cast<int>(index)));
         }
 
@@ -170,7 +243,7 @@ namespace {
         }) | flex;
 
         Element body;
-        if (wide_layout) {
+        if (split) {
             body = hbox({
                 menu_panel | flex,
                 separatorEmpty(),
@@ -178,7 +251,7 @@ namespace {
                 separatorEmpty(),
                 status_panel | flex,
             });
-        } else if (compact_layout) {
+        } else if (compact) {
             body = vbox({
                 std::move(menu_panel),
                 separator() | color(Color::GrayDark),
@@ -197,41 +270,57 @@ namespace {
             });
         }
 
-        Element brand = show_full_logo
-            ? ArcadeLogo()
-            : text("MAZE // CIRCUITO DE ESCAPE") | bold | hcenter | color(Color::CyanLight);
+        return Project2Shell("MAIN MENU", std::move(body),
+            compact ? "Arrows: move   Enter: select   Q: quit"
+                    : "W/S or arrows: navigate   Enter: select   Q: quit");
+    }
 
-        Elements layout;
-        if (!compact_layout) {
-            layout.push_back(hbox({
-                text("ESCAPE PROTOCOL") | bold | color(Color::CyanLight),
-                filler(),
-                text("PROJECT 2") | color(Color::GrayLight),
-            }));
-            layout.push_back(separator() | color(Color::Cyan));
-            layout.push_back(separatorEmpty());
+    ftxui::Element Project2ChoiceMenu(std::string section,
+                                      const std::vector<std::string>& labels,
+                                      const std::vector<std::string>& descriptions,
+                                      int selected_option,
+                                      std::string current_value) {
+        using namespace ftxui;
+        const auto metrics = Project2Metrics();
+        Elements rows;
+        for (std::size_t index = 0; index < labels.size(); ++index) {
+            rows.push_back(Project2Row(labels[index],
+                selected_option == static_cast<int>(index),
+                index < descriptions.size() ? descriptions[index] : ""));
         }
 
-        layout.push_back(std::move(brand));
+        auto choices = vbox({
+            text(std::move(section)) | bold | color(Color::White),
+            separator() | color(Color::GrayDark),
+            vbox(std::move(rows)),
+        });
 
-        if (!compact_layout) {
-            layout.push_back(text("CIRCUITO DE ESCAPE") | hcenter | color(Color::GrayLight));
-            layout.push_back(separatorEmpty());
+        Element body;
+        if (metrics.mode == Project2MenuLayout::split) {
+            body = hbox({
+                choices | flex,
+                separatorEmpty(),
+                separator() | color(Color::GrayDark),
+                separatorEmpty(),
+                vbox({
+                    text("CURRENT") | bold | color(Color::White),
+                    separator() | color(Color::GrayDark),
+                    text(std::move(current_value)) | bold | color(Color::GreenLight),
+                    separatorEmpty(),
+                    text("Changes apply without altering map generation or gameplay.") |
+                        color(Color::GrayLight),
+                }) | flex,
+            });
+        } else {
+            body = vbox({
+                std::move(choices),
+                separatorEmpty(),
+                text("CURRENT  " + current_value) | hcenter | color(Color::GreenLight),
+            });
         }
 
-        layout.push_back(std::move(body));
-        layout.push_back(separator() | color(Color::Cyan));
-        layout.push_back(text(compact_layout
-            ? "Arrows: move   Enter: select   Q: quit"
-            : "W/S or arrows: navigate   Enter: select   Q: quit") |
-            hcenter | color(Color::GrayLight));
-
-        return vbox(std::move(layout)) |
-            size(WIDTH, EQUAL, frame_width) |
-            borderRounded |
-            color(Color::CyanLight) |
-            center |
-            bgcolor(Color::Black);
+        return Project2Shell("SETTINGS", std::move(body),
+            "W/S or arrows: navigate   Enter: confirm   Back: return");
     }
 
     int OptionCount(MenuScreen screen) {
