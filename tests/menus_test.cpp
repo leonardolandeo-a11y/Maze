@@ -143,6 +143,15 @@ void test_custom_sizes() {
     assert(menu.takeCommand() == MenuCommand::none);
 }
 
+void test_project2_responsive_layout_policy() {
+    assert(project2_menu_layout_for(160, 45) == Project2MenuLayout::split);
+    assert(project2_menu_layout_for(120, 30) == Project2MenuLayout::split);
+    assert(project2_menu_layout_for(80, 24) == Project2MenuLayout::stacked);
+    assert(project2_menu_layout_for(70, 20) == Project2MenuLayout::stacked);
+    assert(project2_menu_layout_for(47, 30) == Project2MenuLayout::compact);
+    assert(project2_menu_layout_for(100, 17) == Project2MenuLayout::compact);
+}
+
 void test_project1_compatibility() {
     Menus menu(false);
     assert(menu.selectedScenario() == ScenarioSelection::scenario1);
@@ -187,5 +196,6 @@ void run_menus_tests() {
     test_project2_render_mode_and_help();
     test_project2_size_flow();
     test_custom_sizes();
+    test_project2_responsive_layout_policy();
     test_project1_compatibility();
 }
