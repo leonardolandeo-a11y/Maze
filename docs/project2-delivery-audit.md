@@ -160,3 +160,39 @@ Validación ejecutada:
   worker con mensaje visible. Esta prueba no sustituye inspección humana en Windows.
 
 No cambios a audio/música/#131 ni generación de installer/Release/exe final.
+
+## Visual polish — issue #132 / PR #133 (2026-11-06)
+
+- Project 2 Main Menu and Difficulty now share a centered, compact arcade panel,
+  the existing MAZE block logo, cyan borders/focus, green configuration summary,
+  and visible keyboard hints. The existing options and event handling are unchanged.
+- Map Size and Custom share that panel, aligned presets, full-row selection,
+  rows/columns hierarchy and green/red validation messages. Validation itself is unchanged.
+- `MapGenerationAnimation` renders a rounded standby panel, selected dimensions,
+  a looping pulse and spinner. It claims neither percentage nor worker stage.
+  It consumes the existing frame counter; worker, polling, timing, failure handling,
+  quit semantics and asynchronous generation are unchanged.
+- The existing HUD line now reads `SIZE rows×columns | DIFFICULTY level` in cyan,
+  followed by switch state. No extra HUD row or board-space reservation was added.
+- Startup, Victory and Death remain unchanged and were inspected as visual references.
+
+Validation of this visual-only increment:
+
+- `cmake -S . -B build`: passed (existing debug build).
+- `cmake --build build --parallel`: passed.
+- `./build/Maze_test`: passed, with all existing assertions retained.
+- `ctest --test-dir build --output-on-failure`: passed, 1/1, 7.11 seconds.
+- Actual Linux PTY at 120×50: 10×15, 20×30, 30×40 CUSTOM, 40×60 and
+  15×20 CUSTOM completed selector → animated generation → difficulty → gameplay;
+  H/Z inside and outside help and Q passed. Invalid 100×150, 10×60, 40×10
+  retained visible rejection and created no generation directory; 80×24 retained
+  terminal-size rejection before generation.
+- Inspected FTXUI frame captures for Startup, Main Menu, Map Size, Custom,
+  invalid Custom, three Loading frames, Difficulty, Gameplay, Victory and Death.
+  Rendered all four requested dimensions in FULL MAP/DETAIL, with/without help,
+  at 80×40, 120×50 and 160×60. Existing responsive regression tests also passed.
+  Captures were generated locally in /tmp; this is Linux render/PTY evidence,
+  not a claim of native Windows-terminal validation.
+- No test source changes were needed. No gameplay, algorithm, generation, size
+  rules, seeds, concurrency, save/load, H/Z handlers or audio/music/#131 changes.
+  No installer, Release build or final executable package was generated.

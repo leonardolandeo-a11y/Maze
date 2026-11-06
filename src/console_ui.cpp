@@ -1047,8 +1047,10 @@ ftxui::Element ConsoleUI::render_project2(
             text(" "),
             vbox({
                 text(turns + " | " + energy + " | " + score + " | " + resources),
-                text(difficulty + " | " + std::to_string(map.grid.rows()) + "x" +
-                     std::to_string(map.grid.columns()) + " | " + switches),
+                hbox({text("SIZE " + std::to_string(map.grid.rows()) + "×" +
+                     std::to_string(map.grid.columns()) + " | DIFFICULTY " + difficulty) |
+                         color(Color::CyanLight),
+                     text(" | " + switches)}),
                 text(player + " | " + guard + " | " + next_guard_turn)
             }),
             text(" ")
