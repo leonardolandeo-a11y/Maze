@@ -53,70 +53,15 @@ namespace {
         });
     }
 
-    using BlockGlyph = std::array<std::string_view, 5>;
-
-    BlockGlyph BlockGlyphFor(char value) {
-        switch (value) {
-            case 'A': return {" ### ", "#   #", "#####", "#   #", "#   #"};
-            case 'B': return {"#### ", "#   #", "#### ", "#   #", "#### "};
-            case 'C': return {" ####", "#    ", "#    ", "#    ", " ####"};
-            case 'D': return {"#### ", "#   #", "#   #", "#   #", "#### "};
-            case 'E': return {"#####", "#    ", "#### ", "#    ", "#####"};
-            case 'F': return {"#####", "#    ", "#### ", "#    ", "#    "};
-            case 'G': return {" ####", "#    ", "# ###", "#   #", " ####"};
-            case 'H': return {"#   #", "#   #", "#####", "#   #", "#   #"};
-            case 'I': return {"#####", "  #  ", "  #  ", "  #  ", "#####"};
-            case 'J': return {"#####", "   # ", "   # ", "#  # ", " ##  "};
-            case 'K': return {"#   #", "#  # ", "###  ", "#  # ", "#   #"};
-            case 'L': return {"#    ", "#    ", "#    ", "#    ", "#####"};
-            case 'M': return {"#   #", "## ##", "# # #", "#   #", "#   #"};
-            case 'N': return {"#   #", "##  #", "# # #", "#  ##", "#   #"};
-            case 'O': return {" ### ", "#   #", "#   #", "#   #", " ### "};
-            case 'P': return {"#### ", "#   #", "#### ", "#    ", "#    "};
-            case 'Q': return {" ### ", "#   #", "#   #", "#  ##", " ####"};
-            case 'R': return {"#### ", "#   #", "#### ", "#  # ", "#   #"};
-            case 'S': return {" ####", "#    ", " ### ", "    #", "#### "};
-            case 'T': return {"#####", "  #  ", "  #  ", "  #  ", "  #  "};
-            case 'U': return {"#   #", "#   #", "#   #", "#   #", " ### "};
-            case 'V': return {"#   #", "#   #", "#   #", " # # ", "  #  "};
-            case 'W': return {"#   #", "#   #", "# # #", "## ##", "#   #"};
-            case 'X': return {"#   #", " # # ", "  #  ", " # # ", "#   #"};
-            case 'Y': return {"#   #", " # # ", "  #  ", "  #  ", "  #  "};
-            case 'Z': return {"#####", "   # ", "  #  ", " #   ", "#####"};
-            default: return {"     ", "     ", "     ", "     ", "     "};
-        }
-    }
-
-    ftxui::Element BlockLabel(std::string_view label) {
+    ftxui::Element Project2CompactArtOption(std::string_view art, bool selected) {
         using namespace ftxui;
-        std::array<std::string, 5> rows;
-        for (const char value : label) {
-            if (value == ' ') {
-                for (auto& row : rows) row += "   ";
-                continue;
-            }
-            const auto glyph = BlockGlyphFor(value);
-            for (std::size_t row = 0; row < rows.size(); ++row) {
-                for (const char pixel : glyph[row]) {
-                    rows[row] += pixel == '#' ? "█" : " ";
-                }
-                rows[row] += " ";
-            }
-        }
-        Elements output;
-        for (auto& row : rows) output.push_back(text(std::move(row)));
-        return vbox(std::move(output));
-    }
-
-    ftxui::Element Project2BlockOption(std::string_view label, bool selected) {
-        using namespace ftxui;
-        auto art = BlockLabel(label) |
+        auto label = RenderArtCompact(art) |
             color(selected ? Color::CyanLight : Color::White);
-        if (selected) art = art | bold;
+        if (selected) label = label | bold;
         return hbox({
-            text(selected ? "> " : "  ") |
+            text(selected ? "▸ " : "  ") |
                 color(selected ? Color::CyanLight : Color::GrayLight),
-            std::move(art),
+            std::move(label),
             filler(),
             selected ? text("SELECT") | color(Color::GreenLight) : text(""),
             text("  "),
@@ -326,16 +271,20 @@ namespace {
         const std::array<std::string, 5> labels{
             "START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"
         };
+        const std::array<std::string_view, 5> arts{
+            MenuArt::START_GAME, MenuArt::DIFFICULTY, MenuArt::RENDER_MODE,
+            MenuArt::HELP, MenuArt::QUIT
+        };
         const bool spacious = metrics.height >= 30;
-        const bool block_menu = metrics.mode == Project2MenuLayout::split &&
-            metrics.height >= 34 && metrics.width >= 118;
+        const bool art_menu = metrics.mode == Project2MenuLayout::split &&
+            metrics.height >= 30 && metrics.width >= 100;
         for (std::size_t index = 0; index < labels.size(); ++index) {
-            menu_rows.push_back(block_menu
-                ? Project2BlockOption(labels[index],
+            menu_rows.push_back(art_menu
+                ? Project2CompactArtOption(arts[index],
                     selected_option == static_cast<int>(index))
                 : Project2Row(labels[index],
                     selected_option == static_cast<int>(index)));
-            if (!block_menu && spacious && index + 1 < labels.size()) {
+            if (!art_menu && spacious && index + 1 < labels.size()) {
                 menu_rows.push_back(separatorEmpty());
             }
         }
@@ -448,23 +397,25 @@ namespace {
             "W/S or arrows: navigate   Enter: confirm   Back: return");
     }
 
-    ftxui::Element Project2BlockChoiceMenu(std::string section,
-                                           const std::vector<std::string>& labels,
-                                           int selected_option,
-                                           std::string current_value) {
+    ftxui::Element Project2CompactChoiceMenu(
+        std::string section,
+        const std::vector<std::string>& labels,
+        const std::vector<std::string_view>& arts,
+        int selected_option,
+        std::string current_value) {
         using namespace ftxui;
         const auto metrics = Project2Metrics();
-        const bool use_blocks = metrics.mode != Project2MenuLayout::compact &&
-            metrics.width >= 82 && metrics.height >= 28;
+        const bool use_art = metrics.mode != Project2MenuLayout::compact &&
+            metrics.width >= 72 && metrics.height >= 24;
 
         Elements rows;
         for (std::size_t index = 0; index < labels.size(); ++index) {
-            rows.push_back(use_blocks
-                ? Project2BlockOption(labels[index],
+            rows.push_back(use_art
+                ? Project2CompactArtOption(arts[index],
                     selected_option == static_cast<int>(index))
                 : Project2Row(labels[index],
                     selected_option == static_cast<int>(index)));
-            if (!use_blocks && index + 1 < labels.size()) rows.push_back(separatorEmpty());
+            if (!use_art && index + 1 < labels.size()) rows.push_back(separatorEmpty());
         }
 
         Element choices = vbox(std::move(rows));
@@ -807,14 +758,16 @@ ftxui::Element Menus::Render() const {
     }
 
     if (project2_mode_ && currentScreen_ == MenuScreen::Difficulty) {
-        return Project2BlockChoiceMenu("DIFFICULTY",
+        return Project2CompactChoiceMenu("DIFFICULTY",
             {"EASY", "MEDIUM", "HARD", "BACK"},
+            {MenuArt::EASY, MenuArt::MEDIUM, MenuArt::HARD, MenuArt::BACK},
             selectedOption_, DifficultyLabel(selectedDifficulty_));
     }
 
     if (project2_mode_ && currentScreen_ == MenuScreen::RenderMode) {
-        return Project2BlockChoiceMenu("RENDER MODE",
+        return Project2CompactChoiceMenu("RENDER MODE",
             {"EMOJI", "ASCII", "BACK"},
+            {MenuArt::EMOJI, MenuArt::ASCII, MenuArt::BACK},
             selectedOption_, RenderModeLabel(selectedRenderMode_));
     }
 
