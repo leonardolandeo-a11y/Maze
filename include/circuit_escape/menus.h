@@ -28,6 +28,14 @@ enum class ScenarioSelection {
     scenario2
 };
 
+enum class Project2MenuLayout {
+    compact,
+    stacked,
+    split
+};
+
+[[nodiscard]] Project2MenuLayout project2_menu_layout_for(int width, int height) noexcept;
+
 class Menus {
 public:
     explicit Menus(bool project2_mode = false);
