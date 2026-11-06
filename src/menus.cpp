@@ -137,9 +137,10 @@ namespace {
         const auto terminal = Terminal::Size();
         const int available_width = std::max(1, terminal.dimx - 4);
         const int frame_width = std::min(118, available_width);
-        const bool short_screen = terminal.dimy < 24;
-        const bool wide_layout = frame_width >= 84 && !short_screen;
-        const bool show_full_logo = frame_width >= 48 && terminal.dimy >= 20;
+        const auto layout_mode = project2_menu_layout_for(terminal.dimx, terminal.dimy);
+        const bool compact_layout = layout_mode == Project2MenuLayout::compact;
+        const bool wide_layout = layout_mode == Project2MenuLayout::split;
+        const bool show_full_logo = !compact_layout && frame_width >= 48;
 
         Elements menu_rows;
         const std::array<std::string, 5> labels{
@@ -177,6 +178,15 @@ namespace {
                 separatorEmpty(),
                 status_panel | flex,
             });
+        } else if (compact_layout) {
+            body = vbox({
+                std::move(menu_panel),
+                separator() | color(Color::GrayDark),
+                text(map_text + "  |  " + DifficultyLabel(difficulty) + "  |  " +
+                    RenderModeLabel(render_mode)) | hcenter | color(Color::GrayLight),
+                text(maps_ready ? "MAP SET READY" : "MAP SET NOT GENERATED") |
+                    hcenter | color(maps_ready ? Color::GreenLight : Color::YellowLight),
+            });
         } else {
             body = vbox({
                 std::move(menu_panel),
@@ -191,26 +201,29 @@ namespace {
             ? ArcadeLogo()
             : text("MAZE // CIRCUITO DE ESCAPE") | bold | hcenter | color(Color::CyanLight);
 
-        Elements layout{
-            hbox({
+        Elements layout;
+        if (!compact_layout) {
+            layout.push_back(hbox({
                 text("ESCAPE PROTOCOL") | bold | color(Color::CyanLight),
                 filler(),
                 text("PROJECT 2") | color(Color::GrayLight),
-            }),
-            separator() | color(Color::Cyan),
-            separatorEmpty(),
-            std::move(brand),
-        };
+            }));
+            layout.push_back(separator() | color(Color::Cyan));
+            layout.push_back(separatorEmpty());
+        }
 
-        if (!short_screen) {
+        layout.push_back(std::move(brand));
+
+        if (!compact_layout) {
             layout.push_back(text("CIRCUITO DE ESCAPE") | hcenter | color(Color::GrayLight));
             layout.push_back(separatorEmpty());
         }
 
         layout.push_back(std::move(body));
-        layout.push_back(separatorEmpty());
         layout.push_back(separator() | color(Color::Cyan));
-        layout.push_back(text("W/S or arrows: navigate   Enter: select   Q: quit") |
+        layout.push_back(text(compact_layout
+            ? "Arrows: move   Enter: select   Q: quit"
+            : "W/S or arrows: navigate   Enter: select   Q: quit") |
             hcenter | color(Color::GrayLight));
 
         return vbox(std::move(layout)) |
@@ -242,6 +255,12 @@ namespace {
         return 1;
     }
 
+}
+
+Project2MenuLayout project2_menu_layout_for(int width, int height) noexcept {
+    if (width >= 92 && height >= 24) return Project2MenuLayout::split;
+    if (width >= 48 && height >= 18) return Project2MenuLayout::stacked;
+    return Project2MenuLayout::compact;
 }
 
 Menus::Menus(bool project2_mode) : project2_mode_(project2_mode) {
