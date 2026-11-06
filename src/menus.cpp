@@ -114,15 +114,24 @@ namespace {
         auto tail = hint.empty()
             ? (selected ? text("SELECT") | color(Color::GreenLight) : text(""))
             : text(std::move(hint)) | color(selected ? Color::GreenLight : Color::GrayLight);
-        return hbox({std::move(marker), std::move(name), filler(), std::move(tail)});
+        return hbox({
+            text("  "),
+            std::move(marker),
+            std::move(name),
+            filler(),
+            std::move(tail),
+            text("  "),
+        });
     }
 
     ftxui::Element StatusLine(std::string key, std::string value, ftxui::Color value_color) {
         using namespace ftxui;
         return hbox({
+            text("  "),
             text(std::move(key)) | color(Color::GrayLight),
             filler(),
             text(std::move(value)) | bold | color(value_color),
+            text("  "),
         });
     }
 
@@ -221,9 +230,13 @@ namespace {
         const std::array<std::string, 5> labels{
             "START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"
         };
+        const bool spacious = metrics.height >= 30;
         for (std::size_t index = 0; index < labels.size(); ++index) {
             menu_rows.push_back(Project2Row(labels[index],
                 selected_option == static_cast<int>(index)));
+            if (spacious && index + 1 < labels.size()) {
+                menu_rows.push_back(separatorEmpty());
+            }
         }
 
         auto menu_panel = vbox({
@@ -234,15 +247,20 @@ namespace {
 
         const std::string map_text = std::to_string(map_size.rows) + " x " +
             std::to_string(map_size.columns);
-        auto status_panel = vbox({
+        Elements status_rows{
             text("CURRENT SETUP") | bold | color(Color::White),
             separator() | color(Color::GrayDark),
             StatusLine("MAP", map_text, Color::CyanLight),
-            StatusLine("DIFFICULTY", DifficultyLabel(difficulty), Color::GreenLight),
-            StatusLine("RENDER", RenderModeLabel(render_mode), Color::White),
-            StatusLine("MAP SET", maps_ready ? "READY" : "NOT GENERATED",
-                maps_ready ? Color::GreenLight : Color::YellowLight),
-        }) | flex;
+        };
+        if (spacious) status_rows.push_back(separatorEmpty());
+        status_rows.push_back(StatusLine("DIFFICULTY", DifficultyLabel(difficulty),
+            Color::GreenLight));
+        if (spacious) status_rows.push_back(separatorEmpty());
+        status_rows.push_back(StatusLine("RENDER", RenderModeLabel(render_mode), Color::White));
+        if (spacious) status_rows.push_back(separatorEmpty());
+        status_rows.push_back(StatusLine("MAP SET", maps_ready ? "READY" : "NOT GENERATED",
+            maps_ready ? Color::GreenLight : Color::YellowLight));
+        auto status_panel = vbox(std::move(status_rows)) | flex;
 
         Element body;
         if (split) {
@@ -285,10 +303,14 @@ namespace {
         using namespace ftxui;
         const auto metrics = Project2Metrics();
         Elements rows;
+        const bool spacious = metrics.height >= 30;
         for (std::size_t index = 0; index < labels.size(); ++index) {
             rows.push_back(Project2Row(labels[index],
                 selected_option == static_cast<int>(index),
                 index < descriptions.size() ? descriptions[index] : ""));
+            if (spacious && index + 1 < labels.size()) {
+                rows.push_back(separatorEmpty());
+            }
         }
 
         auto choices = vbox({
