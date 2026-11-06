@@ -96,6 +96,22 @@ void capture_priority_test() {
     assert(result.outcome == GameOutcome::captured);
 }
 
+void capture_on_enabled_exit_test() {
+    auto input = isolated_guard_map();
+    input.graph = graph_of(2, 5);
+    input.guard_start = {1, 4};
+    GameVerifier game(input);
+    // Valid mid-game states: both switches already activated.
+    auto state = game.initial_state();
+    state.player = {0, 2};
+    state.guard = input.exit;
+    state.switch_a_active = state.switch_b_active = true;
+    assert(game.step(state, Action::right).outcome == GameOutcome::captured);
+    state.guard = {1, 3};
+    state.turn = 1; // Guard moves onto the exit on this even turn.
+    assert(game.step(state, Action::right).outcome == GameOutcome::captured);
+}
+
 void battery_and_trap_test() {
     auto input = isolated_guard_map();
     input.switch_b = {0, 3};
@@ -305,6 +321,7 @@ void run_game_verifier_tests() {
     exit_requires_both_switches_test();
     guard_even_turn_capture_test();
     capture_priority_test();
+    capture_on_enabled_exit_test();
     battery_and_trap_test();
     resource_and_score_test();
     limit_and_wait_test();
