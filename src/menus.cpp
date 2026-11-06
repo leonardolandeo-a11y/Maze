@@ -141,12 +141,14 @@ namespace {
         const auto mode = project2_menu_layout_for(terminal_width, terminal_height);
 
         const int desired_width = std::max(40, terminal_width * 9 / 10);
-        const int frame_width = std::min({142, desired_width,
-            std::max(20, terminal_width - 2)});
+        const int available_width = terminal_width > 4 ? terminal_width - 2 : terminal_width;
+        const int frame_width = std::max(1,
+            std::min({142, desired_width, std::max(1, available_width)}));
 
         const int desired_height = std::max(16, terminal_height * 4 / 5);
-        const int frame_height = std::min({38, desired_height,
-            std::max(12, terminal_height - 2)});
+        const int available_height = terminal_height > 4 ? terminal_height - 2 : terminal_height;
+        const int frame_height = std::max(1,
+            std::min({38, desired_height, std::max(1, available_height)}));
 
         return {
             frame_width,
@@ -290,7 +292,7 @@ namespace {
         }
 
         auto choices = vbox({
-            text(std::move(section)) | bold | color(Color::White),
+            text(section) | bold | color(Color::White),
             separator() | color(Color::GrayDark),
             vbox(std::move(rows)),
         });
@@ -319,7 +321,7 @@ namespace {
             });
         }
 
-        return Project2Shell("SETTINGS", std::move(body),
+        return Project2Shell(section, std::move(body),
             "W/S or arrows: navigate   Enter: confirm   Back: return");
     }
 
