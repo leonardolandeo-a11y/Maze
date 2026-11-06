@@ -27,6 +27,32 @@ namespace {
         return vbox(std::move(lines));
     }
 
+    ftxui::Element RenderArtCompact(std::string_view art) {
+        using namespace ftxui;
+        Elements lines;
+        std::istringstream stream{std::string(art)};
+        std::string line;
+        while (std::getline(stream, line)) {
+            if (!line.empty()) lines.push_back(text(line));
+        }
+        return vbox(std::move(lines));
+    }
+
+    ftxui::Element Project2ArtOption(std::string_view art, bool selected) {
+        using namespace ftxui;
+        auto label = RenderArtCompact(art) |
+            color(selected ? Color::CyanLight : Color::White);
+        if (selected) label = label | bold;
+        return hbox({
+            text(selected ? "> " : "  ") |
+                color(selected ? Color::CyanLight : Color::GrayLight),
+            std::move(label),
+            filler(),
+            selected ? text("SELECT") | color(Color::GreenLight) : text(""),
+            text("  "),
+        });
+    }
+
     ftxui::Element RenderOption(
         std::string_view art,
         bool selected
@@ -230,11 +256,20 @@ namespace {
         const std::array<std::string, 5> labels{
             "START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"
         };
+        const std::array<std::string_view, 5> arts{
+            MenuArt::START_GAME, MenuArt::DIFFICULTY, MenuArt::RENDER_MODE,
+            MenuArt::HELP, MenuArt::QUIT
+        };
         const bool spacious = metrics.height >= 30;
+        const bool art_menu = metrics.mode == Project2MenuLayout::split &&
+            metrics.height >= 32 && metrics.width >= 110;
         for (std::size_t index = 0; index < labels.size(); ++index) {
-            menu_rows.push_back(Project2Row(labels[index],
-                selected_option == static_cast<int>(index)));
-            if (spacious && index + 1 < labels.size()) {
+            menu_rows.push_back(art_menu
+                ? Project2ArtOption(arts[index],
+                    selected_option == static_cast<int>(index))
+                : Project2Row(labels[index],
+                    selected_option == static_cast<int>(index)));
+            if (!art_menu && spacious && index + 1 < labels.size()) {
                 menu_rows.push_back(separatorEmpty());
             }
         }
@@ -333,6 +368,60 @@ namespace {
                     separatorEmpty(),
                     text("Changes apply without altering map generation or gameplay.") |
                         color(Color::GrayLight),
+                }) | flex,
+            });
+        } else {
+            body = vbox({
+                std::move(choices),
+                separatorEmpty(),
+                text("CURRENT  " + current_value) | hcenter | color(Color::GreenLight),
+            });
+        }
+
+        return Project2Shell(section, std::move(body),
+            "W/S or arrows: navigate   Enter: confirm   Back: return");
+    }
+
+    ftxui::Element Project2ArtChoiceMenu(std::string section,
+                                         const std::vector<std::string_view>& arts,
+                                         int selected_option,
+                                         std::string current_value) {
+        using namespace ftxui;
+        const auto metrics = Project2Metrics();
+        const bool use_art = metrics.mode != Project2MenuLayout::compact &&
+            metrics.width >= 72 && metrics.height >= 24;
+
+        Elements rows;
+        for (std::size_t index = 0; index < arts.size(); ++index) {
+            if (use_art) {
+                rows.push_back(Project2ArtOption(arts[index],
+                    selected_option == static_cast<int>(index)));
+            } else {
+                std::string fallback;
+                if (arts[index] == MenuArt::EASY) fallback = "EASY";
+                else if (arts[index] == MenuArt::MEDIUM) fallback = "MEDIUM";
+                else if (arts[index] == MenuArt::HARD) fallback = "HARD";
+                else if (arts[index] == MenuArt::EMOJI) fallback = "EMOJI";
+                else if (arts[index] == MenuArt::ASCII) fallback = "ASCII";
+                else fallback = "BACK";
+                rows.push_back(Project2Row(fallback,
+                    selected_option == static_cast<int>(index)));
+            }
+            if (!use_art && index + 1 < arts.size()) rows.push_back(separatorEmpty());
+        }
+
+        Element choices = vbox(std::move(rows));
+        Element body;
+        if (metrics.mode == Project2MenuLayout::split) {
+            body = hbox({
+                std::move(choices) | flex,
+                separatorEmpty(),
+                separator() | color(Color::GrayDark),
+                separatorEmpty(),
+                vbox({
+                    text("CURRENT") | bold | color(Color::White),
+                    separator() | color(Color::GrayDark),
+                    text(std::move(current_value)) | bold | color(Color::GreenLight),
                 }) | flex,
             });
         } else {
@@ -661,16 +750,14 @@ ftxui::Element Menus::Render() const {
     }
 
     if (project2_mode_ && currentScreen_ == MenuScreen::Difficulty) {
-        return Project2ChoiceMenu("DIFFICULTY",
-            {"EASY", "MEDIUM", "HARD", "BACK"},
-            {"LOWER COST", "BALANCED", "HIGHER COST", ""},
+        return Project2ArtChoiceMenu("DIFFICULTY",
+            {MenuArt::EASY, MenuArt::MEDIUM, MenuArt::HARD, MenuArt::BACK},
             selectedOption_, DifficultyLabel(selectedDifficulty_));
     }
 
     if (project2_mode_ && currentScreen_ == MenuScreen::RenderMode) {
-        return Project2ChoiceMenu("RENDER MODE",
-            {"EMOJI", "ASCII", "BACK"},
-            {"RICH SYMBOLS", "PORTABLE", ""},
+        return Project2ArtChoiceMenu("RENDER MODE",
+            {MenuArt::EMOJI, MenuArt::ASCII, MenuArt::BACK},
             selectedOption_, RenderModeLabel(selectedRenderMode_));
     }
 
