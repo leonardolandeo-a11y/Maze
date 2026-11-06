@@ -52,6 +52,43 @@ namespace {
             option,
         });
     }
+    // Project 2 uses the same phosphor palette and block logo as the intro.
+    ftxui::Element ArcadeRow(std::string label, bool selected) {
+        using namespace ftxui;
+        auto row = hbox({text(selected ? " ▸ " : "   "), text(label), filler(),
+                         text(selected ? " ◂ " : "   ")});
+        return selected ? row | bold | color(Color::Black) | bgcolor(Color::CyanLight)
+                        : row | color(Color::White);
+    }
+
+    ftxui::Element ArcadePanel(std::string title, ftxui::Elements content,
+                              std::string controls) {
+        using namespace ftxui;
+        Elements lines{
+            text(" ESCAPE PROTOCOL / " + title) | bold | color(Color::CyanLight),
+            separator() | color(Color::Cyan),
+        };
+        for (auto& line : content) lines.push_back(std::move(line));
+        lines.push_back(separator() | color(Color::Cyan));
+        lines.push_back(paragraph(std::move(controls)) | color(Color::GrayLight));
+        return vbox(std::move(lines)) | size(WIDTH, EQUAL, 52) | borderRounded |
+            color(Color::CyanLight) | center | bgcolor(Color::Black);
+    }
+
+    ftxui::Element ArcadeLogo() {
+        using namespace ftxui;
+        Elements lines;
+        std::istringstream stream{std::string(MenuArt::MAZE_LOGO)};
+        std::string line;
+        while (std::getline(stream, line)) {
+            // The legacy art includes blank braille padding on its last line.
+            const auto padding = line.find("   ", line.find("╚═╝"));
+            if (padding != std::string::npos) line.erase(padding);
+            if (!line.empty()) lines.push_back(text(line) | hcenter);
+        }
+        return vbox(std::move(lines)) | bold | color(Color::CyanLight);
+    }
+
     int OptionCount(MenuScreen screen) {
         switch (screen) {
             case MenuScreen::Main:
@@ -313,12 +350,12 @@ ftxui::Element Menus::Render() const {
         const bool custom = currentScreen_ == MenuScreen::CustomSize;
         Elements lines;
         auto row = [&](std::string label, int index) {
-            auto element = text("  " + label + "  ");
-            return selectedOption_ == index ? element | bold | inverted | color(Color::CyanLight)
-                                          : element | color(Color::White);
+            return ArcadeRow(std::move(label), selectedOption_ == index);
         };
-        lines.push_back(text(custom ? "CUSTOM MAP SIZE" : "SELECT MAP SIZE") | bold | center | color(Color::CyanLight));
-        lines.push_back(separator());
+        lines.push_back(text(custom ? "CUSTOM MAP SIZE" : "SELECT MAP SIZE") |
+            bold | hcenter | color(Color::White));
+        lines.push_back(text("ROWS × COLUMNS") | hcenter | color(Color::GreenLight));
+        lines.push_back(separatorEmpty());
         if (custom) {
             lines.push_back(row("Rows:     [ " + customRows_ + " ]", 0));
             lines.push_back(row("Columns:  [ " + customColumns_ + " ]", 1));
@@ -330,8 +367,8 @@ ftxui::Element Menus::Render() const {
                 status = ConsoleUI::project2_size_error(size, Terminal::Size());
             } catch (const std::invalid_argument& e) { status = e.what(); }
             lines.push_back(separatorEmpty());
-            lines.push_back(text("Map cells: " + area));
-            lines.push_back(paragraph(status.empty() ? "Status: ✓ Valid size" : "Status: " + status)
+            lines.push_back(text("CELLS  " + area) | color(Color::White));
+            lines.push_back(paragraph(status.empty() ? "✓ READY TO GENERATE" : "! " + status)
                 | color(status.empty() ? Color::GreenLight : Color::RedLight));
             lines.push_back(separatorEmpty());
             lines.push_back(row("[ GENERATE ]", 2));
@@ -340,16 +377,40 @@ ftxui::Element Menus::Render() const {
             constexpr const char* labels[] = {"SMALL", "RECOMMENDED", "LARGE"};
             for (std::size_t index = 0; index < project2_map_sizes.size(); ++index) {
                 const auto size = project2_map_sizes[index];
-                lines.push_back(row(std::to_string(size.rows) + " × " + std::to_string(size.columns) +
-                    "     " + labels[index], static_cast<int>(index)));
+                lines.push_back(row(std::to_string(size.rows) + "×" + std::to_string(size.columns) +
+                    "      " + labels[index], static_cast<int>(index)));
             }
             lines.push_back(row("CUSTOM      CREATE YOUR SIZE", 3));
             lines.push_back(row("BACK", 4));
         }
-        lines.push_back(separator());
-        lines.push_back(text("Tab / arrows: select   Enter: confirm") | dim);
-        if (custom) lines.push_back(text("Type to replace • Backspace: erase • Esc: back") | dim);
-        return vbox(std::move(lines)) | size(WIDTH, LESS_THAN, 54) | borderRounded | center;
+        lines.push_back(separatorEmpty());
+        return ArcadePanel(custom ? "CUSTOM" : "MAP SIZE", std::move(lines), custom
+            ? "Tab / arrows: select • Enter: confirm\nType to replace • Backspace: erase • Esc: back"
+            : "Tab / arrows: select • Enter: confirm");
+    }
+
+    if (project2_mode_ && (currentScreen_ == MenuScreen::Main ||
+                          currentScreen_ == MenuScreen::Difficulty)) {
+        const std::string difficulty = selectedDifficulty_ == Difficulty::easy ? "EASY" :
+            selectedDifficulty_ == Difficulty::standard ? "MEDIUM" : "HARD";
+        Elements lines{ArcadeLogo(), separatorEmpty(),
+            text("SIZE " + std::to_string(selectedMapSize_.rows) + "×" +
+                std::to_string(selectedMapSize_.columns) + " | DIFFICULTY " + difficulty) |
+                hcenter | color(Color::GreenLight), separatorEmpty()};
+        const bool main = currentScreen_ == MenuScreen::Main;
+        const std::vector<std::string> labels = main
+            ? std::vector<std::string>{"START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"}
+            : std::vector<std::string>{"EASY", "MEDIUM", "HARD", "BACK"};
+        if (!main) {
+            lines.push_back(text(mapsReady_ ? "MAPS READY / SELECT DIFFICULTY" : "SELECT DIFFICULTY") |
+                hcenter | bold | color(Color::White));
+            lines.push_back(separatorEmpty());
+        }
+        for (std::size_t i = 0; i < labels.size(); ++i)
+            lines.push_back(ArcadeRow(labels[i], selectedOption_ == static_cast<int>(i)));
+        lines.push_back(separatorEmpty());
+        return ArcadePanel(main ? "MAIN MENU" : "DIFFICULTY", std::move(lines),
+            "W/S / arrows / Tab: select • Enter: confirm");
     }
 
     auto logo = RenderArt(MenuArt::MAZE_LOGO)
