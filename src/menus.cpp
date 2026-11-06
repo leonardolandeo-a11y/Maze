@@ -89,6 +89,137 @@ namespace {
         return vbox(std::move(lines)) | bold | color(Color::CyanLight);
     }
 
+    std::string DifficultyLabel(Difficulty difficulty) {
+        switch (difficulty) {
+            case Difficulty::easy: return "EASY";
+            case Difficulty::standard: return "MEDIUM";
+            case Difficulty::hard: return "HARD";
+        }
+        return "EASY";
+    }
+
+    std::string RenderModeLabel(RenderMode mode) {
+        return mode == RenderMode::emoji ? "EMOJI" : "ASCII";
+    }
+
+    ftxui::Element MainMenuRow(std::string label, bool selected) {
+        using namespace ftxui;
+        auto marker = text(selected ? "> " : "  ") |
+            color(selected ? Color::CyanLight : Color::GrayLight);
+        auto name = text(std::move(label)) |
+            color(selected ? Color::CyanLight : Color::White);
+        if (selected) name = name | bold;
+        return hbox({
+            std::move(marker),
+            std::move(name),
+            filler(),
+            selected ? text("SELECT") | color(Color::GreenLight) : text(""),
+        });
+    }
+
+    ftxui::Element StatusLine(std::string key, std::string value, ftxui::Color value_color) {
+        using namespace ftxui;
+        return hbox({
+            text(std::move(key)) | color(Color::GrayLight),
+            filler(),
+            text(std::move(value)) | bold | color(value_color),
+        });
+    }
+
+    ftxui::Element Project2MainMenu(Project2MapSize map_size,
+                                    Difficulty difficulty,
+                                    RenderMode render_mode,
+                                    bool maps_ready,
+                                    int selected_option) {
+        using namespace ftxui;
+
+        const auto terminal = Terminal::Size();
+        const int available_width = std::max(1, terminal.dimx - 4);
+        const int frame_width = std::min(118, available_width);
+        const bool short_screen = terminal.dimy < 24;
+        const bool wide_layout = frame_width >= 84 && !short_screen;
+        const bool show_full_logo = frame_width >= 48 && terminal.dimy >= 20;
+
+        Elements menu_rows;
+        const std::array<std::string, 5> labels{
+            "START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"
+        };
+        for (std::size_t index = 0; index < labels.size(); ++index) {
+            menu_rows.push_back(MainMenuRow(labels[index],
+                selected_option == static_cast<int>(index)));
+        }
+
+        auto menu_panel = vbox({
+            text("COMMANDS") | bold | color(Color::White),
+            separator() | color(Color::GrayDark),
+            vbox(std::move(menu_rows)),
+        }) | flex;
+
+        const std::string map_text = std::to_string(map_size.rows) + " x " +
+            std::to_string(map_size.columns);
+        auto status_panel = vbox({
+            text("CURRENT SETUP") | bold | color(Color::White),
+            separator() | color(Color::GrayDark),
+            StatusLine("MAP", map_text, Color::CyanLight),
+            StatusLine("DIFFICULTY", DifficultyLabel(difficulty), Color::GreenLight),
+            StatusLine("RENDER", RenderModeLabel(render_mode), Color::White),
+            StatusLine("MAP SET", maps_ready ? "READY" : "NOT GENERATED",
+                maps_ready ? Color::GreenLight : Color::YellowLight),
+        }) | flex;
+
+        Element body;
+        if (wide_layout) {
+            body = hbox({
+                menu_panel | flex,
+                separatorEmpty(),
+                separator() | color(Color::GrayDark),
+                separatorEmpty(),
+                status_panel | flex,
+            });
+        } else {
+            body = vbox({
+                std::move(menu_panel),
+                separatorEmpty(),
+                separator() | color(Color::GrayDark),
+                separatorEmpty(),
+                std::move(status_panel),
+            });
+        }
+
+        Element brand = show_full_logo
+            ? ArcadeLogo()
+            : text("MAZE // CIRCUITO DE ESCAPE") | bold | hcenter | color(Color::CyanLight);
+
+        Elements layout{
+            hbox({
+                text("ESCAPE PROTOCOL") | bold | color(Color::CyanLight),
+                filler(),
+                text("PROJECT 2") | color(Color::GrayLight),
+            }),
+            separator() | color(Color::Cyan),
+            separatorEmpty(),
+            std::move(brand),
+        };
+
+        if (!short_screen) {
+            layout.push_back(text("CIRCUITO DE ESCAPE") | hcenter | color(Color::GrayLight));
+            layout.push_back(separatorEmpty());
+        }
+
+        layout.push_back(std::move(body));
+        layout.push_back(separatorEmpty());
+        layout.push_back(separator() | color(Color::Cyan));
+        layout.push_back(text("W/S or arrows: navigate   Enter: select   Q: quit") |
+            hcenter | color(Color::GrayLight));
+
+        return vbox(std::move(layout)) |
+            size(WIDTH, EQUAL, frame_width) |
+            borderRounded |
+            color(Color::CyanLight) |
+            center |
+            bgcolor(Color::Black);
+    }
+
     int OptionCount(MenuScreen screen) {
         switch (screen) {
             case MenuScreen::Main:
@@ -389,27 +520,25 @@ ftxui::Element Menus::Render() const {
             : "Tab / arrows: select • Enter: confirm");
     }
 
-    if (project2_mode_ && (currentScreen_ == MenuScreen::Main ||
-                          currentScreen_ == MenuScreen::Difficulty)) {
-        const std::string difficulty = selectedDifficulty_ == Difficulty::easy ? "EASY" :
-            selectedDifficulty_ == Difficulty::standard ? "MEDIUM" : "HARD";
-        Elements lines{ArcadeLogo(), separatorEmpty(),
-            text("SIZE " + std::to_string(selectedMapSize_.rows) + "×" +
-                std::to_string(selectedMapSize_.columns) + " | DIFFICULTY " + difficulty) |
-                hcenter | color(Color::GreenLight), separatorEmpty()};
-        const bool main = currentScreen_ == MenuScreen::Main;
-        const std::vector<std::string> labels = main
-            ? std::vector<std::string>{"START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"}
-            : std::vector<std::string>{"EASY", "MEDIUM", "HARD", "BACK"};
-        if (!main) {
-            lines.push_back(text(mapsReady_ ? "MAPS READY / SELECT DIFFICULTY" : "SELECT DIFFICULTY") |
-                hcenter | bold | color(Color::White));
-            lines.push_back(separatorEmpty());
-        }
-        for (std::size_t i = 0; i < labels.size(); ++i)
+    if (project2_mode_ && currentScreen_ == MenuScreen::Main) {
+        return Project2MainMenu(selectedMapSize_, selectedDifficulty_, selectedRenderMode_,
+            mapsReady_, selectedOption_);
+    }
+
+    if (project2_mode_ && currentScreen_ == MenuScreen::Difficulty) {
+        Elements lines{
+            ArcadeLogo(),
+            separatorEmpty(),
+            text(mapsReady_ ? "MAPS READY / SELECT DIFFICULTY" : "SELECT DIFFICULTY") |
+                hcenter | bold | color(Color::White),
+            separatorEmpty(),
+        };
+        const std::array<std::string, 4> labels{"EASY", "MEDIUM", "HARD", "BACK"};
+        for (std::size_t i = 0; i < labels.size(); ++i) {
             lines.push_back(ArcadeRow(labels[i], selectedOption_ == static_cast<int>(i)));
+        }
         lines.push_back(separatorEmpty());
-        return ArcadePanel(main ? "MAIN MENU" : "DIFFICULTY", std::move(lines),
+        return ArcadePanel("DIFFICULTY", std::move(lines),
             "W/S / arrows / Tab: select • Enter: confirm");
     }
 
