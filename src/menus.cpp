@@ -9,6 +9,7 @@
 #include <string>
 
 #include <ftxui/dom/elements.hpp>
+#include <ftxui/dom/canvas.hpp>
 
 
 namespace {
@@ -27,108 +28,84 @@ namespace {
         return vbox(std::move(lines));
     }
 
-    ftxui::Element RenderArtCompact(std::string_view art) {
-        using namespace ftxui;
-        Elements lines;
-        std::istringstream stream{std::string(art)};
-        std::string line;
-        while (std::getline(stream, line)) {
-            if (!line.empty()) lines.push_back(text(line));
+    using PixelGlyph = std::array<std::string_view, 5>;
+
+    PixelGlyph PixelGlyphFor(char value) {
+        switch (value) {
+            case 'A': return {" ### ", "#   #", "#####", "#   #", "#   #"};
+            case 'B': return {"#### ", "#   #", "#### ", "#   #", "#### "};
+            case 'C': return {" ####", "#    ", "#    ", "#    ", " ####"};
+            case 'D': return {"#### ", "#   #", "#   #", "#   #", "#### "};
+            case 'E': return {"#####", "#    ", "#### ", "#    ", "#####"};
+            case 'F': return {"#####", "#    ", "#### ", "#    ", "#    "};
+            case 'G': return {" ####", "#    ", "# ###", "#   #", " ####"};
+            case 'H': return {"#   #", "#   #", "#####", "#   #", "#   #"};
+            case 'I': return {"#####", "  #  ", "  #  ", "  #  ", "#####"};
+            case 'J': return {"#####", "   # ", "   # ", "#  # ", " ##  "};
+            case 'K': return {"#   #", "#  # ", "###  ", "#  # ", "#   #"};
+            case 'L': return {"#    ", "#    ", "#    ", "#    ", "#####"};
+            case 'M': return {"#   #", "## ##", "# # #", "#   #", "#   #"};
+            case 'N': return {"#   #", "##  #", "# # #", "#  ##", "#   #"};
+            case 'O': return {" ### ", "#   #", "#   #", "#   #", " ### "};
+            case 'P': return {"#### ", "#   #", "#### ", "#    ", "#    "};
+            case 'Q': return {" ### ", "#   #", "#   #", "#  ##", " ####"};
+            case 'R': return {"#### ", "#   #", "#### ", "#  # ", "#   #"};
+            case 'S': return {" ####", "#    ", " ### ", "    #", "#### "};
+            case 'T': return {"#####", "  #  ", "  #  ", "  #  ", "  #  "};
+            case 'U': return {"#   #", "#   #", "#   #", "#   #", " ### "};
+            case 'V': return {"#   #", "#   #", "#   #", " # # ", "  #  "};
+            case 'W': return {"#   #", "#   #", "# # #", "## ##", "#   #"};
+            case 'X': return {"#   #", " # # ", "  #  ", " # # ", "#   #"};
+            case 'Y': return {"#   #", " # # ", "  #  ", "  #  ", "  #  "};
+            case 'Z': return {"#####", "   # ", "  #  ", " #   ", "#####"};
+            default: return {"     ", "     ", "     ", "     ", "     "};
         }
-        return vbox(std::move(lines));
     }
 
-    ftxui::Element Project2ArtOption(std::string_view art, bool selected) {
+    int CanvasLabelWidth(std::string_view label, int scale) {
+        int units = 0;
+        for (char value : label) units += value == ' ' ? 3 : 6;
+        return std::max(2, units * scale);
+    }
+
+    ftxui::Element CanvasLabel(std::string label, int scale, ftxui::Color color_value) {
         using namespace ftxui;
-        auto label = RenderArtCompact(art) |
-            color(selected ? Color::CyanLight : Color::White);
-        if (selected) label = label | bold;
-        return hbox({
-            text(selected ? "> " : "  ") |
-                color(selected ? Color::CyanLight : Color::GrayLight),
-            std::move(label),
-            filler(),
-            selected ? text("SELECT") | color(Color::GreenLight) : text(""),
-            text("  "),
+        const int width = CanvasLabelWidth(label, scale);
+        const int height = 5 * scale;
+        return canvas(width, height, [label = std::move(label), scale, color_value](Canvas& image) {
+            int origin_x = 0;
+            for (char value : label) {
+                if (value == ' ') {
+                    origin_x += 3 * scale;
+                    continue;
+                }
+                const auto glyph = PixelGlyphFor(value);
+                for (int row = 0; row < 5; ++row) {
+                    for (int column = 0; column < 5; ++column) {
+                        if (glyph[row][column] != '#') continue;
+                        for (int sy = 0; sy < scale; ++sy) {
+                            for (int sx = 0; sx < scale; ++sx) {
+                                image.DrawBlock(origin_x + column * scale + sx,
+                                                row * scale + sy,
+                                                true, color_value);
+                            }
+                        }
+                    }
+                }
+                origin_x += 6 * scale;
+            }
         });
     }
 
-    ftxui::Element Project2CompactArtOption(std::string_view art, bool selected) {
+    ftxui::Element ModernMazeLogo(bool compact) {
         using namespace ftxui;
-        auto label = RenderArtCompact(art) |
-            color(selected ? Color::CyanLight : Color::White);
-        if (selected) label = label | bold;
-        return hbox({
-            text(selected ? "▸ " : "  ") |
-                color(selected ? Color::CyanLight : Color::GrayLight),
-            std::move(label),
-            filler(),
-            selected ? text("SELECT") | color(Color::GreenLight) : text(""),
-            text("  "),
+        const int scale = compact ? 1 : 3;
+        auto wordmark = CanvasLabel("MAZE", scale, Color::RGB(77, 226, 232));
+        return vbox({
+            wordmark | hcenter,
+            compact ? text("") : text("CIRCUITO DE ESCAPE") |
+                hcenter | color(Color::RGB(128, 151, 161)),
         });
-    }
-
-    ftxui::Element RenderOption(
-        std::string_view art,
-        bool selected
-    ) {
-        using namespace ftxui;
-
-        auto option = RenderArt(art)
-            | color(selected ? Color::CyanLight : Color::White);
-
-        if (!selected) {
-            return hbox({
-                text("  "),
-                option,
-            });
-        }
-
-        return hbox({
-            vbox({
-                text(" "),
-                text(" "),
-                text("▸ "),
-                text(" "),
-            }) | color(Color::CyanLight),
-            option,
-        });
-    }
-    // Project 2 uses the same phosphor palette and block logo as the intro.
-    ftxui::Element ArcadeRow(std::string label, bool selected) {
-        using namespace ftxui;
-        auto row = hbox({text(selected ? " ▸ " : "   "), text(label), filler(),
-                         text(selected ? " ◂ " : "   ")});
-        return selected ? row | bold | color(Color::Black) | bgcolor(Color::CyanLight)
-                        : row | color(Color::White);
-    }
-
-    ftxui::Element ArcadePanel(std::string title, ftxui::Elements content,
-                              std::string controls) {
-        using namespace ftxui;
-        Elements lines{
-            text(" ESCAPE PROTOCOL / " + title) | bold | color(Color::CyanLight),
-            separator() | color(Color::Cyan),
-        };
-        for (auto& line : content) lines.push_back(std::move(line));
-        lines.push_back(separator() | color(Color::Cyan));
-        lines.push_back(paragraph(std::move(controls)) | color(Color::GrayLight));
-        return vbox(std::move(lines)) | size(WIDTH, EQUAL, 52) | borderRounded |
-            color(Color::CyanLight) | center | bgcolor(Color::Black);
-    }
-
-    ftxui::Element ArcadeLogo() {
-        using namespace ftxui;
-        Elements lines;
-        std::istringstream stream{std::string(MenuArt::MAZE_LOGO)};
-        std::string line;
-        while (std::getline(stream, line)) {
-            // The legacy art includes blank braille padding on its last line.
-            const auto padding = line.find("   ", line.find("╚═╝"));
-            if (padding != std::string::npos) line.erase(padding);
-            if (!line.empty()) lines.push_back(text(line) | hcenter);
-        }
-        return vbox(std::move(lines)) | bold | color(Color::CyanLight);
     }
 
     std::string DifficultyLabel(Difficulty difficulty) {
@@ -142,38 +119,6 @@ namespace {
 
     std::string RenderModeLabel(RenderMode mode) {
         return mode == RenderMode::emoji ? "EMOJI" : "ASCII";
-    }
-
-    ftxui::Element Project2Row(std::string label, bool selected,
-                               std::string hint = {}) {
-        using namespace ftxui;
-        auto marker = text(selected ? "> " : "  ") |
-            color(selected ? Color::CyanLight : Color::GrayLight);
-        auto name = text(std::move(label)) |
-            color(selected ? Color::CyanLight : Color::White);
-        if (selected) name = name | bold;
-        auto tail = hint.empty()
-            ? (selected ? text("SELECT") | color(Color::GreenLight) : text(""))
-            : text(std::move(hint)) | color(selected ? Color::GreenLight : Color::GrayLight);
-        return hbox({
-            text("  "),
-            std::move(marker),
-            std::move(name),
-            filler(),
-            std::move(tail),
-            text("  "),
-        });
-    }
-
-    ftxui::Element StatusLine(std::string key, std::string value, ftxui::Color value_color) {
-        using namespace ftxui;
-        return hbox({
-            text("  "),
-            text(std::move(key)) | color(Color::GrayLight),
-            filler(),
-            text(std::move(value)) | bold | color(value_color),
-            text("  "),
-        });
     }
 
     struct Project2FrameMetrics {
@@ -190,22 +135,61 @@ namespace {
         const int terminal_height = terminal.dimy > 0 ? terminal.dimy : 32;
         const auto mode = project2_menu_layout_for(terminal_width, terminal_height);
 
-        const int desired_width = std::max(40, terminal_width * 9 / 10);
+        const int desired_width = std::max(44, terminal_width * 9 / 10);
         const int available_width = terminal_width > 4 ? terminal_width - 2 : terminal_width;
         const int frame_width = std::max(1,
             std::min({142, desired_width, std::max(1, available_width)}));
 
-        const int desired_height = std::max(16, terminal_height * 4 / 5);
+        const int desired_height = std::max(18, terminal_height * 4 / 5);
         const int available_height = terminal_height > 4 ? terminal_height - 2 : terminal_height;
         const int frame_height = std::max(1,
-            std::min({38, desired_height, std::max(1, available_height)}));
+            std::min({40, desired_height, std::max(1, available_height)}));
 
         return {
             frame_width,
             frame_height,
             mode,
-            mode != Project2MenuLayout::compact && frame_width >= 56 && frame_height >= 23
+            mode != Project2MenuLayout::compact && frame_width >= 60 && frame_height >= 24
         };
+    }
+
+    ftxui::Element StatusChip(std::string label, std::string value, ftxui::Color accent) {
+        using namespace ftxui;
+        return hbox({
+            text(" " + std::move(label) + " ") | color(Color::RGB(125, 145, 154)),
+            text(" " + std::move(value) + " ") | bold | color(accent),
+        }) | borderRounded | borderStyled(Color::RGB(47, 65, 72));
+    }
+
+    ftxui::Element MenuCard(std::string title,
+                            std::string subtitle,
+                            bool selected) {
+        using namespace ftxui;
+        const auto accent = Color::RGB(77, 226, 232);
+        const auto card_bg = selected ? Color::RGB(12, 39, 46) : Color::RGB(11, 18, 23);
+        auto title_element = text(std::move(title)) | bold |
+            color(selected ? accent : Color::RGB(224, 234, 238));
+        auto subtitle_element = text(std::move(subtitle)) |
+            color(Color::RGB(115, 139, 149));
+
+        auto content = vbox({
+            hbox({
+                text(selected ? " ● " : " ○ ") |
+                    color(selected ? accent : Color::RGB(74, 91, 99)),
+                std::move(title_element),
+                filler(),
+                selected ? text("ENTER") | bold | color(Color::RGB(78, 239, 165))
+                         : text(""),
+                text(" "),
+            }),
+            hbox({text("   "), std::move(subtitle_element)}),
+        });
+
+        return std::move(content) |
+            size(HEIGHT, EQUAL, 4) |
+            borderRounded |
+            borderStyled(selected ? accent : Color::RGB(47, 65, 72)) |
+            bgcolor(card_bg);
     }
 
     ftxui::Element Project2Shell(std::string section,
@@ -215,27 +199,23 @@ namespace {
         using namespace ftxui;
         const auto metrics = Project2Metrics();
         const bool compact = metrics.mode == Project2MenuLayout::compact;
+        const auto accent = Color::RGB(77, 226, 232);
+        const auto background = Color::RGB(7, 11, 15);
 
-        Elements content;
-        if (!compact) {
-            content.push_back(hbox({
-                text("ESCAPE PROTOCOL") | bold | color(Color::CyanLight),
+        Elements content{
+            hbox({
+                text(" ESCAPE PROTOCOL ") | bold | color(accent),
                 filler(),
-                text(std::move(section)) | color(Color::GrayLight),
-            }));
-            content.push_back(separator() | color(Color::Cyan));
-        }
+                text(" " + std::move(section) + " ") |
+                    color(Color::RGB(127, 149, 158)),
+            }),
+            separator() | color(Color::RGB(31, 51, 59)),
+        };
 
         if (show_brand) {
-            if (metrics.show_logo) {
-                content.push_back(separatorEmpty());
-                content.push_back(ArcadeLogo());
-                content.push_back(text("CIRCUITO DE ESCAPE") |
-                    hcenter | color(Color::GrayLight));
-            } else {
-                content.push_back(text("MAZE // CIRCUITO DE ESCAPE") |
-                    bold | hcenter | color(Color::CyanLight));
-            }
+            content.push_back(separatorEmpty());
+            content.push_back(ModernMazeLogo(compact));
+            if (!compact) content.push_back(separatorEmpty());
         }
 
         content.push_back(vbox({
@@ -244,17 +224,17 @@ namespace {
             filler(),
         }) | flex);
 
-        content.push_back(separator() | color(Color::Cyan));
+        content.push_back(separator() | color(Color::RGB(31, 51, 59)));
         content.push_back(text(std::move(controls)) |
-            hcenter | color(Color::GrayLight));
+            hcenter | color(Color::RGB(116, 137, 146)));
 
         return vbox(std::move(content)) |
             size(WIDTH, EQUAL, metrics.width) |
             size(HEIGHT, EQUAL, metrics.height) |
             borderRounded |
-            color(Color::CyanLight) |
+            borderStyled(Color::RGB(48, 117, 128)) |
             center |
-            bgcolor(Color::Black);
+            bgcolor(background);
     }
 
     ftxui::Element Project2MainMenu(Project2MapSize map_size,
@@ -267,181 +247,123 @@ namespace {
         const bool split = metrics.mode == Project2MenuLayout::split;
         const bool compact = metrics.mode == Project2MenuLayout::compact;
 
-        Elements menu_rows;
         const std::array<std::string, 5> labels{
             "START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"
         };
-        const std::array<std::string_view, 5> arts{
-            MenuArt::START_GAME, MenuArt::DIFFICULTY, MenuArt::RENDER_MODE,
-            MenuArt::HELP, MenuArt::QUIT
+        const std::array<std::string, 5> subtitles{
+            "Choose a board and prepare a new run",
+            "Select Easy, Medium or Hard",
+            "Switch between Emoji and ASCII",
+            "Controls, objectives and rules",
+            "Close Circuito de Escape"
         };
-        const bool spacious = metrics.height >= 30;
-        const bool art_menu = metrics.mode == Project2MenuLayout::split &&
-            metrics.height >= 30 && metrics.width >= 100;
-        for (std::size_t index = 0; index < labels.size(); ++index) {
-            menu_rows.push_back(art_menu
-                ? Project2CompactArtOption(arts[index],
-                    selected_option == static_cast<int>(index))
-                : Project2Row(labels[index],
-                    selected_option == static_cast<int>(index)));
-            if (!art_menu && spacious && index + 1 < labels.size()) {
-                menu_rows.push_back(separatorEmpty());
-            }
-        }
 
-        auto menu_panel = vbox({
-            text("COMMANDS") | bold | color(Color::White),
-            separator() | color(Color::GrayDark),
-            vbox(std::move(menu_rows)),
-        }) | flex;
+        Elements cards;
+        for (std::size_t index = 0; index < labels.size(); ++index) {
+            cards.push_back(MenuCard(labels[index], subtitles[index],
+                selected_option == static_cast<int>(index)));
+            if (index + 1 < labels.size()) cards.push_back(separatorEmpty());
+        }
 
         const std::string map_text = std::to_string(map_size.rows) + " x " +
             std::to_string(map_size.columns);
-        Elements status_rows{
-            text("CURRENT SETUP") | bold | color(Color::White),
-            separator() | color(Color::GrayDark),
-            StatusLine("MAP", map_text, Color::CyanLight),
-        };
-        if (spacious) status_rows.push_back(separatorEmpty());
-        status_rows.push_back(StatusLine("DIFFICULTY", DifficultyLabel(difficulty),
-            Color::GreenLight));
-        if (spacious) status_rows.push_back(separatorEmpty());
-        status_rows.push_back(StatusLine("RENDER", RenderModeLabel(render_mode), Color::White));
-        if (spacious) status_rows.push_back(separatorEmpty());
-        status_rows.push_back(StatusLine("MAP SET", maps_ready ? "READY" : "NOT GENERATED",
-            maps_ready ? Color::GreenLight : Color::YellowLight));
-        auto status_panel = vbox(std::move(status_rows)) | flex;
+        const std::string selected_label = labels[std::clamp(selected_option, 0, 4)];
+
+        auto nav = vbox(std::move(cards));
+        auto overview = vbox({
+            text("SELECTED") | bold | color(Color::RGB(119, 145, 155)),
+            separatorEmpty(),
+            CanvasLabel(selected_label, compact ? 1 : 2, Color::RGB(77, 226, 232)) | hcenter,
+            filler(),
+            text("RUN SETUP") | bold | color(Color::RGB(119, 145, 155)),
+            separatorEmpty(),
+            hbox({
+                StatusChip("MAP", map_text, Color::RGB(77, 226, 232)),
+                separatorEmpty(),
+                StatusChip("LEVEL", DifficultyLabel(difficulty), Color::RGB(78, 239, 165)),
+            }),
+            separatorEmpty(),
+            hbox({
+                StatusChip("VIEW", RenderModeLabel(render_mode), Color::RGB(224, 234, 238)),
+                separatorEmpty(),
+                StatusChip("MAPS", maps_ready ? "READY" : "PENDING",
+                    maps_ready ? Color::RGB(78, 239, 165) : Color::RGB(255, 174, 66)),
+            }),
+        }) | flex;
 
         Element body;
         if (split) {
             body = hbox({
-                menu_panel | flex,
+                nav | flex,
                 separatorEmpty(),
-                separator() | color(Color::GrayDark),
                 separatorEmpty(),
-                status_panel | flex,
-            });
-        } else if (compact) {
-            body = vbox({
-                std::move(menu_panel),
-                separator() | color(Color::GrayDark),
-                text(map_text + "  |  " + DifficultyLabel(difficulty) + "  |  " +
-                    RenderModeLabel(render_mode)) | hcenter | color(Color::GrayLight),
-                text(maps_ready ? "MAP SET READY" : "MAP SET NOT GENERATED") |
-                    hcenter | color(maps_ready ? Color::GreenLight : Color::YellowLight),
+                overview | flex,
             });
         } else {
             body = vbox({
-                std::move(menu_panel),
-                separatorEmpty(),
-                separator() | color(Color::GrayDark),
-                separatorEmpty(),
-                std::move(status_panel),
+                std::move(nav),
+                compact ? text("") : separatorEmpty(),
+                compact ? text(map_text + "  •  " + DifficultyLabel(difficulty) + "  •  " +
+                    RenderModeLabel(render_mode)) |
+                    hcenter | color(Color::RGB(119, 145, 155))
+                    : std::move(overview),
             });
         }
 
         return Project2Shell("MAIN MENU", std::move(body),
-            compact ? "Arrows: move   Enter: select   Q: quit"
-                    : "W/S or arrows: navigate   Enter: select   Q: quit");
+            compact ? "Arrows  •  Enter  •  Q"
+                    : "W/S or arrows: navigate   •   Enter: select   •   Q: quit");
     }
 
     ftxui::Element Project2ChoiceMenu(std::string section,
                                       const std::vector<std::string>& labels,
-                                      const std::vector<std::string>& descriptions,
                                       int selected_option,
                                       std::string current_value) {
         using namespace ftxui;
         const auto metrics = Project2Metrics();
-        Elements rows;
-        const bool spacious = metrics.height >= 30;
+        Elements cards;
         for (std::size_t index = 0; index < labels.size(); ++index) {
-            rows.push_back(Project2Row(labels[index],
-                selected_option == static_cast<int>(index),
-                index < descriptions.size() ? descriptions[index] : ""));
-            if (spacious && index + 1 < labels.size()) {
-                rows.push_back(separatorEmpty());
-            }
+            const std::string subtitle =
+                labels[index] == "BACK" ? "Return to main menu" :
+                (section == "RENDER MODE"
+                    ? (labels[index] == "EMOJI" ? "Rich symbols and markers" : "Portable text rendering")
+                    : (labels[index] == "EASY" ? "Lowest verified route cost" :
+                       labels[index] == "MEDIUM" ? "Balanced verified route cost" :
+                       "Highest verified route cost"));
+            cards.push_back(MenuCard(labels[index], subtitle,
+                selected_option == static_cast<int>(index)));
+            if (index + 1 < labels.size()) cards.push_back(separatorEmpty());
         }
 
-        auto choices = vbox({
-            text(section) | bold | color(Color::White),
-            separator() | color(Color::GrayDark),
-            vbox(std::move(rows)),
-        });
+        auto choice_list = vbox(std::move(cards));
+        const std::string selected = labels[std::clamp(selected_option, 0,
+            static_cast<int>(labels.size()) - 1)];
 
         Element body;
         if (metrics.mode == Project2MenuLayout::split) {
             body = hbox({
-                choices | flex,
+                choice_list | flex,
                 separatorEmpty(),
-                separator() | color(Color::GrayDark),
                 separatorEmpty(),
                 vbox({
-                    text("CURRENT") | bold | color(Color::White),
-                    separator() | color(Color::GrayDark),
-                    text(std::move(current_value)) | bold | color(Color::GreenLight),
+                    text("SELECTED") | bold | color(Color::RGB(119, 145, 155)),
                     separatorEmpty(),
-                    text("Changes apply without altering map generation or gameplay.") |
-                        color(Color::GrayLight),
+                    CanvasLabel(selected, 2, Color::RGB(77, 226, 232)) | hcenter,
+                    filler(),
+                    StatusChip("CURRENT", std::move(current_value), Color::RGB(78, 239, 165)),
                 }) | flex,
             });
         } else {
             body = vbox({
-                std::move(choices),
+                std::move(choice_list),
                 separatorEmpty(),
-                text("CURRENT  " + current_value) | hcenter | color(Color::GreenLight),
+                text("CURRENT  " + current_value) |
+                    hcenter | color(Color::RGB(78, 239, 165)),
             });
         }
 
         return Project2Shell(section, std::move(body),
-            "W/S or arrows: navigate   Enter: confirm   Back: return");
-    }
-
-    ftxui::Element Project2CompactChoiceMenu(
-        std::string section,
-        const std::vector<std::string>& labels,
-        const std::vector<std::string_view>& arts,
-        int selected_option,
-        std::string current_value) {
-        using namespace ftxui;
-        const auto metrics = Project2Metrics();
-        const bool use_art = metrics.mode != Project2MenuLayout::compact &&
-            metrics.width >= 72 && metrics.height >= 24;
-
-        Elements rows;
-        for (std::size_t index = 0; index < labels.size(); ++index) {
-            rows.push_back(use_art
-                ? Project2CompactArtOption(arts[index],
-                    selected_option == static_cast<int>(index))
-                : Project2Row(labels[index],
-                    selected_option == static_cast<int>(index)));
-            if (!use_art && index + 1 < labels.size()) rows.push_back(separatorEmpty());
-        }
-
-        Element choices = vbox(std::move(rows));
-        Element body;
-        if (metrics.mode == Project2MenuLayout::split) {
-            body = hbox({
-                std::move(choices) | flex,
-                separatorEmpty(),
-                separator() | color(Color::GrayDark),
-                separatorEmpty(),
-                vbox({
-                    text("CURRENT") | bold | color(Color::White),
-                    separator() | color(Color::GrayDark),
-                    text(std::move(current_value)) | bold | color(Color::GreenLight),
-                }) | flex,
-            });
-        } else {
-            body = vbox({
-                std::move(choices),
-                separatorEmpty(),
-                text("CURRENT  " + current_value) | hcenter | color(Color::GreenLight),
-            });
-        }
-
-        return Project2Shell(section, std::move(body),
-            "W/S or arrows: navigate   Enter: confirm   Back: return");
+            "W/S or arrows: navigate   •   Enter: confirm   •   Back: return");
     }
 
     int OptionCount(MenuScreen screen) {
@@ -758,16 +680,14 @@ ftxui::Element Menus::Render() const {
     }
 
     if (project2_mode_ && currentScreen_ == MenuScreen::Difficulty) {
-        return Project2CompactChoiceMenu("DIFFICULTY",
+        return Project2ChoiceMenu("DIFFICULTY",
             {"EASY", "MEDIUM", "HARD", "BACK"},
-            {MenuArt::EASY, MenuArt::MEDIUM, MenuArt::HARD, MenuArt::BACK},
             selectedOption_, DifficultyLabel(selectedDifficulty_));
     }
 
     if (project2_mode_ && currentScreen_ == MenuScreen::RenderMode) {
-        return Project2CompactChoiceMenu("RENDER MODE",
+        return Project2ChoiceMenu("RENDER MODE",
             {"EMOJI", "ASCII", "BACK"},
-            {MenuArt::EMOJI, MenuArt::ASCII, MenuArt::BACK},
             selectedOption_, RenderModeLabel(selectedRenderMode_));
     }
 
