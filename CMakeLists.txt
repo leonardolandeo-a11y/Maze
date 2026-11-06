@@ -103,6 +103,7 @@ add_executable(Maze_test
     tests/map_generation/map_batch_test.cpp
     tests/map_generation/map_storage_test.cpp
     tests/map_generation/map_generator_cli_test.cpp
+    tests/project2_generation_test.cpp
     tests/project2_integration_test.cpp
 )
 

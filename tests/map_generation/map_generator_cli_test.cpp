@@ -25,6 +25,7 @@ void usage_and_validation_test() {
             {"--workers", "0"},
             {"--candidates", "11"},
             {"--rows", "3", "--columns", "3"},
+            {"--rows", "100", "--columns", "150"},
             {"--rows", "10", "--rows", "20"},
             {"--rough-percent", "101"},
             {"--help", "--seed", "4"}}) {
