@@ -3,11 +3,13 @@
 #include <ftxui/component/event.hpp>
 #include <ftxui/dom/elements.hpp>
 #include "circuit_escape/game_rules.h"
+#include "circuit_escape/project2_generation.h"
 #include "circuit_escape/console_ui.h"
 
 enum class MenuScreen {
     Main,
     Scenario,
+    MapSize,
     Difficulty,
     RenderMode,
     Help
@@ -16,6 +18,7 @@ enum class MenuScreen {
 enum class MenuCommand {
     none,
     startGame,
+    generateMaps,
     quit
 };
 
@@ -34,7 +37,12 @@ public:
     [[nodiscard]]Difficulty selectedDifficulty() const noexcept;
     [[nodiscard]]RenderMode selectedRenderMode() const noexcept;
 
+    Project2MapSize selectedMapSize() const { return selectedMapSize_; }
+    void generationFinished(bool success);
+
 private:
+    Project2MapSize selectedMapSize_ = project2_map_sizes.front();
+    bool mapsReady_ = false;
     bool project2_mode_ = false;
     MenuScreen currentScreen_ = MenuScreen::Main;
     int selectedOption_ = 0;

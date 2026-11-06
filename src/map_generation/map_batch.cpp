@@ -1,5 +1,6 @@
 #include "circuit_escape/map_generation/map_batch.h"
 #include "circuit_escape/graph.h"
+#include "circuit_escape/map_generation/map_sizes.h"
 
 #include <algorithm>
 #include <atomic>
@@ -14,6 +15,7 @@
 namespace {
 
 void validate_config(const MapBatchConfig& config) {
+    validate_project2_map_size({config.rows, config.columns});
     if (config.rows < 3 || config.columns < 3 ||
         config.rows > std::numeric_limits<std::size_t>::max() / config.columns ||
         config.rows * config.columns > 1'000'000 ||

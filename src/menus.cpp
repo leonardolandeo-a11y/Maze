@@ -54,6 +54,8 @@ namespace {
         switch (screen) {
             case MenuScreen::Main:
                 return 6;
+            case MenuScreen::MapSize:
+                return static_cast<int>(project2_map_sizes.size()) + 1;
             case MenuScreen::Scenario:
                 return 3;
             case MenuScreen::Difficulty:
@@ -104,7 +106,7 @@ bool Menus::OnEvent(ftxui::Event event) {
         if (currentScreen_ == MenuScreen::Main) {
             if (project2_mode_) {
                 switch (selectedOption_) {
-                    case 0: pendingCommand_ = MenuCommand::startGame; return true;
+                    case 0: currentScreen_ = MenuScreen::MapSize; break;
                     case 1: currentScreen_ = MenuScreen::Difficulty; break;
                     case 2: currentScreen_ = MenuScreen::RenderMode; break;
                     case 3: currentScreen_ = MenuScreen::Help; break;
@@ -141,7 +143,19 @@ bool Menus::OnEvent(ftxui::Event event) {
             return true;
         }
 
+        if (currentScreen_ == MenuScreen::MapSize) {
+            if (selectedOption_ < static_cast<int>(project2_map_sizes.size())) {
+                selectedMapSize_ = project2_map_sizes[selectedOption_];
+                mapsReady_ = false;
+                pendingCommand_ = MenuCommand::generateMaps;
+            }
+            currentScreen_ = MenuScreen::Main;
+            selectedOption_ = 0;
+            return true;
+        }
         if (currentScreen_ == MenuScreen::Difficulty) {
+            if (project2_mode_ && mapsReady_ && selectedOption_ < 3)
+                pendingCommand_ = MenuCommand::startGame;
             switch (selectedOption_) {
                 case 0:
                     selectedDifficulty_ = Difficulty::easy;
@@ -276,6 +290,13 @@ ftxui::Element Menus::Render() const {
         };
             break;
 
+        case MenuScreen::MapSize:
+            options.push_back(text("SELECT MAP SIZE") | bold);
+            for (std::size_t index = 0; index < project2_map_sizes.size(); ++index)
+                options.push_back(text((selectedOption_ == static_cast<int>(index) ? "> " : "  ") +
+                    map_size_label(project2_map_sizes[index])));
+            options.push_back(text(selectedOption_ == static_cast<int>(project2_map_sizes.size()) ? "> Back" : "  Back"));
+            break;
         case MenuScreen::Scenario:
             options = {
             RenderOption(MenuArt::SCENARIO_1, selectedOption_ == 0),
@@ -322,6 +343,7 @@ ftxui::Element Menus::Render() const {
         separatorEmpty(),
         separatorEmpty(),
         separatorEmpty(),
+        project2_mode_ ? text("MAP SIZE: " + map_size_label(selectedMapSize_)) : text(""),
         menuOptions,
     });
     ftxui::Element rightPanel = filler();
@@ -341,4 +363,10 @@ ftxui::Element Menus::Render() const {
     | size(WIDTH, GREATER_THAN, 1)
     | size(HEIGHT, GREATER_THAN, 1)
     | bgcolor(Color::Black);
+}
+void Menus::generationFinished(bool success) {
+    mapsReady_ = success;
+    currentScreen_ = success ? MenuScreen::Difficulty : MenuScreen::Main;
+    selectedOption_ = 0;
+    pendingCommand_ = MenuCommand::none;
 }

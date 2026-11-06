@@ -29,6 +29,7 @@ Number read_number(const std::string& value, std::string_view option) {
 
 void print_usage(std::ostream& output) {
     output << "Usage: map_generator [options]\n"
+           << "  Allowed dimensions: 10x15, 20x30, 40x60\n"
            << "  --rows N              Map height (default: 10)\n"
            << "  --columns N           Map width (default: 15)\n"
            << "  --seed N              Base random seed (default: 12345)\n"

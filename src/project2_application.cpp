@@ -128,13 +128,17 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
     std::atomic<bool> victory_active{false};
     std::atomic<bool> death_active{false};
     std::atomic<bool> running{true};
+    std::atomic<bool> loading_active{false};
+    Project2Generation generation;
+    std::filesystem::path active_maps = maps_directory_;
+    int loading_frame = 0;
     int startup_frame = 0;
     int victory_frame = 0;
     int death_frame = 0;
 
     auto load_difficulty = [&](SavedDifficulty value) {
         try {
-            SavedMap map = load_map(map_file(maps_directory_, value));
+            SavedMap map = load_map(map_file(active_maps, value));
             if (map.difficulty != value) {
                 throw std::runtime_error("Map difficulty does not match the selected level");
             }
@@ -152,6 +156,7 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
         } catch (const std::exception& exception) {
             error = exception.what();
             session.reset();
+            menus.generationFinished(false);
             menu = true;
         }
     };
@@ -166,10 +171,18 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
         if (startup_active) {
             return startup_animation.RenderStartupFrame(startup_frame);
         }
+        if (generation.loading()) {
+            static constexpr const char* frames[] = {"|", "/", "-", "\\"};
+            return vbox({text("GENERATING MAPS") | bold,
+                text("Kruskal + Dijkstra + validation"),
+                text(map_size_label(menus.selectedMapSize())),
+                text(std::string(frames[loading_frame % 4]) + " Generating..."),
+                text("Q: quit (waits for current batch)")}) | center | bgcolor(Color::Black);
+        }
         if (menu || !session) {
             return vbox({
-                menus.Render(),
-                error.empty() ? text("") : text(error) | color(Color::RedLight)
+                error.empty() ? text("") : paragraph(error) | color(Color::RedLight),
+                menus.Render()
             }) | bgcolor(Color::Black);
         }
         if (victory_active) {
@@ -199,9 +212,27 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
             screen.Exit();
             return true;
         }
+        if (generation.loading()) {
+            if (event == Event::Custom) {
+                ++loading_frame;
+                if (generation.poll()) {
+                    loading_active = false;
+                    error = generation.error();
+                    if (error.empty()) active_maps = generation.directory();
+                    menus.generationFinished(error.empty());
+                    menu = true;
+                }
+            }
+            return true;
+        }
         if (menu || !session) {
             const bool handled = menus.OnEvent(event);
             switch (menus.takeCommand()) {
+                case MenuCommand::generateMaps:
+                    error.clear();
+                    generation.start(menus.selectedMapSize(), "generated-maps");
+                    loading_active = true;
+                    return true;
                 case MenuCommand::startGame:
                     load_difficulty(saved_difficulty(menus.selectedDifficulty()));
                     return true;
@@ -289,7 +320,7 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
                     if (death_active && death_frame < DeathAnimation::maxFrames)
                         ++death_frame;
                 });
-            } else {
+            } else if (!loading_active) {
                 continue;
             }
             screen.Post(Event::Custom);

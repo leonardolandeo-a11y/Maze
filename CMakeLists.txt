@@ -39,6 +39,8 @@ add_library(Maze_core
     src/map_generation/map_batch.cpp
     src/map_generation/map_storage.cpp
     src/map_generation/map_generator_cli.cpp
+    src/map_generation/map_sizes.cpp
+    src/project2_generation.cpp
     src/project2_session.cpp
     src/project2_application.cpp
 )
