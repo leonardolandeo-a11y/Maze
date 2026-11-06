@@ -3,6 +3,7 @@
 #include "circuit_escape/help.h"
 
 #include <sstream>
+#include <array>
 #include <algorithm>
 #include <stdexcept>
 #include <string>
