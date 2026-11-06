@@ -1,6 +1,8 @@
 param(
-    [string]$BuildDirectory = "cmake-build-debug",
-    [string]$MapsDirectory = "cmake-build-debug\stage10-maps-items",
+    [string]$BuildDirectory = "build",
+    [string]$MapsDirectory = "assets\maps",
+    [ValidateSet("Debug", "Release", "RelWithDebInfo", "MinSizeRel")]
+    [string]$Configuration = "Release",
     [string]$CMake = "",
     [string]$NSIS = ""
 )
@@ -56,14 +58,14 @@ foreach ($name in @("mapa_facil.txt", "mapa_medio.txt", "mapa_dificil.txt")) {
     }
 }
 
-& $CMake -S $root -B $build
+& $CMake -S $root -B $build "-DCMAKE_BUILD_TYPE=$Configuration"
 if ($LASTEXITCODE -ne 0) { throw "CMake configuration failed" }
-& $CMake --build $build --target map_generator escape_circuit
+& $CMake --build $build --config $Configuration --target map_generator escape_circuit
 if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
 
 New-Item -ItemType Directory -Path $distribution -Force | Out-Null
 if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
-& $CMake --install $build --prefix $stage --component Runtime
+& $CMake --install $build --config $Configuration --prefix $stage --component Runtime
 if ($LASTEXITCODE -ne 0) { throw "CMake installation failed" }
 
 $maps = Join-Path $stage "assets\maps"

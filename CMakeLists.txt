@@ -105,6 +105,15 @@ add_executable(Maze_test
 )
 
 target_link_libraries(Maze_test PRIVATE Maze_core)
+# These tests use assert; keep checks active in Release builds as well.
+if(MSVC)
+    target_compile_options(Maze_test PRIVATE /UNDEBUG)
+else()
+    target_compile_options(Maze_test PRIVATE -UNDEBUG)
+endif()
+target_compile_definitions(Maze_test PRIVATE
+    MAZE_DEFAULT_MAPS_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}/assets/maps"
+)
 
 add_test(NAME Maze_test COMMAND Maze_test)
 
@@ -119,5 +128,13 @@ install(FILES
     installer/launch-generator.cmd
     installer/launch-generated-game.cmd
     DESTINATION .
+    COMPONENT Runtime
+)
+
+install(FILES
+    assets/maps/mapa_facil.txt
+    assets/maps/mapa_medio.txt
+    assets/maps/mapa_dificil.txt
+    DESTINATION assets/maps
     COMPONENT Runtime
 )
