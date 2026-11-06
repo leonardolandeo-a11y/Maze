@@ -590,7 +590,7 @@ ftxui::Element Menus::Render() const {
         const bool custom = currentScreen_ == MenuScreen::CustomSize;
         Elements lines;
         auto row = [&](std::string label, int index) {
-            return ArcadeRow(std::move(label), selectedOption_ == index);
+            return Project2Row(std::move(label), selectedOption_ == index);
         };
         lines.push_back(text(custom ? "CUSTOM MAP SIZE" : "SELECT MAP SIZE") |
             bold | hcenter | color(Color::White));
@@ -624,9 +624,11 @@ ftxui::Element Menus::Render() const {
             lines.push_back(row("BACK", 4));
         }
         lines.push_back(separatorEmpty());
-        return ArcadePanel(custom ? "CUSTOM" : "MAP SIZE", std::move(lines), custom
-            ? "Tab / arrows: select • Enter: confirm\nType to replace • Backspace: erase • Esc: back"
-            : "Tab / arrows: select • Enter: confirm");
+        return Project2Shell(custom ? "CUSTOM MAP SIZE" : "MAP SIZE",
+            vbox(std::move(lines)),
+            custom
+                ? "Tab/arrows: select   Enter: confirm   Backspace: erase   Esc: back"
+                : "W/S or arrows: navigate   Enter: confirm   Back: return");
     }
 
     if (project2_mode_ && currentScreen_ == MenuScreen::Main) {
@@ -635,20 +637,23 @@ ftxui::Element Menus::Render() const {
     }
 
     if (project2_mode_ && currentScreen_ == MenuScreen::Difficulty) {
-        Elements lines{
-            ArcadeLogo(),
-            separatorEmpty(),
-            text(mapsReady_ ? "MAPS READY / SELECT DIFFICULTY" : "SELECT DIFFICULTY") |
-                hcenter | bold | color(Color::White),
-            separatorEmpty(),
-        };
-        const std::array<std::string, 4> labels{"EASY", "MEDIUM", "HARD", "BACK"};
-        for (std::size_t i = 0; i < labels.size(); ++i) {
-            lines.push_back(ArcadeRow(labels[i], selectedOption_ == static_cast<int>(i)));
-        }
-        lines.push_back(separatorEmpty());
-        return ArcadePanel("DIFFICULTY", std::move(lines),
-            "W/S / arrows / Tab: select • Enter: confirm");
+        return Project2ChoiceMenu("DIFFICULTY",
+            {"EASY", "MEDIUM", "HARD", "BACK"},
+            {"LOWER COST", "BALANCED", "HIGHER COST", ""},
+            selectedOption_, DifficultyLabel(selectedDifficulty_));
+    }
+
+    if (project2_mode_ && currentScreen_ == MenuScreen::RenderMode) {
+        return Project2ChoiceMenu("RENDER MODE",
+            {"EMOJI", "ASCII", "BACK"},
+            {"RICH SYMBOLS", "PORTABLE", ""},
+            selectedOption_, RenderModeLabel(selectedRenderMode_));
+    }
+
+    if (project2_mode_ && currentScreen_ == MenuScreen::Help) {
+        Help helpView;
+        return Project2Shell("HELP", helpView.RenderMenu(),
+            "Enter: back   Q: quit", false);
     }
 
     auto logo = RenderArt(MenuArt::MAZE_LOGO)
