@@ -19,14 +19,26 @@ ctest --test-dir build --output-on-failure
 ./build/escape_circuit
 ```
 
-El flujo interactivo es **Start Game → SELECT MAP SIZE → generación animada →
-Easy / Medium / Hard → partida**. El selector ofrece exactamente **10x15, 20x30,
-40x60 y Back**; flechas/W/S y Enter. El tamaño elegido aparece en menú y HUD.
-Se conservan Render Mode, Help y Quit.
+El flujo interactivo es **Start Game → SELECT MAP SIZE → preset o CUSTOM →
+validación → generación animada → Easy / Medium / Hard → partida**. El selector
+ofrece **10x15 SMALL, 20x30 RECOMMENDED, 40x60 LARGE, CUSTOM y BACK**.
+CUSTOM permite escribir filas/columnas; Tab/flechas cambian campo y Enter confirma.
+Al entrar a un campo, escribir reemplaza el valor; Backspace borra. No admite letras,
+signos ni decimales. Muestra área y validación en vivo antes de generar.
 
-La lista única `project2_map_sizes` en `map_generation/map_sizes.h` restringe
-la UI y `run_map_batch` (también el CLI): dimensiones libres, invertidas o
-`100x150` se rechazan antes de generar o escribir archivos.
+`validate_project2_map_size`, en `map_generation/map_sizes.cpp`, centraliza las reglas
+para presets, CUSTOM, generación asíncrona y `run_map_batch` (incluido CLI):
+**5 ≤ rows ≤ 40, 5 ≤ columns ≤ 60, rows × columns ≤ 2400,
+rows ≤ columns ≤ 2 × rows**. 30x40 y 15x20 están soportados. 100x150, 50x50 y
+40x70 exceden límites; 10x60 y 40x10 tienen proporciones no soportadas.
+El límite de área es redundante con los máximos por eje y se conserva explícito.
+
+Antes de generar desde UI, el renderer comprueba las medidas reales del panel:
+FULL MAP debe mostrar todas las columnas y como máximo dos filas por línea de
+terminal, con espacio para HUD y controles. Un terminal insuficiente muestra
+`Terminal too small for FULL MAP` sin iniciar el worker. DETAIL mantiene cámara
+centrada en el jugador. Se conserva el layout responsive de PR #130; la validación
+de terminal es propia de la UI y no limita la generación CLI sin pantalla.
 
 Cada selección llama directamente a `run_map_batch` en un worker `std::async`:
 Kruskal → Dijkstra → GameVerifier → MapSelector → save/load. No se ejecutan
@@ -34,7 +46,7 @@ comandos shell. FTXUI anima `Generating...` cada 60 ms mediante `Post(Event::Cus
 el future publica solo un directorio terminado o un error. Durante la carga no
 se procesa gameplay. Q cierra la UI y espera que el lote termine antes de salir.
 
-Los archivos quedan en `generated-maps/10x15/`, `20x30/` o `40x60/`, relativos al
+Los archivos quedan en `generated-maps/<rows>x<columns>/` (por ejemplo `30x40/`), relativos al
 directorio de trabajo, con `mapa_facil.txt`, `mapa_medio.txt`, `mapa_dificil.txt`
 y sus witnesses. Se regeneran al confirmar un tamaño; nunca se usa un lote viejo
 tras un fallo. Si no hay tres costos distintos verificados o falla la escritura/

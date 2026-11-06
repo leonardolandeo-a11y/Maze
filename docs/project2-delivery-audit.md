@@ -94,8 +94,8 @@ No se creó Setup.exe, MSI, ZIP de entrega, GitHub Release ni paquete final.
 ## Nuevo requisito: elección de tamaño desde la UI (#132 / #133)
 
 Flujo implementado: Main → Start Game → SELECT MAP SIZE → generación/validación
-con animación → Difficulty → gameplay. Lista central de 10x15/20x30/40x60 usada
-por Menus y validación de run_map_batch; CLI 100x150 devuelve error sin archivos.
+con animación → Difficulty → gameplay. Presets 10x15/20x30/40x60 y CUSTOM con reglas centrales
+en map_sizes; CLI 100x150 devuelve error sin archivos.
 La generación usa exactamente el perfil de aceptación rápida de la tabla anterior.
 
 Persistencia por directorios generated-maps/<tamaño>; el worker guarda y vuelve a
@@ -122,3 +122,41 @@ Release. PR #133 se conserva abierto y la rama no se elimina.
 
 Validación final: configuración CMake y build correctos; Maze_test PASS; CTest
 1/1 PASS (6.20 s).
+
+## CUSTOM y selector visual (#132 / #133)
+
+Panel FTXUI centrado, borde redondeado, título cian, selección invertida, etiquetas
+SMALL/RECOMMENDED/LARGE y pantalla CUSTOM con campos numéricos, área y estado vivo.
+Tab/flechas cambian foco; Enter avanza/confirma; escribir reemplaza el valor al
+entrar al campo; Backspace elimina y Escape vuelve. Letras/pegados no numéricos no
+entran en los campos. Una entrada vacía o inválida no emite generación.
+
+Reglas únicas en map_sizes: 5–40 filas, 5–60 columnas, área ≤2400,
+rows ≤ columns ≤ 2×rows. El área máxima es redundante con los límites por eje.
+Se valida antes de crear workers, archivos o candidatos. El mínimo 5x5 usa también
+corredores transitables para colocar los cinco actores/objetivos distintos.
+
+El preflight del renderer comparte el cálculo de panel con render_project2:
+requiere todas las columnas, altura para filas comprimidas 2:1 y margen para HUD/
+controles. Si falta espacio, no inicia worker. DETAIL conserva cámara; no se
+agregaron casos especiales de render por tamaño. El CLI valida dimensiones sin
+necesitar terminal. Los mapas se guardan en generated-maps/<rows>x<columns>/.
+
+Validación ejecutada:
+- cmake -S . -B build y cmake --build build --parallel: PASS (build de desarrollo).
+- ./build/Maze_test: PASS; ctest --test-dir build --output-on-failure: 1/1 PASS.
+- Generación de tres dificultades, persistencia aislada, dimensiones cargadas y
+  witness ganador para 10x15, 20x30, 40x60, 30x40, 15x20 y 5x5: PASS.
+- Rechazo previo de 100x150, 50x50, 40x70, 41x60, 40x61, 4x5, 0x0, overflow,
+  cadenas vacías/no numéricas; 10x60 y 40x10 rechazados por proporciones: PASS.
+- Layout FULL MAP/DETAIL estable para estos tamaños en terminales 80x40, 120x50
+  y 160x60; suite responsive heredada de PR #130: PASS. GitHub informa PR #130
+  MERGED sin checks asociados; no se atribuye un check remoto inexistente.
+- UI real FTXUI mediante teclado automatizado en pseudoterminal Linux 120x50:
+  10x15, 20x30, 30x40 CUSTOM, 40x60 y 15x20 CUSTOM → carga animada → juego → H/Z
+  dentro/fuera de ayuda → Q, exit 0: PASS. Frames de formulario inspeccionados.
+- UI: 100x150 muestra máximo 40×60/2400; 10x60 y 40x10 muestran proporciones
+  soportadas; Enter no genera carpetas: PASS. Terminal 80x24 rechaza antes del
+  worker con mensaje visible. Esta prueba no sustituye inspección humana en Windows.
+
+No cambios a audio/música/#131 ni generación de installer/Release/exe final.
