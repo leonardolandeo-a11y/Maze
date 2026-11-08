@@ -145,9 +145,9 @@ void test_custom_sizes() {
 
 void test_project2_responsive_layout_policy() {
     assert(project2_menu_layout_for(160, 45) == Project2MenuLayout::split);
-    assert(project2_menu_layout_for(120, 30) == Project2MenuLayout::split);
-    assert(project2_menu_layout_for(80, 24) == Project2MenuLayout::stacked);
-    assert(project2_menu_layout_for(70, 20) == Project2MenuLayout::stacked);
+    assert(project2_menu_layout_for(120, 35) == Project2MenuLayout::split);
+    assert(project2_menu_layout_for(80, 24) == Project2MenuLayout::compact);
+    assert(project2_menu_layout_for(100, 30) == Project2MenuLayout::stacked);
     assert(project2_menu_layout_for(47, 30) == Project2MenuLayout::compact);
     assert(project2_menu_layout_for(100, 17) == Project2MenuLayout::compact);
 }

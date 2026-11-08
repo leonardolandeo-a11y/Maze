@@ -1,6 +1,7 @@
 #include "circuit_escape/project2_application.h"
 
 #include "circuit_escape/project2_session.h"
+#include "circuit_escape/ui_theme.h"
 #include "circuit_escape/StartupAnimation.h"
 #include "circuit_escape/MapGenerationAnimation.h"
 #include "circuit_escape/VictoryAnimation.h"
@@ -178,9 +179,9 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
         }
         if (menu || !session) {
             return vbox({
-                error.empty() ? text("") : paragraph(error) | color(Color::RedLight),
+                error.empty() ? text("") : paragraph(error) | color(MazeUI::error),
                 menus.Render()
-            }) | bgcolor(Color::Black);
+            }) | bgcolor(MazeUI::background);
         }
         if (victory_active) {
             return victory_animation.RenderVictoryFrame(victory_frame, animation_observation(*session));
@@ -193,7 +194,7 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
             ? help_content(*session, *report, highlight_mode, ui, map_view)
             : ui.render_project2(*session, map_view);
         return vbox({filler(), hbox({filler(), std::move(content), filler()}), filler()})
-            | bgcolor(Color::Black);
+            | bgcolor(MazeUI::background);
     });
 
     Component component = CatchEvent(renderer, [&](const Event& event) {

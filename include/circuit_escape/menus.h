@@ -39,7 +39,7 @@ enum class Project2MenuLayout {
 class Menus {
 public:
     explicit Menus(bool project2_mode = false);
-    [[nodiscard]] ftxui::Element Render() const;
+    [[nodiscard]] ftxui::Element Render(std::optional<ftxui::Dimensions> terminal = std::nullopt) const;
     bool OnEvent(ftxui::Event event);
     MenuCommand takeCommand();
     [[nodiscard]]ScenarioSelection selectedScenario() const noexcept;
