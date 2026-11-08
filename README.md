@@ -19,54 +19,36 @@ ctest --test-dir build --output-on-failure
 ./build/escape_circuit
 ```
 
-El flujo interactivo es **Start Game → SELECT MAP SIZE → preset o CUSTOM →
-validación → generación animada → Easy / Medium / Hard → partida**. El selector
-ofrece **10x15 SMALL, 20x30 RECOMMENDED, 40x60 LARGE, CUSTOM y BACK**.
-CUSTOM permite escribir filas/columnas; Tab/flechas cambian campo y Enter confirma.
-Al entrar a un campo, escribir reemplaza el valor; Backspace borra. No admite letras,
-signos ni decimales. Muestra área y validación en vivo antes de generar.
+**map_generator = preparación offline. escape_circuit = juego con mapas preparados.**
 
-`validate_project2_map_size`, en `map_generation/map_sizes.cpp`, centraliza las reglas
-para presets, CUSTOM, generación asíncrona y `run_map_batch` (incluido CLI):
+El menú ofrece **START GAME, DIFFICULTY, RENDER MODE, HELP y QUIT**.
+En DIFFICULTY se elige Easy / Medium / Hard; START GAME carga respectivamente
+`mapa_facil.txt`, `mapa_medio.txt` o `mapa_dificil.txt` desde `assets/maps`.
+No se eligen dimensiones ni se generan mapas dentro del juego, tampoco al iniciarlo.
+Cerrar y volver a abrir el juego reutiliza exactamente los mismos archivos.
+
+Para preparar otro lote, ejecutar el generador desde terminal y elegir allí las dimensiones:
+
+```bash
+./build/map_generator --rows 20 --columns 30 --seed 12345 --workers 4 --candidates 10 --initial-energy 1000 --maximum-energy 1000 --turn-limit 2000 --extra-openings 15 --rough-percent 15 --rough-cost 2 --search-states 100 --output build/prepared-maps
+./build/escape_circuit --maps build/prepared-maps
+# Cerrar con Q y volver a abrir: no se regenera nada.
+./build/escape_circuit --maps build/prepared-maps
+```
+
+El generador conserva Kruskal, DSU, Dijkstra, GameVerifier, MapSelector,
+construcción/validación concurrentes y guardado/carga. Solo volver a ejecutar
+`map_generator` reemplaza el lote. Los assets incluidos siguen siendo generados
+por estos algoritmos, no hechos manualmente.
+
+Las dimensiones se configuran con `--rows` y `--columns`, sin recompilar:
 **5 ≤ rows ≤ 40, 5 ≤ columns ≤ 60, rows × columns ≤ 2400,
-rows ≤ columns ≤ 2 × rows**. 30x40 y 15x20 están soportados. 100x150, 50x50 y
-40x70 exceden límites; 10x60 y 40x10 tienen proporciones no soportadas.
-El límite de área es redundante con los máximos por eje y se conserva explícito.
+rows ≤ columns ≤ 2 × rows**. También se admiten 30×40 y 15×20.
+El renderer conserva FULL MAP / DETAIL y soporte interno de dimensiones variables.
 
-Antes de generar desde UI, el renderer comprueba las medidas reales del panel:
-FULL MAP debe mostrar todas las columnas y como máximo dos filas por línea de
-terminal, con espacio para HUD y controles. Un terminal insuficiente muestra
-`Terminal too small for FULL MAP` sin iniciar el worker. DETAIL mantiene cámara
-centrada en el jugador. Se conserva el layout responsive de PR #130; la validación
-de terminal es propia de la UI y no limita la generación CLI sin pantalla.
-
-Cada selección llama directamente a `run_map_batch` en un worker `std::async`:
-Kruskal → Dijkstra → GameVerifier → MapSelector → save/load. No se ejecutan
-comandos shell. FTXUI anima `Generating...` cada 60 ms mediante `Post(Event::Custom)`;
-el future publica solo un directorio terminado o un error. Durante la carga no
-se procesa gameplay. Q cierra la UI y espera que el lote termine antes de salir.
-
-Los archivos quedan en `generated-maps/<rows>x<columns>/` (por ejemplo `30x40/`), relativos al
-directorio de trabajo, con `mapa_facil.txt`, `mapa_medio.txt`, `mapa_dificil.txt`
-y sus witnesses. Se regeneran al confirmar un tamaño; nunca se usa un lote viejo
-tras un fallo. Si no hay tres costos distintos verificados o falla la escritura/
-carga, se vuelve al menú con el error; no se inicia partida.
-
-| Tamaño | Seed base | Candidatos / workers | Energía inicial/máxima | Turnos | Budget |
-|---|---:|---|---|---:|---:|
-| 10x15 | 12345 | 10 / 4 | 1000 / 1000 | 2000 | 100 |
-| 20x30 | 12345 | 10 / 4 | 1000 / 1000 | 2000 | 100 |
-| 40x60 | 42 | 10 / 4 | 1000 / 1000 | 2000 | 100 |
-
-Todos usan 15 aperturas extra, terreno rugoso 15% con costo 2 y sin ítems.
-Esta configuración determinista prioriza lotes válidos y respuesta rápida.
-`map_generator` sigue disponible como ejecutable independiente con parámetros
-propios dentro de los tres tamaños permitidos.
-
-Para cargar mapas previamente preparados sin generar, sigue disponible
-`./build/escape_circuit --maps assets/maps --difficulty medium`.
-`--maps` se aplica a esa carga directa; el flujo interactivo escribe en
-`generated-maps/<tamaño>` y conserva los assets incluidos.
+`--maps DIR` se aplica tanto al menú como a `--difficulty easy|medium|hard`.
+Si falta cualquiera de los tres archivos, el juego termina con un mensaje que
+identifica el archivo y pide ejecutar el generador offline; no crea mapas de reemplazo.
 
 ### Configuración reproducible de los mapas incluidos
 
