@@ -93,10 +93,6 @@ namespace {
         switch (screen) {
             case MenuScreen::Main:
                 return 6;
-            case MenuScreen::MapSize:
-                return static_cast<int>(project2_map_sizes.size()) + 2;
-            case MenuScreen::CustomSize:
-                return 4;
             case MenuScreen::Scenario:
                 return 3;
             case MenuScreen::Difficulty:
@@ -126,44 +122,6 @@ opción de la partida o producir un MenuCommand para GameApplication.
 bool Menus::OnEvent(ftxui::Event event) {
     using namespace ftxui;
 
-    if (currentScreen_ == MenuScreen::CustomSize) {
-        if (event == Event::Escape) {
-            currentScreen_ = MenuScreen::MapSize;
-            selectedOption_ = 3;
-        } else if (event == Event::Tab || event == Event::ArrowDown || event == Event::ArrowRight) {
-            selectedOption_ = (selectedOption_ + 1) % 4;
-            replaceInput_ = true;
-        } else if (event == Event::TabReverse || event == Event::ArrowUp || event == Event::ArrowLeft) {
-            selectedOption_ = (selectedOption_ + 3) % 4;
-            replaceInput_ = true;
-        } else if (event == Event::Return) {
-            if (selectedOption_ < 2) { ++selectedOption_; replaceInput_ = true; }
-            else if (selectedOption_ == 3) { currentScreen_ = MenuScreen::MapSize; selectedOption_ = 3; }
-            else {
-                try {
-                    selectedMapSize_ = parse_project2_map_size(customRows_, customColumns_);
-                    mapsReady_ = false;
-                    pendingCommand_ = MenuCommand::generateMaps;
-                } catch (const std::invalid_argument&) { /* Live status explains the rejection. */ }
-            }
-        } else if (selectedOption_ < 2) {
-            auto& input = selectedOption_ == 0 ? customRows_ : customColumns_;
-            if (event == Event::Backspace || event == Event::Delete) {
-                if (replaceInput_) input.clear();
-                else if (!input.empty()) input.pop_back();
-                replaceInput_ = false;
-            } else if (event.is_character()) {
-                const auto value = event.character();
-                if (!value.empty() && std::all_of(value.begin(), value.end(), [](char c) { return c >= '0' && c <= '9'; })) {
-                    if (replaceInput_) input.clear();
-                    replaceInput_ = false;
-                    if (input.size() + value.size() <= 9) input += value;
-                }
-            }
-        }
-        return true;
-    }
-
     const int optionCount = project2_mode_ && currentScreen_ == MenuScreen::Main
         ? 5 : OptionCount(currentScreen_);
 
@@ -185,7 +143,7 @@ bool Menus::OnEvent(ftxui::Event event) {
         if (currentScreen_ == MenuScreen::Main) {
             if (project2_mode_) {
                 switch (selectedOption_) {
-                    case 0: currentScreen_ = MenuScreen::MapSize; break;
+                    case 0: pendingCommand_ = MenuCommand::startGame; return true;
                     case 1: currentScreen_ = MenuScreen::Difficulty; break;
                     case 2: currentScreen_ = MenuScreen::RenderMode; break;
                     case 3: currentScreen_ = MenuScreen::Help; break;
@@ -222,23 +180,7 @@ bool Menus::OnEvent(ftxui::Event event) {
             return true;
         }
 
-        if (currentScreen_ == MenuScreen::MapSize) {
-            if (selectedOption_ < static_cast<int>(project2_map_sizes.size())) {
-                selectedMapSize_ = project2_map_sizes[selectedOption_];
-                validate_project2_map_size(selectedMapSize_);
-                mapsReady_ = false;
-                pendingCommand_ = MenuCommand::generateMaps;
-            }
-            if (selectedOption_ == 3) {
-                currentScreen_ = MenuScreen::CustomSize;
-                replaceInput_ = true;
-            } else currentScreen_ = MenuScreen::Main;
-            selectedOption_ = 0;
-            return true;
-        }
         if (currentScreen_ == MenuScreen::Difficulty) {
-            if (project2_mode_ && mapsReady_ && selectedOption_ < 3)
-                pendingCommand_ = MenuCommand::startGame;
             switch (selectedOption_) {
                 case 0:
                     selectedDifficulty_ = Difficulty::easy;
@@ -346,63 +288,19 @@ RenderMode Menus::selectedRenderMode() const noexcept {
 ftxui::Element Menus::Render() const {
     using namespace ftxui;
 
-    if (currentScreen_ == MenuScreen::MapSize || currentScreen_ == MenuScreen::CustomSize) {
-        const bool custom = currentScreen_ == MenuScreen::CustomSize;
-        Elements lines;
-        auto row = [&](std::string label, int index) {
-            return ArcadeRow(std::move(label), selectedOption_ == index);
-        };
-        lines.push_back(text(custom ? "CUSTOM MAP SIZE" : "SELECT MAP SIZE") |
-            bold | hcenter | color(Color::White));
-        lines.push_back(text("ROWS × COLUMNS") | hcenter | color(Color::GreenLight));
-        lines.push_back(separatorEmpty());
-        if (custom) {
-            lines.push_back(row("Rows:     [ " + customRows_ + " ]", 0));
-            lines.push_back(row("Columns:  [ " + customColumns_ + " ]", 1));
-            std::string status;
-            std::string area = "—";
-            try {
-                const auto size = parse_project2_map_size(customRows_, customColumns_);
-                area = std::to_string(size.rows * size.columns);
-                status = ConsoleUI::project2_size_error(size, Terminal::Size());
-            } catch (const std::invalid_argument& e) { status = e.what(); }
-            lines.push_back(separatorEmpty());
-            lines.push_back(text("CELLS  " + area) | color(Color::White));
-            lines.push_back(paragraph(status.empty() ? "✓ READY TO GENERATE" : "! " + status)
-                | color(status.empty() ? Color::GreenLight : Color::RedLight));
-            lines.push_back(separatorEmpty());
-            lines.push_back(row("[ GENERATE ]", 2));
-            lines.push_back(row("[ BACK ]", 3));
-        } else {
-            constexpr const char* labels[] = {"SMALL", "RECOMMENDED", "LARGE"};
-            for (std::size_t index = 0; index < project2_map_sizes.size(); ++index) {
-                const auto size = project2_map_sizes[index];
-                lines.push_back(row(std::to_string(size.rows) + "×" + std::to_string(size.columns) +
-                    "      " + labels[index], static_cast<int>(index)));
-            }
-            lines.push_back(row("CUSTOM      CREATE YOUR SIZE", 3));
-            lines.push_back(row("BACK", 4));
-        }
-        lines.push_back(separatorEmpty());
-        return ArcadePanel(custom ? "CUSTOM" : "MAP SIZE", std::move(lines), custom
-            ? "Tab / arrows: select • Enter: confirm\nType to replace • Backspace: erase • Esc: back"
-            : "Tab / arrows: select • Enter: confirm");
-    }
-
     if (project2_mode_ && (currentScreen_ == MenuScreen::Main ||
                           currentScreen_ == MenuScreen::Difficulty)) {
         const std::string difficulty = selectedDifficulty_ == Difficulty::easy ? "EASY" :
             selectedDifficulty_ == Difficulty::standard ? "MEDIUM" : "HARD";
         Elements lines{ArcadeLogo(), separatorEmpty(),
-            text("SIZE " + std::to_string(selectedMapSize_.rows) + "×" +
-                std::to_string(selectedMapSize_.columns) + " | DIFFICULTY " + difficulty) |
+            text("DIFFICULTY " + difficulty) |
                 hcenter | color(Color::GreenLight), separatorEmpty()};
         const bool main = currentScreen_ == MenuScreen::Main;
         const std::vector<std::string> labels = main
             ? std::vector<std::string>{"START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"}
             : std::vector<std::string>{"EASY", "MEDIUM", "HARD", "BACK"};
         if (!main) {
-            lines.push_back(text(mapsReady_ ? "MAPS READY / SELECT DIFFICULTY" : "SELECT DIFFICULTY") |
+            lines.push_back(text("SELECT DIFFICULTY") |
                 hcenter | bold | color(Color::White));
             lines.push_back(separatorEmpty());
         }
@@ -440,10 +338,6 @@ ftxui::Element Menus::Render() const {
         };
             break;
 
-        case MenuScreen::CustomSize:
-        case MenuScreen::MapSize:
-            // Size screens render their compact panel above.
-            break;
         case MenuScreen::Scenario:
             options = {
             RenderOption(MenuArt::SCENARIO_1, selectedOption_ == 0),
@@ -490,7 +384,6 @@ ftxui::Element Menus::Render() const {
         separatorEmpty(),
         separatorEmpty(),
         separatorEmpty(),
-        project2_mode_ ? text("MAP SIZE: " + map_size_label(selectedMapSize_)) : text(""),
         menuOptions,
     });
     ftxui::Element rightPanel = filler();
@@ -510,10 +403,4 @@ ftxui::Element Menus::Render() const {
     | size(WIDTH, GREATER_THAN, 1)
     | size(HEIGHT, GREATER_THAN, 1)
     | bgcolor(Color::Black);
-}
-void Menus::generationFinished(bool success) {
-    mapsReady_ = success;
-    currentScreen_ = success ? MenuScreen::Difficulty : MenuScreen::Main;
-    selectedOption_ = 0;
-    pendingCommand_ = MenuCommand::none;
 }
