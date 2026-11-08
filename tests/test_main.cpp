@@ -30,7 +30,10 @@ void run_project2_generation_tests();
 
 void run_responsive_ui_tests();
 
+void run_cinematic_sequence_tests();
+
 int main() {
+    run_cinematic_sequence_tests();
     run_responsive_ui_tests();
     run_project2_generation_tests();
 

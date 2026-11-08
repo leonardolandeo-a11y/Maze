@@ -11,9 +11,7 @@
 
 #include "circuit_escape/console_ui.h"
 #include "circuit_escape/menus.h"
-#include "circuit_escape/StartupAnimation.h"
-#include "circuit_escape/DeathAnimation.h"
-#include "circuit_escape/VictoryAnimation.h"
+#include "circuit_escape/animation_sequence.h"
 
 #include <ftxui/dom/elements.hpp>
 
@@ -173,9 +171,6 @@ void GameApplication::Run(){
 
         bool restartRequested = false;
 
-        StartupAnimation startupAnimation;
-        DeathAnimation deathAnimation;
-        VictoryAnimation victoryAnimation;
         Menus menus;
 
         int startupFrame = 0;
@@ -219,7 +214,7 @@ void GameApplication::Run(){
         ftxui::Component applicationRenderer = ftxui::Renderer(
             [&]{
                 if (startupActive){
-                    return startupAnimation.RenderStartupFrame(startupFrame);
+                    return AnimationSequence::startup(startupFrame);
                 }
 
                 if (menuActive){
@@ -227,11 +222,11 @@ void GameApplication::Run(){
                 }
 
                 if (deathActive){
-                    return deathAnimation.RenderDeathFrame(deathFrame,deathReason,*finalObservation);
+                    return AnimationSequence::death(deathFrame,deathReason,*finalObservation);
                 }
 
                 if (victoryActive){
-                    return victoryAnimation.RenderVictoryFrame(victoryFrame,*finalObservation);
+                    return AnimationSequence::victory(victoryFrame,*finalObservation);
                 }
 
                 return gameComponent->Render();
@@ -242,7 +237,12 @@ void GameApplication::Run(){
             applicationRenderer,
             [&](const ftxui::Event& event){
                 if (startupActive){
-                    if (event == ftxui::Event::Return){
+                    if (event == ftxui::Event::Character('q') ||
+                        event == ftxui::Event::Character('Q')) {
+                        screen.Exit();
+                    }
+                    if (event == ftxui::Event::Return &&
+                        AnimationSequence::welcomeVisible(startupFrame)){
                         startupActive = false;
                         return true;
                     }
@@ -335,11 +335,8 @@ void GameApplication::Run(){
 
                     if (startupActive){
                         screen.Post([&]{
-                            ++startupFrame;
-
-                            if (startupFrame >= StartupAnimation::maxFrames){
-                                startupActive = false;
-                            }
+                            if (startupActive && startupFrame < AnimationSequence::startupFrames - 1)
+                                ++startupFrame; // WELCOME waits for Enter.
                         });
 
                         screen.Post(ftxui::Event::Custom);
@@ -351,9 +348,10 @@ void GameApplication::Run(){
                         !deathAnimationComplete
                     ){
                         screen.Post([&]{
-                            ++deathFrame;
+                            if (deathActive && !AnimationSequence::deathComplete(deathFrame))
+                                ++deathFrame;
 
-                            if (deathFrame >= DeathAnimation::maxFrames){
+                            if (AnimationSequence::deathComplete(deathFrame)){
                                 deathAnimationComplete = true;
                             }
                         });
@@ -367,9 +365,10 @@ void GameApplication::Run(){
                         !victoryAnimationComplete
                     ){
                         screen.Post([&]{
-                            ++victoryFrame;
+                            if (victoryActive && !AnimationSequence::victoryComplete(victoryFrame))
+                                ++victoryFrame;
 
-                            if (victoryFrame >= VictoryAnimation::maxFrames){
+                            if (AnimationSequence::victoryComplete(victoryFrame)){
                                 victoryAnimationComplete = true;
                             }
                         });

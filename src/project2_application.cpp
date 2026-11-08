@@ -2,9 +2,7 @@
 
 #include "circuit_escape/project2_session.h"
 #include "circuit_escape/ui_theme.h"
-#include "circuit_escape/StartupAnimation.h"
-#include "circuit_escape/VictoryAnimation.h"
-#include "circuit_escape/DeathAnimation.h"
+#include "circuit_escape/animation_sequence.h"
 #include "circuit_escape/menus.h"
 #include "circuit_escape/console_ui.h"
 #include "circuit_escape/project2_help_text.h"
@@ -131,9 +129,6 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
     std::optional<HelpReport> report;
     Menus menus(true);
     ConsoleUI ui(RenderMode::emoji);
-    const StartupAnimation startup_animation;
-    const VictoryAnimation victory_animation;
-    const DeathAnimation death_animation;
     std::atomic<bool> startup_active{true};
     std::atomic<bool> victory_active{false};
     std::atomic<bool> death_active{false};
@@ -174,7 +169,7 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
     ScreenInteractive screen = ScreenInteractive::Fullscreen();
     Component renderer = Renderer([&] {
         if (startup_active) {
-            return startup_animation.RenderStartupFrame(startup_frame);
+            return AnimationSequence::startup(startup_frame);
         }
         if (menu || !session) {
             return vbox({
@@ -183,10 +178,10 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
             }) | bgcolor(MazeUI::background);
         }
         if (victory_active) {
-            return victory_animation.RenderVictoryFrame(victory_frame, animation_observation(*session));
+            return AnimationSequence::victory(victory_frame, animation_observation(*session));
         }
         if (death_active) {
-            return death_animation.RenderDeathFrame(death_frame,
+            return AnimationSequence::death(death_frame,
                 end_reason(session->state().outcome), animation_observation(*session));
         }
         Element content = show_help && report
@@ -200,7 +195,7 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
         if (startup_active) {
             if (event == Event::Character('q') || event == Event::Character('Q')) {
                 screen.Exit();
-            } else if (event == Event::Return) {
+            } else if (event == Event::Return && AnimationSequence::welcomeVisible(startup_frame)) {
                 startup_active = false;
             }
             return true;
@@ -225,8 +220,8 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
         }
         if (victory_active || death_active) {
             const bool animation_complete = victory_active
-                ? victory_frame >= VictoryAnimation::maxFrames - 1
-                : death_frame >= DeathAnimation::maxFrames - 1;
+                ? AnimationSequence::victoryComplete(victory_frame)
+                : AnimationSequence::deathComplete(death_frame);
             if (animation_complete &&
                 (event == Event::Return || event == Event::Character('r') || event == Event::Character('R'))) {
                 victory_active = false;
@@ -286,17 +281,17 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
             // thread only reads atomic animation flags and posts callbacks.
             if (startup_active) {
                 screen.Post([&] {
-                    if (startup_active && ++startup_frame >= StartupAnimation::maxFrames)
-                        startup_active = false;
+                    if (startup_active && startup_frame < AnimationSequence::startupFrames - 1)
+                        ++startup_frame; // Stay on WELCOME until Enter, never skip the cinematic.
                 });
             } else if (victory_active) {
                 screen.Post([&] {
-                    if (victory_active && victory_frame < VictoryAnimation::maxFrames)
+                    if (victory_active && victory_frame < AnimationSequence::victoryFrames - 1)
                         ++victory_frame;
                 });
             } else if (death_active) {
                 screen.Post([&] {
-                    if (death_active && death_frame < DeathAnimation::maxFrames)
+                    if (death_active && death_frame < AnimationSequence::deathFrames - 1)
                         ++death_frame;
                 });
             } else {
