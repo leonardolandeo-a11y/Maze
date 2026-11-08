@@ -16,6 +16,10 @@ FetchContent_MakeAvailable(ftxui)
 # Include src files
 add_library(Maze_core
     src/ui_theme.cpp
+    src/cinematic_view.cpp
+    src/CinematicStartupAnimation.cpp
+    src/CinematicVictoryAnimation.cpp
+    src/CinematicDeathAnimation.cpp
     src/agent.cpp
     src/environment.cpp
     src/controllers.cpp
@@ -95,6 +99,7 @@ add_executable(Maze_test
     tests/map_generation/map_selector_test.cpp
     tests/help_test.cpp
     tests/menus_test.cpp
+    tests/cinematic_sequence_test.cpp
     tests/animations_test.cpp
     tests/responsive_ui_test.cpp
         tests/graph_test.cpp
