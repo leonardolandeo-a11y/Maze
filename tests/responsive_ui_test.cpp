@@ -31,6 +31,11 @@ void check(ftxui::Element element, ftxui::Dimensions viewport, const std::string
         }
         text += '\n';
     }
+    if (name == "main" || name.starts_with("prepared-")) {
+        for (const auto* obsolete : {"SELECT MAP SIZE", "CUSTOM MAP SIZE",
+                                    "GENERATING", "NOT PREPARED"})
+            assert(text.find(obsolete) == std::string::npos);
+    }
     // Optional review artifacts are actual FTXUI frames, not separate mockups.
     if (const char* directory = std::getenv("MAZE_UI_PREVIEW_DIR")) {
         const auto path = std::filesystem::path(directory) /
@@ -77,18 +82,29 @@ void run_responsive_ui_tests() {
             if (page == 3) check(settings.Render(viewport), viewport, "help",
                 {"THE ESCAPE", "CONTROLS", "Wait one turn", "FULL MAP / DETAIL", "Enter: back"});
         }
-        menu.OnEvent(ftxui::Event::Return);
-        check(menu.Render(viewport), viewport, "sizes",
-            {"10 x 15", "20 x 30", "40 x 60", "CUSTOM", "BACK"});
-        down(menu, 3);
-        menu.OnEvent(ftxui::Event::Return);
-        check(menu.Render(viewport), viewport, "custom",
-            {"Rows:", "Columns:", "CELLS", "GENERATE", "BACK", "Esc: back"});
+        // The responsive menu starts an existing map at every viewport.
+        // No size form or generation command can intervene.
+        for (int level = 0; level < 3; ++level) {
+            Menus prepared(true);
+            down(prepared, 1);
+            prepared.OnEvent(ftxui::Event::Return);
+            down(prepared, level);
+            prepared.OnEvent(ftxui::Event::Return);
+            assert(prepared.takeCommand() == MenuCommand::none);
+            assert(prepared.selectedDifficulty() == (level == 0 ? Difficulty::easy :
+                level == 1 ? Difficulty::standard : Difficulty::hard));
+            check(prepared.Render(viewport), viewport, "prepared-" + std::to_string(level),
+                {"MAIN MENU", "START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"});
+            prepared.OnEvent(ftxui::Event::Return);
+            assert(prepared.takeCommand() == MenuCommand::startGame);
+            assert(prepared.takeCommand() == MenuCommand::none);
+        }
 
         StartupAnimation startup;
         for (int frame : {0, 18, StartupAnimation::maxFrames - 1})
             check(startup.RenderStartupFrame(frame, viewport), viewport,
                 "startup-" + std::to_string(frame), {"CIRCUITO DE ESCAPE", "Enter: continue"});
+        // Reusable animation remains tested, but is disconnected from the game.
         MapGenerationAnimation loading;
         check(loading.RenderFrame(10, {20,30}, viewport), viewport, "loading",
             {"PREPARING THE ESCAPE", "GENERATING 20 x 30", "PLEASE WAIT", "Q: quit"});

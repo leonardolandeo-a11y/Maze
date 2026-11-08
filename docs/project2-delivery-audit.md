@@ -2,6 +2,11 @@
 
 Fecha: 2026-11-06. Issue #132. Base: main f472a19, incluido PR #130.
 
+> Actualización #136 (2026-11-08): el flujo de generación desde UI descrito
+> más abajo es evidencia histórica de #132/#133 y ya no está vigente.
+> La preparación se realiza con `map_generator`; `escape_circuit` carga los
+> tres archivos preparados. Ver el inicio rápido del README.
+
 ## Fuente y alcance
 
 Se auditó el checklist detallado proporcionado por el responsable del repositorio
@@ -196,3 +201,31 @@ Validation of this visual-only increment:
 - No test source changes were needed. No gameplay, algorithm, generation, size
   rules, seeds, concurrency, save/load, H/Z handlers or audio/music/#131 changes.
   No installer, Release build or final executable package was generated.
+
+## Restauración de preparación offline (#136)
+
+Base inspeccionada: main `57a4e2d`. `68208d3` añadió selección de tamaño y
+generación desde UI; `e2d510a` añadió CUSTOM; `9f445be` refinó la animación.
+Se retiraron esas pantallas/comandos y el worker del flujo de Project2Application.
+Se conservan helpers internos, animaciones reutilizables, dimensiones configurables,
+algoritmos, concurrencia del generador, persistencia, assets y audio/música.
+
+Validación Linux, 2026-11-08:
+
+- `cmake -S . -B build`, `cmake --build build --parallel`,
+  `./build/Maze_test` y `ctest --test-dir build --output-on-failure`: aprobados;
+  CTest 1/1, 9.54 segundos.
+- Regresiones: START GAME directo con cada dificultad; falta de cada uno de los
+  tres mapas produce error antes de FTXUI, tanto en menú como con dificultad directa.
+- Comando 20×30 del inicio rápido del README: 7/10 candidatos verificados,
+  Easy ID 3/costo 51, Medium ID 6/costo 63, Hard ID 9/costo 76.
+- Tras terminar el proceso generador, seis ejecuciones reales de escape_circuit
+  en PTY Linux de 160×60: Easy/Medium/Hard, cerrar y repetir cada dificultad.
+  Navegación mediante DIFFICULTY → START GAME; tablero STATUS visible;
+  envío de 46/60/68 acciones del witness respectivamente y salida con Q (código 0).
+  No aparecieron SELECT MAP SIZE, CUSTOM MAP SIZE ni GENERATING MAPS.
+- SHA-256 y mtime nanosegundos de los tres archivos idénticos antes/después de
+  cada ejecución. El juego reutilizó el mismo lote en las seis partidas.
+- Carpeta inexistente: código 1 y mensaje con archivo faltante e instrucción
+  de ejecutar map_generator.
+- No se ha probado aquí una terminal Windows ni generado un instalador.

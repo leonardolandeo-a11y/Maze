@@ -45,10 +45,6 @@ namespace {
         switch (screen) {
             case MenuScreen::Main:
                 return 6;
-            case MenuScreen::MapSize:
-                return static_cast<int>(project2_map_sizes.size()) + 2;
-            case MenuScreen::CustomSize:
-                return 4;
             case MenuScreen::Scenario:
                 return 3;
             case MenuScreen::Difficulty:
@@ -87,44 +83,6 @@ opción de la partida o producir un MenuCommand para GameApplication.
 bool Menus::OnEvent(ftxui::Event event) {
     using namespace ftxui;
 
-    if (currentScreen_ == MenuScreen::CustomSize) {
-        if (event == Event::Escape) {
-            currentScreen_ = MenuScreen::MapSize;
-            selectedOption_ = 3;
-        } else if (event == Event::Tab || event == Event::ArrowDown || event == Event::ArrowRight) {
-            selectedOption_ = (selectedOption_ + 1) % 4;
-            replaceInput_ = true;
-        } else if (event == Event::TabReverse || event == Event::ArrowUp || event == Event::ArrowLeft) {
-            selectedOption_ = (selectedOption_ + 3) % 4;
-            replaceInput_ = true;
-        } else if (event == Event::Return) {
-            if (selectedOption_ < 2) { ++selectedOption_; replaceInput_ = true; }
-            else if (selectedOption_ == 3) { currentScreen_ = MenuScreen::MapSize; selectedOption_ = 3; }
-            else {
-                try {
-                    selectedMapSize_ = parse_project2_map_size(customRows_, customColumns_);
-                    mapsReady_ = false;
-                    pendingCommand_ = MenuCommand::generateMaps;
-                } catch (const std::invalid_argument&) { /* Live status explains the rejection. */ }
-            }
-        } else if (selectedOption_ < 2) {
-            auto& input = selectedOption_ == 0 ? customRows_ : customColumns_;
-            if (event == Event::Backspace || event == Event::Delete) {
-                if (replaceInput_) input.clear();
-                else if (!input.empty()) input.pop_back();
-                replaceInput_ = false;
-            } else if (event.is_character()) {
-                const auto value = event.character();
-                if (!value.empty() && std::all_of(value.begin(), value.end(), [](char c) { return c >= '0' && c <= '9'; })) {
-                    if (replaceInput_) input.clear();
-                    replaceInput_ = false;
-                    if (input.size() + value.size() <= 9) input += value;
-                }
-            }
-        }
-        return true;
-    }
-
     const int optionCount = project2_mode_ && currentScreen_ == MenuScreen::Main
         ? 5 : OptionCount(currentScreen_);
 
@@ -146,7 +104,7 @@ bool Menus::OnEvent(ftxui::Event event) {
         if (currentScreen_ == MenuScreen::Main) {
             if (project2_mode_) {
                 switch (selectedOption_) {
-                    case 0: currentScreen_ = MenuScreen::MapSize; break;
+                    case 0: pendingCommand_ = MenuCommand::startGame; return true;
                     case 1: currentScreen_ = MenuScreen::Difficulty; break;
                     case 2: currentScreen_ = MenuScreen::RenderMode; break;
                     case 3: currentScreen_ = MenuScreen::Help; break;
@@ -183,23 +141,7 @@ bool Menus::OnEvent(ftxui::Event event) {
             return true;
         }
 
-        if (currentScreen_ == MenuScreen::MapSize) {
-            if (selectedOption_ < static_cast<int>(project2_map_sizes.size())) {
-                selectedMapSize_ = project2_map_sizes[selectedOption_];
-                validate_project2_map_size(selectedMapSize_);
-                mapsReady_ = false;
-                pendingCommand_ = MenuCommand::generateMaps;
-            }
-            if (selectedOption_ == 3) {
-                currentScreen_ = MenuScreen::CustomSize;
-                replaceInput_ = true;
-            } else currentScreen_ = MenuScreen::Main;
-            selectedOption_ = 0;
-            return true;
-        }
         if (currentScreen_ == MenuScreen::Difficulty) {
-            if (project2_mode_ && mapsReady_ && selectedOption_ < 3)
-                pendingCommand_ = MenuCommand::startGame;
             switch (selectedOption_) {
                 case 0:
                     selectedDifficulty_ = Difficulty::easy;
@@ -318,47 +260,6 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
     auto shell = [&](std::string title, Element body, std::string controls, bool brand = false) {
         return MazeUI::shell(std::move(title), std::move(body), std::move(controls), metrics, brand);
     };
-    if (currentScreen_ == MenuScreen::MapSize || currentScreen_ == MenuScreen::CustomSize) {
-        const bool custom = currentScreen_ == MenuScreen::CustomSize;
-        // Size forms need room for validation. Use one-line field rows in every viewport.
-        auto field = [&](std::string label, int index) {
-            auto dense = metrics;
-            dense.dense = true;
-            return MazeUI::choice(std::move(label), "", selectedOption_ == index, dense);
-        };
-        Elements lines;
-        if (custom) {
-            lines.push_back(field("Rows:     [ " + customRows_ + " ]", 0));
-            lines.push_back(field("Columns:  [ " + customColumns_ + " ]", 1));
-            std::string status;
-            std::string area = "-";
-            try {
-                const auto size = parse_project2_map_size(customRows_, customColumns_);
-                area = std::to_string(size.rows * size.columns);
-                status = ConsoleUI::project2_size_error(size, terminal.value_or(Terminal::Size()));
-            } catch (const std::invalid_argument& e) { status = e.what(); }
-            lines.push_back(separatorEmpty());
-            lines.push_back(MazeUI::chip("CELLS", area));
-            lines.push_back(paragraph(status.empty() ? "READY TO GENERATE" : status)
-                | color(status.empty() ? MazeUI::success : MazeUI::warning));
-            lines.push_back(separatorEmpty());
-            lines.push_back(field("GENERATE", 2));
-            lines.push_back(field("BACK", 3));
-        } else {
-            constexpr const char* labels[] = {"SMALL", "RECOMMENDED", "LARGE"};
-            for (std::size_t i = 0; i < project2_map_sizes.size(); ++i) {
-                const auto size = project2_map_sizes[i];
-                lines.push_back(row(std::to_string(size.rows) + " x " +
-                    std::to_string(size.columns) + "   " + labels[i], static_cast<int>(i)));
-            }
-            lines.push_back(row("CUSTOM", 3));
-            lines.push_back(row("BACK", 4));
-        }
-        return shell(custom ? "CUSTOM MAP SIZE" : "SELECT MAP SIZE", vbox(std::move(lines)),
-            custom ? "Tab/arrows: field | Enter: confirm | Backspace: erase | Esc: back"
-                   : "W/S or arrows: select | Enter: confirm");
-    }
-
     if (project2_mode_ && currentScreen_ == MenuScreen::Help) {
         auto mission = MazeUI::panel("THE ESCAPE", vbox({
             paragraph("Activate switches A and B, then reach the exit with energy remaining."),
@@ -389,7 +290,7 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
             : level ? std::vector<std::string>{"EASY", "MEDIUM", "HARD", "BACK"}
                     : std::vector<std::string>{"EMOJI", "ASCII", "BACK"};
         const std::vector<std::string> hints = main
-            ? std::vector<std::string>{"Prepare your next escape", "Choose your challenge",
+            ? std::vector<std::string>{"Play your prepared map", "Choose your challenge",
                 "Choose map symbols", "Learn the circuit", "Leave the circuit"}
             : level ? std::vector<std::string>{"Lowest verified route cost",
                 "Balanced verified route cost", "Highest verified route cost", "Return to menu"}
@@ -402,9 +303,7 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
         auto setup = MazeUI::panel("YOUR RUN", vbox({
             MazeUI::chip("DIFFICULTY", difficulty),
             MazeUI::chip("RENDER", render_mode),
-            MazeUI::chip("MAP", map_size_label(selectedMapSize_)),
-            MazeUI::chip("STATE", mapsReady_ ? "READY" : "NOT PREPARED",
-                         mapsReady_ ? MazeUI::success : MazeUI::muted),
+            MazeUI::chip("MAPS", "PREPARED FILES"),
             separatorEmpty(),
             paragraph("Activate both switches. Evade the guard. Find your way out.")
         }));
@@ -447,10 +346,6 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
         };
             break;
 
-        case MenuScreen::CustomSize:
-        case MenuScreen::MapSize:
-            // Size screens render their compact panel above.
-            break;
         case MenuScreen::Scenario:
             options = {
             RenderOption(MenuArt::SCENARIO_1, selectedOption_ == 0),
@@ -497,7 +392,6 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
         separatorEmpty(),
         separatorEmpty(),
         separatorEmpty(),
-        project2_mode_ ? text("MAP SIZE: " + map_size_label(selectedMapSize_)) : text(""),
         menuOptions,
     });
     ftxui::Element rightPanel = filler();
@@ -517,10 +411,4 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
     | size(WIDTH, GREATER_THAN, 1)
     | size(HEIGHT, GREATER_THAN, 1)
     | bgcolor(Color::Black);
-}
-void Menus::generationFinished(bool success) {
-    mapsReady_ = success;
-    currentScreen_ = success ? MenuScreen::Difficulty : MenuScreen::Main;
-    selectedOption_ = 0;
-    pendingCommand_ = MenuCommand::none;
 }

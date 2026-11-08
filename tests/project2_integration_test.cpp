@@ -2,6 +2,9 @@
 #include "circuit_escape/project2_help_text.h"
 #include "circuit_escape/project2_session.h"
 #include "circuit_escape/menus.h"
+#include "circuit_escape/project2_application.h"
+#include <chrono>
+#include <fstream>
 
 #include <cassert>
 #include <filesystem>
@@ -971,6 +974,29 @@ void project2_active_help_text_test() {
 }
 
 void run_project2_integration_tests() {
+    // Missing maps fail before starting FTXUI, both from menu and direct play.
+    const auto missing_root = std::filesystem::temp_directory_path() /
+        ("maze-missing-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::create_directories(missing_root);
+    for (const auto* filename : {"mapa_facil.txt", "mapa_medio.txt", "mapa_dificil.txt"}) {
+        for (const auto direct : {false, true}) {
+            bool rejected = false;
+            try {
+                Project2Application(missing_root).run(direct
+                    ? std::optional{SavedDifficulty::easy} : std::nullopt);
+            } catch (const std::runtime_error& error) {
+                const std::string message = error.what();
+                rejected = message.find(filename) != std::string::npos &&
+                    message.find("map_generator") != std::string::npos;
+            }
+            assert(rejected);
+            assert(!std::filesystem::exists(missing_root / filename));
+        }
+        // Preflight must check all three files, not just the selected difficulty.
+        std::ofstream(missing_root / filename) << "placeholder";
+    }
+    std::filesystem::remove_all(missing_root);
+
     project2_active_help_text_test();
     project2_observation_contract_test();
     project2_dijkstra_help_progression_test();
