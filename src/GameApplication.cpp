@@ -270,7 +270,6 @@ void GameApplication::Run(){
                         case MenuCommand::quit :
                             screen.Exit();
                             return true;
-                        case MenuCommand::generateMaps: // Only emitted in Project 2 mode.
                         case MenuCommand::none:
                             break;
                     }

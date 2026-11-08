@@ -2,7 +2,6 @@
 
 #include "circuit_escape/project2_session.h"
 #include "circuit_escape/StartupAnimation.h"
-#include "circuit_escape/MapGenerationAnimation.h"
 #include "circuit_escape/VictoryAnimation.h"
 #include "circuit_escape/DeathAnimation.h"
 #include "circuit_escape/menus.h"
@@ -113,6 +112,15 @@ Project2Application::Project2Application(std::filesystem::path maps_directory)
 
 int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
     using namespace ftxui;
+    // Preparation is offline: never create or replace maps from the game.
+    for (const auto level : {SavedDifficulty::easy, SavedDifficulty::medium, SavedDifficulty::hard}) {
+        const auto file = map_file(maps_directory_, level);
+        if (!std::filesystem::is_regular_file(file)) {
+            throw std::runtime_error("Missing prepared map: " + file.string() +
+                ". Run map_generator --rows 20 --columns 30 --output \"" +
+                maps_directory_.string() + "\" before starting escape_circuit.");
+        }
+    }
     bool menu = !difficulty.has_value();
     bool show_help = false;
     Project2MapView map_view = Project2MapView::overview;
@@ -123,24 +131,19 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
     Menus menus(true);
     ConsoleUI ui(RenderMode::emoji);
     const StartupAnimation startup_animation;
-    const MapGenerationAnimation generation_animation;
     const VictoryAnimation victory_animation;
     const DeathAnimation death_animation;
     std::atomic<bool> startup_active{true};
     std::atomic<bool> victory_active{false};
     std::atomic<bool> death_active{false};
     std::atomic<bool> running{true};
-    std::atomic<bool> loading_active{false};
-    Project2Generation generation;
-    std::filesystem::path active_maps = maps_directory_;
-    int loading_frame = 0;
     int startup_frame = 0;
     int victory_frame = 0;
     int death_frame = 0;
 
     auto load_difficulty = [&](SavedDifficulty value) {
         try {
-            SavedMap map = load_map(map_file(active_maps, value));
+            SavedMap map = load_map(map_file(maps_directory_, value));
             if (map.difficulty != value) {
                 throw std::runtime_error("Map difficulty does not match the selected level");
             }
@@ -158,7 +161,6 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
         } catch (const std::exception& exception) {
             error = exception.what();
             session.reset();
-            menus.generationFinished(false);
             menu = true;
         }
     };
@@ -172,9 +174,6 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
     Component renderer = Renderer([&] {
         if (startup_active) {
             return startup_animation.RenderStartupFrame(startup_frame);
-        }
-        if (generation.loading()) {
-            return generation_animation.RenderFrame(loading_frame, menus.selectedMapSize());
         }
         if (menu || !session) {
             return vbox({
@@ -209,33 +208,9 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
             screen.Exit();
             return true;
         }
-        if (generation.loading()) {
-            if (event == Event::Custom) {
-                ++loading_frame;
-                if (generation.poll()) {
-                    loading_active = false;
-                    error = generation.error();
-                    if (error.empty()) active_maps = generation.directory();
-                    menus.generationFinished(error.empty());
-                    menu = true;
-                }
-            }
-            return true;
-        }
         if (menu || !session) {
             const bool handled = menus.OnEvent(event);
             switch (menus.takeCommand()) {
-                case MenuCommand::generateMaps:
-                    error = ConsoleUI::project2_size_error(menus.selectedMapSize(), Terminal::Size());
-                    if (!error.empty()) return true;
-                    try {
-                        generation.start(menus.selectedMapSize(), "generated-maps");
-                        loading_active = true;
-                    } catch (const std::exception& exception) {
-                        error = exception.what();
-                        menus.generationFinished(false);
-                    }
-                    return true;
                 case MenuCommand::startGame:
                     load_difficulty(saved_difficulty(menus.selectedDifficulty()));
                     return true;
@@ -323,7 +298,7 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
                     if (death_active && death_frame < DeathAnimation::maxFrames)
                         ++death_frame;
                 });
-            } else if (!loading_active) {
+            } else {
                 continue;
             }
             screen.Post(Event::Custom);
