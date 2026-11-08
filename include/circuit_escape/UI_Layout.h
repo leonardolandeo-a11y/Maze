@@ -1,29 +1,12 @@
 #pragma once
-#include <ftxui/dom/elements.hpp>
+#include "circuit_escape/ui_theme.h"
 
-namespace UILayout{
-    /*      Center Game View configuration       */
-
-    inline ftxui::Element CenterGameView(ftxui::Element content) {
-
-        constexpr int gameViewWidth = 90;
-        constexpr int gameViewHeight = 20;
-
-        ftxui::Element fixedView =content |
-            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, gameViewWidth) |
-                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, gameViewHeight);
-        
-
-        return ftxui::vbox({
-            ftxui::filler(),
-            ftxui::hbox({
-                ftxui::filler(),
-                fixedView,
-                ftxui::filler()
-            }),
-            ftxui::filler()
-        }) | ftxui::bgcolor(ftxui::Color::Black);
-    }
-
-    /*=========================*/
+namespace UILayout {
+inline ftxui::Element CenterGameView(ftxui::Element content) {
+    const auto dimensions = MazeUI::metrics();
+    return std::move(content) |
+        ftxui::size(ftxui::WIDTH, ftxui::LESS_THAN, dimensions.width) |
+        ftxui::size(ftxui::HEIGHT, ftxui::LESS_THAN, dimensions.height) |
+        ftxui::center | ftxui::bgcolor(MazeUI::background);
+}
 }

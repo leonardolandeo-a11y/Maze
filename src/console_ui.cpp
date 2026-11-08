@@ -1,3 +1,4 @@
+#include "circuit_escape/ui_theme.h"
 #include "circuit_escape/console_ui.h"
 #include "circuit_escape/project2_session.h"
 #include "circuit_escape/help.h"
@@ -677,10 +678,19 @@ ftxui::Element ConsoleUI::render_project2_scaled_overview(
              column < columns;
              ++column) {
 
-            const Position position{
+            Position position{
                 static_cast<std::size_t>(source_row),
                 static_cast<std::size_t>(column)
             };
+            const int end_row = (visual_row + 1) * rows / rendered_rows;
+            // Markers outrank sampled terrain; player has the highest priority.
+            for (const auto marker : {map.input.exit, map.input.switch_b,
+                                      map.input.switch_a, state.guard, state.player}) {
+                if (static_cast<int>(marker.column) == column &&
+                    static_cast<int>(marker.row) >= source_row &&
+                    static_cast<int>(marker.row) < end_row)
+                    position = marker;
+            }
 
             const Color background =
                 color_at(position);
@@ -1028,8 +1038,14 @@ ftxui::Element ConsoleUI::render_project2(
         std::to_string(state.turn % 2 == 0 ? state.turn + 2 : state.turn + 1);
 
     const ftxui::Dimensions terminal = terminal_size.value_or(ftxui::Terminal::Size());
-    const auto [panel_width, board_width, board_height] = project2_layout(
+    auto [panel_width, board_width, board_height] = project2_layout(
         {map.grid.rows(), map.grid.columns()}, terminal);
+    // Rendering adapts to resize independently of the generator's size checks.
+    const bool short_terminal = terminal.dimy > 0 && terminal.dimy < 35;
+    if (terminal.dimy > 0)
+        board_height = std::max(1, std::min(board_height,
+            terminal.dimy - (short_terminal ? 14 : 18)));
+
     const int map_rows = static_cast<int>(map.grid.rows());
     const int map_columns = static_cast<int>(map.grid.columns());
     constexpr int footer_height = 7;
@@ -1041,15 +1057,15 @@ ftxui::Element ConsoleUI::render_project2(
         view == Project2MapView::overview &&
         !can_render_full_tiles;
 
-    auto sup_window = window(
-        text(" STATUS ") | bold | color(Color::CyanLight),
+    auto sup_window = MazeUI::panel(
+        "STATUS",
         hbox({
             text(" "),
             vbox({
                 text(turns + " | " + energy + " | " + score + " | " + resources),
                 hbox({text("SIZE " + std::to_string(map.grid.rows()) + "×" +
                      std::to_string(map.grid.columns()) + " | DIFFICULTY " + difficulty) |
-                         color(Color::CyanLight),
+                         color(MazeUI::accent),
                      text(" | " + switches)}),
                 text(player + " | " + guard + " | " + next_guard_turn)
             }),
@@ -1072,8 +1088,8 @@ ftxui::Element ConsoleUI::render_project2(
         hbox({filler(), std::move(map_content), filler()}),
         filler()
     }) | size(WIDTH, EQUAL, panel_width - 4) | size(HEIGHT, EQUAL, board_height);
-    auto board_window = window(
-        text(" MAZE ") | bold | color(Color::CyanLight),
+    auto board_window = MazeUI::panel(
+        "MAZE",
         hbox({text(" "), std::move(board), filler()})
     ) | size(WIDTH, EQUAL, panel_width);
 
@@ -1102,19 +1118,18 @@ ftxui::Element ConsoleUI::render_project2(
     while (footer_lines.size() < 5) {
         footer_lines.push_back(text(" "));
     }
-    auto inf_window = window(
-        text(help_lines.empty() ? " EVENTS / CONTROLS " : " DIJKSTRA ENERGY HELP ")
-            | bold | color(Color::CyanLight),
+    auto inf_window = MazeUI::panel(
+        help_lines.empty() ? "EVENTS / CONTROLS" : "DIJKSTRA ENERGY HELP",
         vbox(std::move(footer_lines))
     ) | size(WIDTH, EQUAL, panel_width) | size(HEIGHT, EQUAL, footer_height);
 
     return vbox({
         std::move(sup_window),
-        separatorEmpty(),
+        short_terminal ? emptyElement() : separatorEmpty(),
         std::move(board_window),
-        separatorEmpty(),
+        short_terminal ? emptyElement() : separatorEmpty(),
         std::move(inf_window)
-    });
+    }) | bgcolor(MazeUI::background);
 }
 
 /*---------------------------------------------------------------------

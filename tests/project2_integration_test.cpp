@@ -86,7 +86,8 @@ void project2_items_visual_test() {
     map.effects.trap_energy_penalty = 2;
     Project2Session session(std::move(map));
     ConsoleUI ui(RenderMode::emoji);
-    const std::string original = render_to_string(ui.render_project2(session));
+    // Match the renderer viewport to render_to_string's 140x55 screen.
+    const std::string original = render_to_string(ui.render_project2(session, Project2MapView::overview, {}, {}, ftxui::Dimensions{140,55}));
     assert(original.find("💎") != std::string::npos);
     assert(original.find("⚡") != std::string::npos);
     assert(original.find("💥") != std::string::npos);
@@ -97,7 +98,7 @@ void project2_items_visual_test() {
     assert(state.energy == 100);
     assert(session.resource_collected({1, 0}));
     assert(session.battery_consumed({2, 0}));
-    const std::string consumed = render_to_string(ui.render_project2(session));
+    const std::string consumed = render_to_string(ui.render_project2(session, Project2MapView::overview, {}, {}, ftxui::Dimensions{140,55}));
     assert(consumed.find("Resources 1/1") != std::string::npos);
     assert(consumed.find("Score 10") != std::string::npos);
     assert(consumed.find("💎") == std::string::npos);
@@ -1015,8 +1016,8 @@ void run_project2_integration_tests() {
         Project2Session session(make_fixture(rows, columns));
         ConsoleUI emoji(RenderMode::emoji);
         ConsoleUI ascii(RenderMode::ascii);
-        const auto screen_emoji = render_to_string(emoji.render_project2(session));
-        const auto screen_ascii = render_to_string(ascii.render_project2(session));
+        const auto screen_emoji = render_to_string(emoji.render_project2(session, Project2MapView::overview, {}, {}, ftxui::Dimensions{140,55}));
+        const auto screen_ascii = render_to_string(ascii.render_project2(session, Project2MapView::overview, {}, {}, ftxui::Dimensions{140,55}));
         assert(screen_emoji.find(" MAZE ") != std::string::npos);
         assert(screen_emoji.find(" STATUS ") != std::string::npos);
         assert(screen_emoji.find("Score 0") != std::string::npos);

@@ -28,7 +28,10 @@ void run_project2_integration_tests();
 
 void run_project2_generation_tests();
 
+void run_responsive_ui_tests();
+
 int main() {
+    run_responsive_ui_tests();
     run_project2_generation_tests();
 
     run_grid_tests();

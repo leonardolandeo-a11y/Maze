@@ -15,6 +15,7 @@ FetchContent_MakeAvailable(ftxui)
 
 # Include src files
 add_library(Maze_core
+    src/ui_theme.cpp
     src/agent.cpp
     src/environment.cpp
     src/controllers.cpp
@@ -95,6 +96,7 @@ add_executable(Maze_test
     tests/help_test.cpp
     tests/menus_test.cpp
     tests/animations_test.cpp
+    tests/responsive_ui_test.cpp
         tests/graph_test.cpp
     tests/graph/disjoint_set_test.cpp
     tests/map_generation/kruskal_test.cpp

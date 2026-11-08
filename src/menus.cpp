@@ -1,13 +1,16 @@
 #include "circuit_escape/menus.h"
 #include "circuit_escape/menusArt.h"
 #include "circuit_escape/help.h"
+#include "circuit_escape/ui_theme.h"
 
 #include <sstream>
+#include <array>
 #include <algorithm>
 #include <stdexcept>
 #include <string>
 
 #include <ftxui/dom/elements.hpp>
+#include <ftxui/dom/canvas.hpp>
 
 
 namespace {
@@ -26,67 +29,16 @@ namespace {
         return vbox(std::move(lines));
     }
 
-    ftxui::Element RenderOption(
-        std::string_view art,
-        bool selected
-    ) {
+    ftxui::Element RenderOption(std::string_view art, bool selected) {
         using namespace ftxui;
-
-        auto option = RenderArt(art)
-            | color(selected ? Color::CyanLight : Color::White);
-
-        if (!selected) {
-            return hbox({
-                text("  "),
-                option,
-            });
-        }
-
+        auto option = RenderArt(art) |
+            color(selected ? Color::CyanLight : Color::White);
+        if (!selected) return hbox({text("  "), option});
         return hbox({
-            vbox({
-                text(" "),
-                text(" "),
-                text("▸ "),
-                text(" "),
-            }) | color(Color::CyanLight),
+            vbox({text(" "), text(" "), text("▸ "), text(" ")}) |
+                color(Color::CyanLight),
             option,
         });
-    }
-    // Project 2 uses the same phosphor palette and block logo as the intro.
-    ftxui::Element ArcadeRow(std::string label, bool selected) {
-        using namespace ftxui;
-        auto row = hbox({text(selected ? " ▸ " : "   "), text(label), filler(),
-                         text(selected ? " ◂ " : "   ")});
-        return selected ? row | bold | color(Color::Black) | bgcolor(Color::CyanLight)
-                        : row | color(Color::White);
-    }
-
-    ftxui::Element ArcadePanel(std::string title, ftxui::Elements content,
-                              std::string controls) {
-        using namespace ftxui;
-        Elements lines{
-            text(" ESCAPE PROTOCOL / " + title) | bold | color(Color::CyanLight),
-            separator() | color(Color::Cyan),
-        };
-        for (auto& line : content) lines.push_back(std::move(line));
-        lines.push_back(separator() | color(Color::Cyan));
-        lines.push_back(paragraph(std::move(controls)) | color(Color::GrayLight));
-        return vbox(std::move(lines)) | size(WIDTH, EQUAL, 52) | borderRounded |
-            color(Color::CyanLight) | center | bgcolor(Color::Black);
-    }
-
-    ftxui::Element ArcadeLogo() {
-        using namespace ftxui;
-        Elements lines;
-        std::istringstream stream{std::string(MenuArt::MAZE_LOGO)};
-        std::string line;
-        while (std::getline(stream, line)) {
-            // The legacy art includes blank braille padding on its last line.
-            const auto padding = line.find("   ", line.find("╚═╝"));
-            if (padding != std::string::npos) line.erase(padding);
-            if (!line.empty()) lines.push_back(text(line) | hcenter);
-        }
-        return vbox(std::move(lines)) | bold | color(Color::CyanLight);
     }
 
     int OptionCount(MenuScreen screen) {
@@ -106,6 +58,15 @@ namespace {
         return 1;
     }
 
+}
+
+Project2MenuLayout project2_menu_layout_for(int width, int height) noexcept {
+    switch (MazeUI::metrics(ftxui::Dimensions{width, height}).layout) {
+        case MazeUI::Layout::compact: return Project2MenuLayout::compact;
+        case MazeUI::Layout::stacked: return Project2MenuLayout::stacked;
+        case MazeUI::Layout::split: return Project2MenuLayout::split;
+    }
+    return Project2MenuLayout::compact;
 }
 
 Menus::Menus(bool project2_mode) : project2_mode_(project2_mode) {
@@ -285,30 +246,77 @@ RenderMode Menus::selectedRenderMode() const noexcept {
     return selectedRenderMode_;
 }
 
-ftxui::Element Menus::Render() const {
+ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
     using namespace ftxui;
 
+    const auto metrics = MazeUI::metrics(terminal);
+    const std::string difficulty = selectedDifficulty_ == Difficulty::easy ? "EASY" :
+        selectedDifficulty_ == Difficulty::standard ? "MEDIUM" : "HARD";
+    const std::string render_mode = selectedRenderMode_ == RenderMode::ascii ? "ASCII" : "EMOJI";
+    auto row = [&](std::string label, int index, std::string subtitle = "") {
+        return MazeUI::choice(std::move(label), std::move(subtitle),
+                              selectedOption_ == index, metrics);
+    };
+    auto shell = [&](std::string title, Element body, std::string controls, bool brand = false) {
+        return MazeUI::shell(std::move(title), std::move(body), std::move(controls), metrics, brand);
+    };
+    if (project2_mode_ && currentScreen_ == MenuScreen::Help) {
+        auto mission = MazeUI::panel("THE ESCAPE", vbox({
+            paragraph("Activate switches A and B, then reach the exit with energy remaining."),
+            paragraph("The guard moves on even turns. Sharing its cell ends the run."),
+            paragraph("Terrain costs energy. Waiting or an invalid move costs 1."),
+            paragraph("Batteries recharge; traps drain energy. Finish before the turn limit.")
+        }));
+        auto controls = MazeUI::panel("CONTROLS", vbox({
+            text("WASD / arrows   Move"),
+            text("E               Wait one turn"),
+            text("H               Route and energy help"),
+            text("1 / 2 / 3 / 0   Highlight route in help"),
+            text("Z               FULL MAP / DETAIL"),
+            text("Q               Quit")
+        }));
+        Element body = metrics.layout == MazeUI::Layout::split
+            ? hbox({mission | flex, text("  "), controls | flex})
+            : vbox({mission, controls});
+        return shell("HELP", body, "Enter: back | Q: quit");
+    }
+
     if (project2_mode_ && (currentScreen_ == MenuScreen::Main ||
-                          currentScreen_ == MenuScreen::Difficulty)) {
-        const std::string difficulty = selectedDifficulty_ == Difficulty::easy ? "EASY" :
-            selectedDifficulty_ == Difficulty::standard ? "MEDIUM" : "HARD";
-        Elements lines{ArcadeLogo(), separatorEmpty(),
-            text("DIFFICULTY " + difficulty) |
-                hcenter | color(Color::GreenLight), separatorEmpty()};
+        currentScreen_ == MenuScreen::Difficulty || currentScreen_ == MenuScreen::RenderMode)) {
         const bool main = currentScreen_ == MenuScreen::Main;
+        const bool level = currentScreen_ == MenuScreen::Difficulty;
         const std::vector<std::string> labels = main
             ? std::vector<std::string>{"START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"}
-            : std::vector<std::string>{"EASY", "MEDIUM", "HARD", "BACK"};
-        if (!main) {
-            lines.push_back(text("SELECT DIFFICULTY") |
-                hcenter | bold | color(Color::White));
-            lines.push_back(separatorEmpty());
-        }
+            : level ? std::vector<std::string>{"EASY", "MEDIUM", "HARD", "BACK"}
+                    : std::vector<std::string>{"EMOJI", "ASCII", "BACK"};
+        const std::vector<std::string> hints = main
+            ? std::vector<std::string>{"Play your prepared map", "Choose your challenge",
+                "Choose map symbols", "Learn the circuit", "Leave the circuit"}
+            : level ? std::vector<std::string>{"Lowest verified route cost",
+                "Balanced verified route cost", "Highest verified route cost", "Return to menu"}
+                    : std::vector<std::string>{"Illustrated map symbols",
+                "Portable text symbols", "Return to menu"};
+        Elements choices;
         for (std::size_t i = 0; i < labels.size(); ++i)
-            lines.push_back(ArcadeRow(labels[i], selectedOption_ == static_cast<int>(i)));
-        lines.push_back(separatorEmpty());
-        return ArcadePanel(main ? "MAIN MENU" : "DIFFICULTY", std::move(lines),
-            "W/S / arrows / Tab: select • Enter: confirm");
+            choices.push_back(row(labels[i], static_cast<int>(i), hints[i]));
+        auto navigation = vbox(std::move(choices));
+        auto setup = MazeUI::panel("YOUR RUN", vbox({
+            MazeUI::chip("DIFFICULTY", difficulty),
+            MazeUI::chip("RENDER", render_mode),
+            MazeUI::chip("MAPS", "PREPARED FILES"),
+            separatorEmpty(),
+            paragraph("Activate both switches. Evade the guard. Find your way out.")
+        }));
+        Element body = metrics.layout == MazeUI::Layout::split
+            ? hbox({
+                navigation | size(WIDTH, EQUAL, (metrics.width - 5) / 2),
+                text("   "),
+                vbox({filler(), setup, separatorEmpty(),
+                      MazeUI::circuit(0) | hcenter, filler()}) | flex})
+            : vbox({navigation, separatorEmpty(),
+                MazeUI::chip("CURRENT", difficulty + " / " + render_mode) | hcenter});
+        return shell(main ? "MAIN MENU" : level ? "DIFFICULTY" : "RENDER MODE",
+            body, "W/S or arrows: select | Enter: confirm | Q: quit", main);
     }
 
     auto logo = RenderArt(MenuArt::MAZE_LOGO)
