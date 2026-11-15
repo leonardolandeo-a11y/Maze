@@ -48,7 +48,12 @@ class Terminal:
                 break
             self.raw.append(data)
             self.stream.feed(data)
-        return '\n'.join(self.screen.display)
+        # Read cell data directly: ConPTY can temporarily leave an empty wide-
+        # character continuation cell while repainting emoji. pyte.display's
+        # char[0] assumption raises IndexError on that valid intermediate state.
+        return '\n'.join(''.join(self.screen.buffer[y][x].data
+                                for x in range(self.screen.columns))
+                         for y in range(self.screen.lines))
 
     def send(self, text):
         if os.name == 'nt':
