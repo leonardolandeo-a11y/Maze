@@ -2,6 +2,7 @@
 #include "circuit_escape/menusArt.h"
 #include "circuit_escape/help.h"
 #include "circuit_escape/ui_theme.h"
+#include "circuit_escape/help_presentation.h"
 
 #include <sstream>
 #include <array>
@@ -261,24 +262,34 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
         return MazeUI::shell(std::move(title), std::move(body), std::move(controls), metrics, brand);
     };
     if (project2_mode_ && currentScreen_ == MenuScreen::Help) {
+        const bool wide = metrics.width >= 110;
+        const int width = wide ? (metrics.width - 10) / 2 : metrics.width - 6;
+        auto line = [&](const std::string& value, Color tone = MazeUI::ink) {
+            return MazeUI::help_text(value, width, tone);
+        };
         auto mission = MazeUI::panel("THE ESCAPE", vbox({
-            paragraph("Activate switches A and B, then reach the exit with energy remaining."),
-            paragraph("The guard moves on even turns. Sharing its cell ends the run."),
-            paragraph("Terrain costs energy. Waiting or an invalid move costs 1."),
-            paragraph("Batteries recharge; traps drain energy. Finish before the turn limit.")
+            line("Activate A and B; reach EXIT with energy before the turn limit."),
+            line("Guard: moves on even turns. Contact ends the run."),
+            line("Energy: terrain costs energy; wait / invalid move costs 1."),
+            line("Batteries recharge; traps drain energy.", MazeUI::muted)
         }));
         auto controls = MazeUI::panel("CONTROLS", vbox({
-            text("WASD / arrows   Move"),
-            text("E               Wait one turn"),
-            text("H               Route and energy help"),
-            text("1 / 2 / 3 / 0   Highlight route in help"),
-            text("Z               FULL MAP / DETAIL"),
-            text("Q               Quit")
+            line("WASD / arrows · Move"),
+            line("E · Wait one turn"),
+            line("H · Route and energy help"),
+            line("1 / 2 / 3 / 0 · Highlight A / B / route / off"),
+            line(MazeUI::zoom_help, MazeUI::accent),
+            line("Q · Quit", MazeUI::muted)
         }));
-        Element body = metrics.layout == MazeUI::Layout::split
-            ? hbox({mission | flex, text("  "), controls | flex})
+        Element body = wide
+            ? hbox({mission | size(WIDTH, EQUAL, width + 2), text("  "),
+                    controls | size(WIDTH, EQUAL, width + 2)})
             : vbox({mission, controls});
-        return shell("HELP", body, "Enter: back | Q: quit");
+        return vbox({text(" MAZE / HELP") | bold | color(MazeUI::accent),
+                     separator() | color(MazeUI::edge), body,
+                     text(" Enter: back | Q: quit") | color(MazeUI::muted)})
+            | size(WIDTH, EQUAL, metrics.width - 2)
+            | borderStyled(ROUNDED, MazeUI::edge) | bgcolor(MazeUI::background) | center;
     }
 
     if (project2_mode_ && (currentScreen_ == MenuScreen::Main ||

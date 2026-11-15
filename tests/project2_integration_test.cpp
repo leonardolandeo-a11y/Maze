@@ -949,13 +949,14 @@ void project2_active_help_text_test() {
 
     report.current_energy = 11;
     const auto positive = format_project2_help_lines(report);
-    assert(positive.size() == 5);
+    assert(positive.size() == 6);
     assert(positive[0].find("A: 2 energy") != std::string::npos);
     assert(positive[0].find("B: 3 energy") != std::string::npos);
     assert(positive[0].find("Exit: locked") != std::string::npos);
     assert(positive[1] == "Route: CURRENT -> A -> B -> EXIT");
     assert(positive[2] == "Cost 10 | Remaining 1 | ENOUGH");
-    assert(positive[4].find("H/Esc back | Z zoom") != std::string::npos);
+    assert(positive[4].find("H/Esc back") != std::string::npos);
+    assert(positive[5] == MazeUI::zoom_help);
 
     report.current_energy = 10;
     const auto zero = format_project2_help_lines(report);

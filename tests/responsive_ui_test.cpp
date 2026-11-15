@@ -67,6 +67,25 @@ void run_responsive_ui_tests() {
     check(marker_ui.render_project2_board(session, {}, Project2MapView::overview, 60, 4),
         {60, 4}, "sampled-markers", {"@", "V", "A", "B", "S"});
 
+    for (auto viewport : {ftxui::Dimensions{60,24}, ftxui::Dimensions{70,24}, ftxui::Dimensions{80,20}}) {
+        Menus menu(true);
+        down(menu, 3);
+        menu.OnEvent(ftxui::Event::Return);
+        check(menu.Render(viewport), viewport, "small-help",
+            {"THE ESCAPE", "CONTROLS", "Z · Alternar", "FULL MAP", "DETAIL", "Enter: back"});
+        ConsoleUI ui(RenderMode::ascii);
+        for (int energy : {100, 51, 1}) {
+            auto report = session.help_report();
+            report.current_energy = energy;
+            const auto lines = format_project2_help_lines(report);
+            for (auto view : {Project2MapView::overview, Project2MapView::detail})
+                check(ui.render_project2(session, view, {}, lines, viewport), viewport,
+                    "small-panel-" + std::to_string(energy),
+                    {"DIJKSTRA ENERGY HELP", "OBJECTIVES", "ROUTE", "ENERGY", "CONTROLS",
+                     "Remaining", "H/Esc back", "Z · Alternar", "FULL MAP", "DETAIL"});
+        }
+    }
+
     for (auto viewport : viewports) {
         Menus menu(true);
         check(menu.Render(viewport), viewport, "main",
@@ -80,7 +99,7 @@ void run_responsive_ui_tests() {
             if (page == 2) check(settings.Render(viewport), viewport, "render",
                 {"EMOJI", "ASCII", "BACK"});
             if (page == 3) check(settings.Render(viewport), viewport, "help",
-                {"THE ESCAPE", "CONTROLS", "Wait one turn", "FULL MAP / DETAIL", "Enter: back"});
+                {"THE ESCAPE", "CONTROLS", "Wait one turn", "FULL MAP", "DETAIL", "Enter: back"});
         }
         // The responsive menu starts an existing map at every viewport.
         // No size form or generation command can intervene.
@@ -127,7 +146,7 @@ void run_responsive_ui_tests() {
                  "EVENTS / CONTROLS", "Help: H", "Quit: Q"});
             check(ui.render_project2(session, view, help.complete_path, help_lines, viewport),
                 viewport, name + "-help", {"STATUS", "MAZE", "DIJKSTRA ENERGY HELP",
-                    "Route: CURRENT", "Remaining", "H/Esc back", "Z zoom"});
+                    "Route: CURRENT", "Remaining", "H/Esc back", "Alternar entre mapa", "FULL MAP", "DETAIL"});
         }
         assert(session.state().turn == 0);
         assert(session.state().energy == map.input.initial_energy);
