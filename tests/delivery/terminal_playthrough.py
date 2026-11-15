@@ -58,10 +58,18 @@ class Terminal:
 
     def until(self, predicate, description, timeout=35):
         deadline = time.monotonic() + timeout
+        matched_since = None
         while time.monotonic() < deadline:
             frame = self.pump()
             if predicate(frame):
-                return frame
+                if matched_since is None:
+                    matched_since = time.monotonic()
+                # ConPTY emits a single redraw in several chunks. Do not inspect
+                # a half-painted frame as soon as the first HUD row arrives.
+                if time.monotonic() - matched_since >= 0.2:
+                    return frame
+            else:
+                matched_since = None
             time.sleep(0.03)
         raise AssertionError(f'Terminal timeout: {description}\n{self.pump()}')
 
@@ -101,8 +109,8 @@ def play(executable, maps, evidence, label):
         try:
             game.contains('WELCOME')
             game.send('\r')
-            initial = game.contains('Turn 0/')
-            assert level.upper() in initial and 'FULL MAP' in initial
+            initial = game.until(lambda f: all(t in f for t in ['Turn 0/', level.upper(), 'FULL MAP']),
+                                 'complete initial gameplay frame')
             # HUD must remain identical through H, route selection and Z.
             hud = re.findall(r'Turn \d+/\d+|Energy \d+/\d+|Player \(\d+,\d+\)|Guard \(\d+,\d+\)|Switch A \w+ \| B \w+', initial)
             assert len(hud) == 5, hud

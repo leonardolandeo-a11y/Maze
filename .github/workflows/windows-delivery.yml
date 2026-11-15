@@ -5,6 +5,9 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+concurrency:
+  group: windows-delivery-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
