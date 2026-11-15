@@ -98,13 +98,13 @@ for name in ['mapa_facil.txt', 'mapa_medio.txt', 'mapa_dificil.txt']:
     assert (evidence / 'workers-1' / name).read_bytes() == (evidence / 'workers-4' / name).read_bytes()
 passed('Two installed generator processes workers=1/4 produce byte-identical maps')
 preserved = map_fingerprints(generated)
-# _?= runs uninstaller in-place, so process completion means cleanup has finished.
-run([install / 'Uninstall.exe', '/S', f'_?={install}'])
-# NSIS may leave the running uninstaller itself until the process exits.
-for _ in range(50):
-    if not (install / 'bin/escape_circuit.exe').exists():
+# Normal NSIS self-copy/self-removal path, exactly as the user shortcut invokes it.
+run([install / 'Uninstall.exe', '/S'])
+for _ in range(200):
+    if not install.exists():
         break
     time.sleep(0.1)
+assert not install.exists(), 'Installation directory remains after uninstall'
 assert not (install / 'bin').exists()
 assert not (install / 'assets').exists()
 assert not shortcuts.exists() and not desktop.exists()
