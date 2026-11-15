@@ -24,7 +24,7 @@ jobs:
       - name: Add toolchain to packaging PATH
         shell: pwsh
         run: |
-          $compiler = (Select-String build-release/CMakeCache.txt '^CMAKE_CXX_COMPILER:FILEPATH=(.*)$').Matches.Groups[1].Value
+          $compiler = (Select-String -LiteralPath build-release/CMakeCache.txt -Pattern '^CMAKE_CXX_COMPILER:[^=]*=(.*)$').Matches.Groups[1].Value
           Split-Path $compiler -Parent | Out-File -FilePath $env:GITHUB_PATH -Append
       - name: Build and CTest Release
         shell: pwsh

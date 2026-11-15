@@ -17,7 +17,7 @@ class Terminal:
     def __init__(self, argv):
         if os.name == 'nt':
             from winpty import PtyProcess
-            self.process = PtyProcess.spawn(argv, dimensions=(60, 160), backend=1)
+            self.process = PtyProcess.spawn(argv, dimensions=(60, 160), backend="0")
         else:
             import pexpect
             self.process = pexpect.spawn(argv[0], argv[1:], dimensions=(60, 160),

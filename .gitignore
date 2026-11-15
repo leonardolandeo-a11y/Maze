@@ -29,4 +29,4 @@ compile_commands.json
 /generated-maps/
 
 /build-*/
-/__pycache__/
+__pycache__/
