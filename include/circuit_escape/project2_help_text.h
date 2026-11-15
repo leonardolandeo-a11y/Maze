@@ -49,7 +49,7 @@
             status_line("B", report.switch_b) + " | " + status_line("Exit", report.exit_goal),
         route,
         cost,
-        "Estimate ignores guard movements, batteries and waiting",
+        "Estimate ignores guard, batteries, trap penalties and waiting",
         "Highlight: 1=A 2=B 3=route 0=off | H/Esc back",
         MazeUI::zoom_help
     };

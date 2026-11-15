@@ -78,7 +78,8 @@ Artefactos del workflow:
    W=arriba, A=izquierda, S=abajo, D=derecha. Activan A/B y llegan a la salida;
    esperar cinemática y pantalla VICTORY. Esta secuencia corresponde únicamente
    al mapa Easy incluido, ID 3, seed 3668352356. H ofrece una estimación energética
-   que no simula al vigilante; no sustituye al witness ganador.
+   de terreno, sin simular al vigilante, baterías, penalizaciones de trampas ni
+   esperas; no sustituye al witness ganador.
 5. Tras la animación, Enter vuelve al menú. En DIFFICULTY elegir MEDIUM y luego
    HARD, iniciar y mostrar carga del nivel y H/Z. Q cierra el juego.
 6. Abrir **Generar mapas**. Escribir `15`, Enter, `20`, Enter. Esperar los tres

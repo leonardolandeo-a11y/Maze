@@ -955,6 +955,7 @@ void project2_active_help_text_test() {
     assert(positive[0].find("Exit: locked") != std::string::npos);
     assert(positive[1] == "Route: CURRENT -> A -> B -> EXIT");
     assert(positive[2] == "Cost 10 | Remaining 1 | ENOUGH");
+    assert(positive[3].find("trap penalties") != std::string::npos);
     assert(positive[4].find("H/Esc back") != std::string::npos);
     assert(positive[5] == MazeUI::zoom_help);
 
