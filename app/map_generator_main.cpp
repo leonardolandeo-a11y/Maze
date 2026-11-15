@@ -10,5 +10,9 @@ int main(int argc, char* argv[]) {
     for (int index = 1; index < argc; ++index) {
         arguments.emplace_back(argv[index]);
     }
+    if (!arguments.empty() && arguments.front() == "--interactive") {
+        arguments.erase(arguments.begin());
+        return run_interactive_map_generator(arguments, std::cin, std::cout, std::cerr);
+    }
     return run_map_generator(arguments, std::cout, std::cerr);
 }

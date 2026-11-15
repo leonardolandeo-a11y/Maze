@@ -1,4 +1,5 @@
 Unicode true
+!include "x64.nsh"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 
@@ -18,6 +19,18 @@ ShowUninstDetails show
 Page instfiles
 UninstPage uninstConfirm
 UninstPage instfiles
+
+Function .onInit
+  ${IfNot} ${RunningX64}
+    MessageBox MB_ICONSTOP "Circuito de Escape requires Windows x64."
+    Abort
+  ${EndIf}
+  SetRegView 64
+FunctionEnd
+
+Function un.onInit
+  SetRegView 64
+FunctionEnd
 
 Section "Install"
   SetOutPath "$INSTDIR"
@@ -43,5 +56,19 @@ Section "Uninstall"
   Delete "$DESKTOP\Circuito de Escape.lnk"
   RMDir /r "$SMPROGRAMS\Circuito de Escape"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CircuitoEscape"
-  RMDir /r "$INSTDIR"
+  Delete "$INSTDIR\bin\escape_circuit.exe"
+  Delete "$INSTDIR\bin\map_generator.exe"
+  Delete "$INSTDIR\bin\*.dll"
+  RMDir "$INSTDIR\bin"
+  Delete "$INSTDIR\assets\maps\mapa_facil.txt"
+  Delete "$INSTDIR\assets\maps\mapa_medio.txt"
+  Delete "$INSTDIR\assets\maps\mapa_dificil.txt"
+  RMDir "$INSTDIR\assets\maps"
+  RMDir "$INSTDIR\assets"
+  Delete "$INSTDIR\README.md"
+  Delete "$INSTDIR\launch-game.cmd"
+  Delete "$INSTDIR\launch-generator.cmd"
+  Delete "$INSTDIR\launch-generated-game.cmd"
+  Delete "$INSTDIR\Uninstall.exe"
+  RMDir "$INSTDIR"
 SectionEnd

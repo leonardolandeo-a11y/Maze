@@ -90,6 +90,10 @@ $copied = [System.Collections.Generic.HashSet[string]]::new([System.StringCompar
 while ($queue.Count -gt 0) {
     $binary = [string]$queue.Dequeue()
     if (-not $checked.Add($binary)) { continue }
+    $architecture = & $objdump -f $binary
+    if ($LASTEXITCODE -ne 0 -or ($architecture -join " ") -notmatch 'pei-x86-64') {
+        throw "Expected a Windows x64 binary: $binary"
+    }
     $imports = & $objdump -p $binary
     if ($LASTEXITCODE -ne 0) { throw "Unable to inspect DLL imports of $binary" }
     foreach ($line in $imports) {
