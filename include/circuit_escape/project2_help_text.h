@@ -1,6 +1,7 @@
 #pragma once
 
 #include "circuit_escape/project2_contracts.h"
+#include "circuit_escape/help_controls.h"
 
 #include <string>
 #include <vector>
@@ -49,6 +50,7 @@
         route,
         cost,
         "Estimate ignores guard movements, batteries and waiting",
-        "Highlight: 1=A 2=B 3=route 0=off | H/Esc back | Z zoom"
+        "Highlight: 1=A 2=B 3=route 0=off | H/Esc back",
+        MazeUI::zoom_help
     };
 }

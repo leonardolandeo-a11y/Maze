@@ -2,6 +2,7 @@
 #include "circuit_escape/console_ui.h"
 #include "circuit_escape/project2_session.h"
 #include "circuit_escape/help.h"
+#include "circuit_escape/help_presentation.h"
 
 #include <algorithm>
 #include <array>
@@ -1123,13 +1124,30 @@ ftxui::Element ConsoleUI::render_project2(
         vbox(std::move(footer_lines))
     ) | size(WIDTH, EQUAL, panel_width) | size(HEIGHT, EQUAL, footer_height);
 
-    return vbox({
+    auto game = vbox({
         std::move(sup_window),
         short_terminal ? emptyElement() : separatorEmpty(),
         std::move(board_window),
         short_terminal ? emptyElement() : separatorEmpty(),
         std::move(inf_window)
     }) | bgcolor(MazeUI::background);
+    if (help_lines.empty()) return game;
+
+    // Overlay the help card from the bottom. The map keeps its exact camera,
+    // dimensions and position when H or Z is pressed.
+    Elements details;
+    const std::array<std::string, 3> headings{"OBJECTIVES", "ROUTE", "ENERGY"};
+    for (std::size_t i = 0; i < help_lines.size(); ++i) {
+        if (i < headings.size() || i == 4) {
+            details.push_back(text(i == 4 ? "CONTROLS" : headings[i])
+                | bold | color(MazeUI::accent));
+        }
+        details.push_back(MazeUI::help_text(help_lines[i], panel_width - 2,
+            i == 3 ? MazeUI::muted : MazeUI::ink));
+    }
+    auto help_panel = MazeUI::panel("DIJKSTRA ENERGY HELP", vbox(std::move(details)))
+        | size(WIDTH, EQUAL, panel_width);
+    return dbox({game, vbox({filler(), help_panel | clear_under})});
 }
 
 /*---------------------------------------------------------------------
