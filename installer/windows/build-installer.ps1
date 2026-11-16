@@ -8,7 +8,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 
 function Resolve-ProjectPath([string]$path) {
     if ([System.IO.Path]::IsPathRooted($path)) { return $path }

@@ -1035,7 +1035,7 @@ La segunda entrega **extiende**, en lugar de duplicar, el motor de la primera. L
 | `IController`, `NavigationPolicy` y `PolicyController<Policy>` | Nueva `GuardBfsPolicy` con acciones legales y persecución por BFS. | `GameVerifier::guard_next_step` adapta la posición del vigilante y la del jugador a `Observation` y reutiliza `PolicyController<GuardBfsPolicy>`. | `tests/controllers_test.cpp`, `tests/map_generation/game_verifier_test.cpp`. |
 | Utilidades genéricas `countMatching` y `LinearSearch` | Se conservan para recorridos de celdas con los iteradores de `Grid`. | Validaciones y localización de la salida en `NavigationEnvironment`. | `tests/generic_functions_test.cpp`, `tests/environment_test.cpp`. |
 | `ConsoleUI`, `Menus`, animaciones y FTXUI | Se agregan selección de dificultad, modo ASCII/emoji, tablero dinámico, vista FULL MAP/DETAIL, símbolos A/B, vigilante y rutas Dijkstra. | `Project2Application` conecta el motor nuevo con la presentación y navegación existentes. | `tests/console_ui_test.cpp`, `tests/project2_integration_test.cpp`, `tests/menus_test.cpp`, `tests/animations_test.cpp`. |
-| CMake, CTest y semillas reproducibles | Se agregan los ejecutables `map_generator` y `escape_circuit`, pruebas de grafos y lotes deterministas. | Construcción de mapas por Kruskal, validación paralela y partida interactiva; empaquetado con NSIS. | `CMakeLists.txt`, `tests/map_generation/map_batch_test.cpp`, `tests/map_generation/kruskal_test.cpp`, `installer/build-installer.ps1`. |
+| CMake, CTest y semillas reproducibles | Se agregan los ejecutables `map_generator` y `escape_circuit`, pruebas de grafos y lotes deterministas. | Construcción de mapas por Kruskal, validación paralela y partida interactiva; empaquetado con NSIS. | `CMakeLists.txt`, `tests/map_generation/map_batch_test.cpp`, `tests/map_generation/kruskal_test.cpp`, `installer/windows/build-installer.ps1`. |
 
 ### Evidencias específicas de algoritmos y reglas
 
@@ -1133,7 +1133,7 @@ Para reconstruir el instalador en una máquina de desarrollo con MinGW x64 y NSI
 cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build-release --parallel 4
 ctest --test-dir build-release -C Release --output-on-failure
-.\installer\build-installer.ps1 -BuildDirectory build-release
+.\installer\windows\build-installer.ps1 -BuildDirectory build-release
 ```
 
 La salida está en `dist/CircuitoEscape-Setup.exe`. Se comprueba la arquitectura

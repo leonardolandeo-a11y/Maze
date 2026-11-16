@@ -40,7 +40,7 @@ jobs:
         shell: pwsh
         run: |
           if (!(Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
-          ./installer/build-installer.ps1 -BuildDirectory build-release
+          ./installer/windows/build-installer.ps1 -BuildDirectory build-release
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
