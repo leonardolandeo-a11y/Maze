@@ -1,17 +1,23 @@
 # Circuito de Escape — Maze
 
+## Descargas del Proyecto 2
+
+| Sistema | Instalador | Cómo iniciar |
+| --- | --- | --- |
+| Windows x64 | [**Descargar ZIP para Windows**](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/CircuitoEscape-Windows-x64-Release.zip) | Extrae el ZIP y abre `CircuitoEscape-Setup.exe`. |
+| Ubuntu 26.04 x86_64 | [**Descargar ZIP para Ubuntu**](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/CircuitoEscape-Ubuntu-26.04-x86_64-Release.zip) | Extrae el ZIP, abre una terminal donde esté `install.sh` y ejecuta `bash install.sh`. |
+
+[Guía de instalación (PDF)](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/Guia_Instalacion_Maze.pdf) · [Notas de la versión de Ubuntu](https://github.com/leonardolandeo-a11y/Maze/releases/tag/v1.0.0-linux)
+
 Motor de navegación por turnos desarrollado en **C++20** para el curso **CS2013 — Programación III**. El proyecto separa el motor de simulación de la interfaz de consola, utiliza **CMake** para la construcción y **FTXUI** para la presentación interactiva.
 
-**Guía de lectura:** las secciones numeradas **1–24 describen principalmente la primera entrega (Proyecto 1)**. Las secciones tituladas **Proyecto 2** documentan la ampliación vigente: dimensiones dinámicas, Kruskal, Dijkstra, vigilante BFS, concurrencia, ayuda H y distribución para Windows. Las exclusiones y el tag `proyecto-1-entrega` que aparecen en la parte histórica no describen el alcance ni la etiqueta final del Proyecto 2.
+**Guía de lectura:** las secciones numeradas **1–24 describen principalmente la primera entrega (Proyecto 1)**. Las secciones tituladas **Proyecto 2** documentan la ampliación vigente: dimensiones dinámicas, Kruskal, Dijkstra, vigilante BFS, concurrencia, ayuda H y distribución para Windows y Ubuntu. Las exclusiones y el tag `proyecto-1-entrega` que aparecen en la parte histórica no describen el alcance ni la etiqueta final del Proyecto 2.
 
 
 ## Proyecto 2 — Inicio rápido para entrega
 
 Se incluyen tres mapas **20×30 generados y validados**, no diseñados manualmente.
-Para Windows x64, descargar el artefacto `CircuitoEscape-Windows-x64-Release` del
-[workflow aprobado de esta rama](https://github.com/leonardolandeo-a11y/Maze/actions/workflows/windows-delivery.yml?query=branch%3Afeat%2Fentrega-final),
-extraer y ejecutar `CircuitoEscape-Setup.exe`. Incluye ambos ejecutables, DLL y
-los tres mapas. No requiere compilador ni herramientas de desarrollo.
+Para instalar el programa sin compilar, usa el ZIP de tu sistema en [Descargas del Proyecto 2](#descargas-del-proyecto-2). Ambos instaladores incluyen el juego, el generador y los tres mapas.
 La [auditoría técnica y demo](docs/entrega-final.md) distingue pruebas automatizadas
 de comprobaciones manuales pendientes.
 
@@ -1117,8 +1123,7 @@ Usar una terminal amplia y ASCII si la fuente no representa bien emojis.
 El workflow [Windows Release delivery](https://github.com/leonardolandeo-a11y/Maze/actions/workflows/windows-delivery.yml)
 compila en Windows x64 Release, ejecuta CTest y crea `CircuitoEscape-Setup.exe`
 con PowerShell/NSIS. Instala y prueba el paquete antes de subir el artefacto
-`CircuitoEscape-Windows-x64-Release` (retención 90 días). Descargarlo, extraerlo y
-ejecutar el Setup; el profesor no necesita CMake, NSIS, Python ni MinGW.
+`CircuitoEscape-Windows-x64-Release` (retención 90 días). Para instalar, descarga el [ZIP de la Release de Windows](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/CircuitoEscape-Windows-x64-Release.zip), extráelo y ejecuta `CircuitoEscape-Setup.exe`. No necesitas CMake, NSIS, Python ni MinGW.
 
 El menú Inicio incluye **Jugar**, **Generar mapas**, **Jugar mapas generados** y
 **Desinstalar**. Generar mapas pide filas y columnas por terminal y guarda en
