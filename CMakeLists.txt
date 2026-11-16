@@ -135,9 +135,9 @@ install(TARGETS map_generator escape_circuit
 )
 install(FILES README.md DESTINATION . COMPONENT Runtime)
 install(FILES
-    installer/launch-game.cmd
-    installer/launch-generator.cmd
-    installer/launch-generated-game.cmd
+    installer/windows/launch-game.cmd
+    installer/windows/launch-generator.cmd
+    installer/windows/launch-generated-game.cmd
     DESTINATION .
     COMPONENT Runtime
 )

@@ -101,7 +101,7 @@ python tests/delivery/terminal_playthrough.py --exe build-release/escape_circuit
 ```
 
 Windows: ejecutar el workflow **Windows Release delivery** en esta rama.
-El script `installer/build-installer.ps1 -BuildDirectory build-release` reutiliza
+El script `installer/windows/build-installer.ps1 -BuildDirectory build-release` reutiliza
 PowerShell/NSIS. Las dependencias de compilación y Python de pruebas son exclusivas
 del runner; no se requieren para instalar ni jugar.
 `Maze_test` mantiene aserciones activas en Release (`-UNDEBUG`/`/UNDEBUG`).
