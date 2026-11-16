@@ -2,7 +2,7 @@
 
 ## Descargas del Proyecto 2
 
-| Sistema | Instalador | Cómo iniciar  Guía de instalación |
+| Sistema | Instalador | Cómo iniciar | Guía de instalación |
 | --- | --- | --- | --- |
 | Windows x64 | [**Descargar ZIP para Windows**](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/CircuitoEscape-Windows-x64-Release.zip) | Extrae el ZIP y abre `CircuitoEscape-Setup.exe`. | [PDF para Windows](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/Guia_Instalacion_Maze.pdf) |
 | Ubuntu 26.04 x86_64 | [**Descargar ZIP para Ubuntu**](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/CircuitoEscape-Ubuntu-26.04-x86_64-Release.zip) | Extrae el ZIP, abre una terminal donde esté `install.sh` y ejecuta `bash install.sh`. | [PDF para Ubuntu](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/Guia_Instalacion_Maze.pdf) |
