@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <filesystem>
 #include <ostream>
+#include <istream>
+#include "circuit_escape/project2_generation.h"
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -29,7 +31,8 @@ Number read_number(const std::string& value, std::string_view option) {
 
 void print_usage(std::ostream& output) {
     output << "Usage: map_generator [options]\n"
-           << "  Allowed dimensions: 10x15, 20x30, 40x60\n"
+           << "  Dimensions: rows 5..40, columns 5..60, rows <= columns <= 2*rows\n"
+           << "  --interactive [--output DIR]  Prompt for rows/columns (standalone mode)\n"
            << "  --rows N              Map height (default: 10)\n"
            << "  --columns N           Map width (default: 15)\n"
            << "  --seed N              Base random seed (default: 12345)\n"
@@ -151,6 +154,31 @@ int run_map_generator(const std::vector<std::string>& arguments,
                << ", cost " << cost_for(batch, levels.hard_id) << '\n'
                << "Saved to: " << options.output_directory.string() << '\n';
         return 0;
+    } catch (const std::exception& exception) {
+        error << "Map generator error: " << exception.what() << '\n';
+        return 1;
+    }
+}
+
+int run_interactive_map_generator(const std::vector<std::string>& arguments,
+                                  std::istream& input, std::ostream& output,
+                                  std::ostream& error) {
+    try {
+        if (!arguments.empty() && (arguments.size() != 2 || arguments[0] != "--output" || arguments[1].empty()))
+            throw std::invalid_argument("Use --interactive [--output DIR]");
+        std::string rows, columns;
+        output << "Rows (5..40): " << std::flush;
+        if (!std::getline(input, rows)) throw std::invalid_argument("Missing rows");
+        output << "Columns (5..60, rows <= columns <= 2*rows): " << std::flush;
+        if (!std::getline(input, columns)) throw std::invalid_argument("Missing columns");
+        // Same validated, deterministic preparation profile as dimension acceptance tests.
+        const auto config = project2_batch_config({read_number<std::size_t>(rows, "rows"),
+                                                   read_number<std::size_t>(columns, "columns")});
+        return run_map_generator({"--rows", rows, "--columns", columns,
+            "--seed", std::to_string(config.base_seed), "--initial-energy", "1000",
+            "--maximum-energy", "1000", "--turn-limit", "2000", "--extra-openings", "15",
+            "--search-states", "100", "--output", arguments.empty() ? "assets/maps" : arguments[1]},
+            output, error);
     } catch (const std::exception& exception) {
         error << "Map generator error: " << exception.what() << '\n';
         return 1;

@@ -27,3 +27,6 @@ compile_commands.json
 /dist/
 
 /generated-maps/
+
+/build-*/
+__pycache__/

@@ -1,0 +1,74 @@
+name: Windows Release delivery
+on:
+  push:
+    branches: [feat/entrega-final]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: windows-delivery-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  installer:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+      - name: Configure Release x64
+        shell: msys2 {0}
+        run: cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+      - name: Add toolchain to packaging PATH
+        shell: pwsh
+        run: |
+          $compiler = (Select-String -LiteralPath build-release/CMakeCache.txt -Pattern '^CMAKE_CXX_COMPILER:[^=]*=(.*)$').Matches.Groups[1].Value
+          Split-Path $compiler -Parent | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Build and CTest Release
+        shell: pwsh
+        run: |
+          cmake --build build-release --parallel 4
+          if ($LASTEXITCODE) { throw 'Build failed' }
+          ctest --test-dir build-release -C Release --output-on-failure --output-junit ctest-release.xml
+          if ($LASTEXITCODE) { throw 'CTest failed' }
+      - name: Package NSIS installer
+        shell: pwsh
+        run: |
+          if (!(Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
+          ./installer/build-installer.ps1 -BuildDirectory build-release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test installed applications in Windows ConPTY
+        shell: pwsh
+        run: |
+          python -m pip install pywinpty==2.0.15 pyte==0.8.2
+          python tests/delivery/windows_acceptance.py
+          if ($LASTEXITCODE) { throw 'Installed acceptance failed' }
+      - name: Record checksum
+        shell: pwsh
+        run: |
+          (Get-FileHash dist/CircuitoEscape-Setup.exe -Algorithm SHA256).Hash + '  CircuitoEscape-Setup.exe' | Set-Content dist/SHA256SUMS.txt
+          "Commit: $env:GITHUB_SHA`nConfiguration: Release, Windows x64 UCRT/MinGW`nRun: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID" | Set-Content dist/BUILD.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CircuitoEscape-Windows-x64-Release
+          path: |
+            dist/CircuitoEscape-Setup.exe
+            dist/SHA256SUMS.txt
+            dist/BUILD.txt
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Windows-validation-evidence
+          path: |
+            build-release/ctest-release.xml
+            build-release/Testing/Temporary/LastTest.log
+            dist/evidence/
+          retention-days: 90

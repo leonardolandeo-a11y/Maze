@@ -119,7 +119,22 @@ void unreachable_exit_test() {
     assert(!result.a_then_b);
     assert(!result.b_then_a);
     assert(!result.recommended);
-    assert(!result.diagnostic.empty());
+    assert(result.diagnostic.find("A->EXIT") != std::string::npos);
+    assert(result.diagnostic.find("B->EXIT") != std::string::npos);
+    assert(result.diagnostic.find("START->A") == std::string::npos);
+}
+
+void unreachable_switch_diagnostic_test() {
+    for (bool isolate_a : {true, false}) {
+        auto input = base_input();
+        (isolate_a ? input.switch_a : input.switch_b) = {2, 2};
+        for (std::size_t column = 0; column < 4; ++column)
+            input.graph.blocked[4 + column] = true;
+        const auto result = validate_map_routes(input);
+        assert(result.status == MapRouteStatus::unreachable);
+        assert(result.diagnostic.find(isolate_a ? "START->A" : "START->B") != std::string::npos);
+        assert(result.diagnostic.find(isolate_a ? "START->B" : "START->A") == std::string::npos);
+    }
 }
 
 void directed_one_order_test() {
@@ -214,6 +229,7 @@ void run_map_validator_tests() {
     deterministic_tie_test();
     energy_threshold_test();
     unreachable_exit_test();
+    unreachable_switch_diagnostic_test();
     directed_one_order_test();
     high_entry_cost_test();
     invalid_settings_test();

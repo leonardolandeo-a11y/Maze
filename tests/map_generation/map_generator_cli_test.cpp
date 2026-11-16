@@ -50,6 +50,33 @@ void missing_three_levels_test(const std::filesystem::path& directory) {
     assert(!std::filesystem::exists(output_directory));
 }
 
+void interactive_test(const std::filesystem::path& directory) {
+    for (const auto* invalid : {"", "10\n", "abc\n15\n", "100\n150\n", "10\n60\n", "-1\n15\n"}) {
+        std::istringstream input(invalid);
+        std::ostringstream output, error;
+        const auto target = directory / "invalid-interactive";
+        assert(run_interactive_map_generator({"--output", target.string()}, input, output, error) == 1);
+        assert(!error.str().empty());
+        assert(!std::filesystem::exists(target));
+    }
+    for (const auto& size : {std::pair{10, 15}, {20, 30}, {40, 60}, {15, 20}}) {
+        std::istringstream input(std::to_string(size.first) + "\n" + std::to_string(size.second) + "\n");
+        std::ostringstream output, error;
+        const auto target = directory / ("interactive-" + std::to_string(size.first));
+        assert(run_interactive_map_generator({"--output", target.string()}, input, output, error) == 0);
+        assert(error.str().empty());
+        int previous_cost = -1;
+        for (const auto* name : {"mapa_facil.txt", "mapa_medio.txt", "mapa_dificil.txt"}) {
+            const auto map = load_map(target / name);
+            assert(map.grid.rows() == static_cast<std::size_t>(size.first));
+            assert(map.grid.columns() == static_cast<std::size_t>(size.second));
+            assert(map.minimum_energy_cost > previous_cost);
+            previous_cost = map.minimum_energy_cost;
+            assert(GameVerifier(map.input, map.effects).replay(map.winning_actions).outcome == GameOutcome::victory);
+        }
+    }
+}
+
 void generated_files_test(const std::filesystem::path& directory) {
     const auto output_directory = directory / "maps";
     std::ostringstream output;
@@ -96,6 +123,7 @@ void run_map_generator_cli_tests() {
     try {
         missing_three_levels_test(folder);
         generated_files_test(folder);
+        interactive_test(folder);
     } catch (...) {
         std::filesystem::remove_all(folder);
         throw;

@@ -8,7 +8,14 @@ Motor de navegación por turnos desarrollado en **C++20** para el curso **CS2013
 ## Proyecto 2 — Inicio rápido para entrega
 
 Se incluyen tres mapas **20×30 generados y validados**, no diseñados manualmente.
-El profesor puede jugar inmediatamente después de compilar, desde la raíz del repositorio:
+Para Windows x64, descargar el artefacto `CircuitoEscape-Windows-x64-Release` del
+[workflow aprobado de esta rama](https://github.com/leonardolandeo-a11y/Maze/actions/workflows/windows-delivery.yml?query=branch%3Afeat%2Fentrega-final),
+extraer y ejecutar `CircuitoEscape-Setup.exe`. Incluye ambos ejecutables, DLL y
+los tres mapas. No requiere compilador ni herramientas de desarrollo.
+La [auditoría técnica y demo](docs/entrega-final.md) distingue pruebas automatizadas
+de comprobaciones manuales pendientes.
+
+Para desarrollo desde la raíz del repositorio:
 
 ```bash
 cmake -S . -B build
@@ -95,8 +102,8 @@ costos, witnesses, selección y errores), sin comparar tiempos variables.
 El generador informa tiempos de construcción y validación por separado.
 Las aserciones de `Maze_test` permanecen activas también en Release.
 
-La [auditoría de entrega](docs/project2-delivery-audit.md) detalla evidencia y límites.
-No se ha generado el instalador final ni una GitHub Release como parte de esta preparación.
+La [auditoría técnica vigente](docs/entrega-final.md) detalla evidencia y límites.
+La [auditoría anterior](docs/project2-delivery-audit.md) se conserva como historial.
 
 ---
 
@@ -1107,30 +1114,35 @@ Usar una terminal amplia y ASCII si la fuente no representa bien emojis.
 
 ## Proyecto 2: instalador Windows (NSIS)
 
-La plataforma objetivo para la entrega es Windows 11 de 64 bits. El futuro instalador incluirá ambos ejecutables (`escape_circuit.exe` y `map_generator.exe`), tres mapas validados y sus dependencias MinGW. No requiere CLion ni CMake en el equipo donde se instala.
+El workflow [Windows Release delivery](https://github.com/leonardolandeo-a11y/Maze/actions/workflows/windows-delivery.yml)
+compila en Windows x64 Release, ejecuta CTest y crea `CircuitoEscape-Setup.exe`
+con PowerShell/NSIS. Instala y prueba el paquete antes de subir el artefacto
+`CircuitoEscape-Windows-x64-Release` (retención 90 días). Descargarlo, extraerlo y
+ejecutar el Setup; el profesor no necesita CMake, NSIS, Python ni MinGW.
 
-El empaquetado final queda para otra tarea después de revisar y mergear el PR. Para prepararlo entonces en la computadora de desarrollo, instalar NSIS y ejecutar desde PowerShell en la raíz del repositorio:
+El menú Inicio incluye **Jugar**, **Generar mapas**, **Jugar mapas generados** y
+**Desinstalar**. Generar mapas pide filas y columnas por terminal y guarda en
+`%LOCALAPPDATA%\CircuitoEscape\generated-maps`. Los mapas incluidos permanecen
+separados; el juego solo carga archivos. Los mapas personales se conservan al
+desinstalar. `map_generator --interactive --output DIR` ofrece el mismo diálogo
+fuera del acceso directo; siguen disponibles todos los parámetros avanzados.
+
+Para reconstruir el instalador en una máquina de desarrollo con MinGW x64 y NSIS:
 
 ```powershell
-# Requiere un directorio de CMake ya configurado, MinGW y NSIS en el equipo de desarrollo.
-# Si cmake.exe y makensis.exe estan en PATH, los parametros -CMake y -NSIS son opcionales.
-.\installer\build-installer.ps1 `
-    -BuildDirectory "build" `
-    -MapsDirectory "assets\maps" `
-    -CMake "RUTA_AL_EJECUTABLE\cmake.exe" `
-    -NSIS "RUTA_AL_EJECUTABLE\makensis.exe"
+cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release --parallel 4
+ctest --test-dir build-release -C Release --output-on-failure
+.\installer\build-installer.ps1 -BuildDirectory build-release
 ```
 
-Sustituir las dos rutas de ejemplo por las de la computadora de desarrollo; el instalador resultante **no necesita** CMake, NSIS ni MinGW en el equipo del usuario.
+La salida está en `dist/CircuitoEscape-Setup.exe`. Se comprueba la arquitectura
+x64 de los binarios y DLL y el arranque con PATH limitado al paquete y Windows.
+El artefacto de evidencia contiene CTest, manifest SHA-256, capturas de terminal y
+resultados de instalación, generación 15×20, H/Z, victoria en seis partidas,
+reproducibilidad workers=1/4 y desinstalación.
 
-Se pueden indicar otros escenarios validados con `-MapsDirectory`; el script copia `mapa_facil.txt`, `mapa_medio.txt` y `mapa_dificil.txt` desde esa carpeta y no modifica los originales. Usa Release por defecto (`-Configuration` permite cambiarlo), configura CMake y recompila los dos ejecutables, copia las DLL de MinGW que necesiten, verifica que `--help` funcione y llama a `makensis.exe`.
-
-Cuando se ejecute ese flujo, el instalador resultante se guardará en `dist/CircuitoEscape-Setup.exe`. Tras instalar, el menú Inicio incluye **Jugar**, **Generar mapas**, **Jugar mapas generados** y **Desinstalar**, y se crea un acceso directo en el escritorio. **Jugar** utiliza los tres mapas validados incluidos en el instalador, sin compilación. **Generar mapas** guarda los tres mapas nuevos en `%LOCALAPPDATA%\CircuitoEscape\generated-maps` y solo anuncia éxito si la generación finaliza correctamente. **Jugar mapas generados** carga los nuevos mapas desde esa carpeta sin sobrescribir los incluidos. Antes de generar el primer lote, muestra un aviso si faltan archivos. La carpeta de mapas generados se conserva tras la desinstalación.
-
-Antes de entregar: comprobar instalación, juego (tres dificultades), ayuda H, ejecución del generador desde el menú Inicio, los archivos producidos y desinstalación. El script de creación y la comprobación `--help` no sustituyen la prueba de instalación real.
-
-### Comprobación de entrega del Proyecto 2
-
-Desde una compilación del Proyecto 2, ejecutar `Maze_test` y comprobar los ejecutables independientes. Para una demostración en Windows, crear `dist/CircuitoEscape-Setup.exe`, instalarlo y probar **Jugar**, **Generar mapas** y **Jugar mapas generados** con los archivos de fácil/medio/difícil. Finalmente ejecutar **Desinstalar**, comprobar que desaparecen programa y accesos directos y que los mapas propios del usuario en `%LOCALAPPDATA%\CircuitoEscape\generated-maps` se conservan.
-
-La entrega debe incluir **código fuente C++20, `CMakeLists.txt`, pruebas, instalador de Windows, README y demostración**. La participación individual en la exposición es obligatoria según la rúbrica. Esta sección no afirma que exista un tag del Proyecto 2: el equipo debe acordar la rama y el identificador definitivos después de integrar y validar `main`.
+Ver [evidencias, límites y recorrido exacto de demo](docs/entrega-final.md).
+La inspección humana de fuentes/emojis y ventanas del instalador en Windows 11
+se distingue de la automatización nativa en el runner Windows Server 2022.
+No se crea una GitHub Release ni se fusiona esta rama automáticamente.
