@@ -17,24 +17,30 @@
         }
         return "EXIT";
     };
-    const auto status_line = [](const char* label, const ObjectiveInfo& info) -> std::string {
-        switch (info.status) {
-            case ObjectiveStatus::activated: return std::string(label) + ": activated";
-            case ObjectiveStatus::locked: return std::string(label) + ": locked";
-            case ObjectiveStatus::enabled: break;
-            case ObjectiveStatus::pending: break;
+    const auto status_line = [&](const char* label, const ObjectiveInfo& info) -> std::string {
+        const std::string prefix = std::string(label) + ": ";
+        if (info.status == ObjectiveStatus::activated) return prefix + "activated (-)";
+        if (info.status == ObjectiveStatus::locked) {
+            std::string missing;
+            if (report.switch_a.status != ObjectiveStatus::activated) missing = "A";
+            if (report.switch_b.status != ObjectiveStatus::activated)
+                missing += missing.empty() ? "B" : "+B";
+            return prefix + "requires " + missing + " (-)";
         }
-        if (!info.cost_from_current) return std::string(label) + ": unreachable";
-        return std::string(label) + ": " + std::to_string(*info.cost_from_current) + " energy";
+        const std::string state = info.status == ObjectiveStatus::enabled ? "enabled " : "pending ";
+        if (!info.cost_from_current) return prefix + state + "unreachable";
+        return prefix + state + std::to_string(*info.cost_from_current) + " energy";
     };
 
     std::string route = "Route: unavailable";
     std::string cost = "Cost: unreachable";
     if (report.total_cost) {
         route = "Route: CURRENT";
-        for (HelpTarget target : report.recommended_order) {
-            route += " -> ";
-            route += target_label(target);
+        for (std::size_t i = 0; i < report.recommended_order.size(); ++i) {
+            // These are consecutive leg costs, not independent costs from CURRENT.
+            route += i < report.segment_costs.size()
+                ? " -[" + std::to_string(report.segment_costs[i]) + "]-> " : " -> ";
+            route += target_label(report.recommended_order[i]);
         }
         const long long remaining = static_cast<long long>(report.current_energy) -
             static_cast<long long>(*report.total_cost);

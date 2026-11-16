@@ -95,7 +95,13 @@ MapRouteValidation validate_map_routes(const MapValidationInput& input) {
 
     if (!result.a_then_b && !result.b_then_a) {
         result.status = MapRouteStatus::unreachable;
-        result.diagnostic = "No route reaches both switches and the exit";
+        result.diagnostic = "No complete route. Unreachable segments:";
+        for (const auto& [found, label] : {
+                std::pair{start_to_a.found, " START->A"}, {a_to_b.found, " A->B"},
+                {b_to_exit.found, " B->EXIT"}, {start_to_b.found, " START->B"},
+                {b_to_a.found, " B->A"}, {a_to_exit.found, " A->EXIT"}}) {
+            if (!found) result.diagnostic += label;
+        }
         return result;
     }
 

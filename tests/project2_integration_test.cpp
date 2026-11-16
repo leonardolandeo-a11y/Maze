@@ -945,15 +945,16 @@ void project2_active_help_text_test() {
     report.switch_b = {ObjectiveStatus::pending, 3};
     report.exit_goal = {ObjectiveStatus::locked, std::nullopt};
     report.total_cost = 10;
+    report.segment_costs = {2, 3, 5};
     report.recommended_order = {HelpTarget::switch_a, HelpTarget::switch_b, HelpTarget::exit};
 
     report.current_energy = 11;
     const auto positive = format_project2_help_lines(report);
     assert(positive.size() == 6);
-    assert(positive[0].find("A: 2 energy") != std::string::npos);
-    assert(positive[0].find("B: 3 energy") != std::string::npos);
-    assert(positive[0].find("Exit: locked") != std::string::npos);
-    assert(positive[1] == "Route: CURRENT -> A -> B -> EXIT");
+    assert(positive[0].find("A: pending 2 energy") != std::string::npos);
+    assert(positive[0].find("B: pending 3 energy") != std::string::npos);
+    assert(positive[0].find("Exit: requires A+B (-)") != std::string::npos);
+    assert(positive[1] == "Route: CURRENT -[2]-> A -[3]-> B -[5]-> EXIT");
     assert(positive[2] == "Cost 10 | Remaining 1 | ENOUGH");
     assert(positive[3].find("trap penalties") != std::string::npos);
     assert(positive[4].find("H/Esc back") != std::string::npos);
@@ -967,12 +968,33 @@ void project2_active_help_text_test() {
     const auto negative = format_project2_help_lines(report);
     assert(negative[2] == "Cost 10 | Remaining -1 | INSUFFICIENT - RECHARGE");
 
+    report.switch_a.status = ObjectiveStatus::activated;
+    report.recommended_order = {HelpTarget::switch_b, HelpTarget::exit};
+    report.segment_costs = {3, 5};
+    report.total_cost = 8;
+    const auto after_a = format_project2_help_lines(report);
+    assert(after_a[0].find("A: activated (-)") != std::string::npos);
+    assert(after_a[0].find("Exit: requires B (-)") != std::string::npos);
+    assert(after_a[1] == "Route: CURRENT -[3]-> B -[5]-> EXIT");
+    report.switch_a.status = ObjectiveStatus::pending;
+    report.switch_b.status = ObjectiveStatus::activated;
+    assert(format_project2_help_lines(report)[0].find("Exit: requires A (-)") != std::string::npos);
+    report.switch_a.status = ObjectiveStatus::activated;
+    report.exit_goal = {ObjectiveStatus::enabled, 5};
+    report.recommended_order = {HelpTarget::exit};
+    report.segment_costs = {5};
+    report.total_cost = 5;
+    const auto after_both = format_project2_help_lines(report);
+    assert(after_both[0].find("B: activated (-)") != std::string::npos);
+    assert(after_both[0].find("Exit: enabled 5 energy") != std::string::npos);
+    assert(after_both[1] == "Route: CURRENT -[5]-> EXIT");
+
     report.total_cost.reset();
     report.exit_goal = {ObjectiveStatus::enabled, std::nullopt};
     const auto unreachable = format_project2_help_lines(report);
     assert(unreachable[1] == "Route: unavailable");
     assert(unreachable[2] == "Cost: unreachable");
-    assert(unreachable[0].find("Exit: unreachable") != std::string::npos);
+    assert(unreachable[0].find("Exit: enabled unreachable") != std::string::npos);
 }
 
 void run_project2_integration_tests() {

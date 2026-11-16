@@ -93,6 +93,24 @@ class Terminal:
         assert self.process.exitstatus == 0, f'Game exit: {self.process.exitstatus}'
 
 
+def check_help_frame(frame):
+    route = frame.split('Route: CURRENT', 1)[1].split('ENERGY', 1)[0]
+    costs = [int(cost) for cost in re.findall(r'-\[(\d+)\]->', route)]
+    total = int(re.search(r'Cost (\d+) \| Remaining', frame)[1])
+    assert costs and sum(costs) == total, (costs, total)
+    missing = []
+    for switch in ['A', 'B']:
+        active = f'Switch A ON' in frame if switch == 'A' else '| B ON' in frame
+        if active:
+            assert f'{switch}: activated (-)' in frame
+            assert not re.search(r'-> ' + switch + r'\b', route)
+        else:
+            missing.append(switch)
+            assert f'{switch}: pending ' in frame
+    expected = 'Exit: requires ' + '+'.join(missing) + ' (-)' if missing else 'Exit: enabled '
+    assert expected in frame, expected
+
+
 def map_fingerprints(directory):
     return {p.name: (hashlib.sha256(p.read_bytes()).hexdigest(), p.stat().st_mtime_ns)
             for p in sorted(Path(directory).glob('mapa_*.txt'))}
@@ -120,7 +138,9 @@ def play(executable, maps, evidence, label):
             hud = re.findall(r'Turn \d+/\d+|Energy \d+/\d+|Player \(\d+,\d+\)|Guard \(\d+,\d+\)|Switch A \w+ \| B \w+', initial)
             assert len(hud) == 5, hud
             game.send('h')
-            game.contains('DIJKSTRA ENERGY HELP')
+            help_frame = game.contains('DIJKSTRA ENERGY HELP')
+            check_help_frame(help_frame)
+            prefix.with_suffix('.help.txt').write_text(help_frame, encoding='utf-8')
             game.send('z')
             frame = game.contains('DETAIL')
             for field in hud:
@@ -136,10 +156,25 @@ def play(executable, maps, evidence, label):
             for field in hud:
                 assert field in frame, field
             prefix.with_suffix('.initial.txt').write_text(frame, encoding='utf-8')
+            switch_state = (False, False)
             for turn, action in enumerate(route, 1):
                 game.send(keys[action])
                 if turn < len(route):
-                    game.contains(f'Turn {turn}/', timeout=10)
+                    moved = game.contains(f'Turn {turn}/', timeout=10)
+                    updated = ('Switch A ON' in moved, '| B ON' in moved)
+                    if turn == 1 or updated != switch_state:
+                        # Reopen after movement/activation: the live application must
+                        # refresh Dijkstra, omit completed objectives and freeze the HUD.
+                        before_help = re.findall(r'Turn \d+/\d+|Energy \d+/\d+|Player \(\d+,\d+\)|Guard \(\d+,\d+\)|Switch A \w+ \| B \w+', moved)
+                        game.send('h')
+                        refreshed = game.contains('DIJKSTRA ENERGY HELP')
+                        check_help_frame(refreshed)
+                        for field in before_help:
+                            assert field in refreshed, field
+                        prefix.with_suffix(f'.help-turn-{turn}.txt').write_text(refreshed, encoding='utf-8')
+                        game.send('\x1b')
+                        game.until(lambda f: 'DIJKSTRA ENERGY HELP' not in f, 'Esc closes refreshed help')
+                    switch_state = updated
             victory = game.contains('Circuit complete. You escaped.', timeout=35)
             assert 'VICTORY' in victory
             prefix.with_suffix('.victory.txt').write_text(victory, encoding='utf-8')
