@@ -2,12 +2,12 @@
 
 ## Descargas del Proyecto 2
 
-| Sistema | Instalador | Cómo iniciar |
-| --- | --- | --- |
-| Windows x64 | [**Descargar ZIP para Windows**](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/CircuitoEscape-Windows-x64-Release.zip) | Extrae el ZIP y abre `CircuitoEscape-Setup.exe`. |
-| Ubuntu 26.04 x86_64 | [**Descargar ZIP para Ubuntu**](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/CircuitoEscape-Ubuntu-26.04-x86_64-Release.zip) | Extrae el ZIP, abre una terminal donde esté `install.sh` y ejecuta `bash install.sh`. |
+| Sistema | Instalador | Cómo iniciar  Guía de instalación |
+| --- | --- | --- | --- |
+| Windows x64 | [**Descargar ZIP para Windows**](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/CircuitoEscape-Windows-x64-Release.zip) | Extrae el ZIP y abre `CircuitoEscape-Setup.exe`. | [PDF para Windows](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/Guia_Instalacion_Maze.pdf) |
+| Ubuntu 26.04 x86_64 | [**Descargar ZIP para Ubuntu**](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/CircuitoEscape-Ubuntu-26.04-x86_64-Release.zip) | Extrae el ZIP, abre una terminal donde esté `install.sh` y ejecuta `bash install.sh`. | [PDF para Ubuntu](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/Guia_Instalacion_Maze.pdf) |
 
-[Guía de instalación (PDF)](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/Guia_Instalacion_Maze.pdf) · [Notas de la versión de Ubuntu](https://github.com/leonardolandeo-a11y/Maze/releases/tag/v1.0.0-linux)
+[Notas de la versión de Windows](https://github.com/leonardolandeo-a11y/Maze/releases/tag/v1.0.0) · [Notas de la versión de Ubuntu](https://github.com/leonardolandeo-a11y/Maze/releases/tag/v1.0.0-linux)
 
 Motor de navegación por turnos desarrollado en **C++20** para el curso **CS2013 — Programación III**. El proyecto separa el motor de simulación de la interfaz de consola, utiliza **CMake** para la construcción y **FTXUI** para la presentación interactiva.
 
