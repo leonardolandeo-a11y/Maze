@@ -1,1153 +1,252 @@
 # Circuito de Escape — Maze
 
+**Proyecto 2 · CS2013 Programación III · UTEC 2026-2**
+
+Juego de terminal en C++20. Activa los interruptores A y B, evita al vigilante y llega a la salida con energía antes de superar el límite de turnos. El generador prepara tres mapas por separado. El juego carga el nivel elegido sin volver a generarlo.
+
+[Descargas](#descargas-del-proyecto-2) · [Cómo jugar](#cómo-jugar) · [Mapas y algoritmos](#mapas-y-algoritmos) · [Arquitectura](#arquitectura-y-reutilización) · [Pruebas y rúbrica](#pruebas-y-rúbrica) · [Demostración](#demostración)
+
 ## Descargas del Proyecto 2
 
-| Sistema | Instalador | Cómo iniciar | Guía de instalación |
-| --- | --- | --- | --- |
-| Windows x64 | [**Descargar ZIP para Windows**](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/CircuitoEscape-Windows-x64-Release.zip) | Extrae el ZIP y abre `CircuitoEscape-Setup.exe`. | [PDF para Windows](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/Guia_Instalacion_Maze.pdf) |
-| Ubuntu 26.04 x86_64 | [**Descargar ZIP para Ubuntu**](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/CircuitoEscape-Ubuntu-26.04-x86_64-Release.zip) | Extrae el ZIP, abre una terminal donde esté `install.sh` y ejecuta `bash install.sh`. | [PDF para Ubuntu](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/Guia_Instalacion_Maze.pdf) |
+| Sistema | Instalador | Guía |
+| --- | --- | --- |
+| Windows x64 | [ZIP para Windows](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/CircuitoEscape-Windows-x64-Release.zip) | [Guía PDF](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/Guia_Instalacion_Maze.pdf) |
+| Ubuntu 26.04 x86_64 | [ZIP para Ubuntu](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/CircuitoEscape-Ubuntu-26.04-x86_64-Release.zip) | [Guía PDF](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/Guia_Instalacion_Maze.pdf) |
 
-[Notas de la versión de Windows](https://github.com/leonardolandeo-a11y/Maze/releases/tag/v1.0.0) · [Notas de la versión de Ubuntu](https://github.com/leonardolandeo-a11y/Maze/releases/tag/v1.0.0-linux)
+Ambos paquetes incluyen `escape_circuit`, `map_generator`, tres mapas y las dependencias de ejecución. No requieren compilar. El recorrido de demostración de este README usa **Ubuntu 26.04 x86_64**. También se incluye el procedimiento en Windows.
 
-Motor de navegación por turnos desarrollado en **C++20** para el curso **CS2013 — Programación III**. El proyecto separa el motor de simulación de la interfaz de consola, utiliza **CMake** para la construcción y **FTXUI** para la presentación interactiva.
+<details>
+<summary>Windows x64 · instalar, jugar y desinstalar</summary>
 
-**Guía de lectura:** las secciones numeradas **1–24 describen principalmente la primera entrega (Proyecto 1)**. Las secciones tituladas **Proyecto 2** documentan la ampliación vigente: dimensiones dinámicas, Kruskal, Dijkstra, vigilante BFS, concurrencia, ayuda H y distribución para Windows y Ubuntu. Las exclusiones y el tag `proyecto-1-entrega` que aparecen en la parte histórica no describen el alcance ni la etiqueta final del Proyecto 2.
+1. Extrae el ZIP y ejecuta `CircuitoEscape-Setup.exe`. Se instala para el usuario actual.
+2. En **Inicio → Circuito de Escape**, abre **Jugar** para cargar los mapas incluidos.
+3. Para crear otros mapas, abre **Generar mapas**, ingresa filas y columnas, y abre **Jugar mapas generados**. Los archivos quedan en `%LOCALAPPDATA%\CircuitoEscape\generated-maps`.
+4. Cierra el juego con `Q` y ejecuta **Desinstalar** desde el mismo menú. Se conservan los mapas generados.
 
+</details>
 
-## Proyecto 2 — Inicio rápido para entrega
+<details>
+<summary>Ubuntu 26.04 x86_64 · instalar, jugar y desinstalar</summary>
 
-Se incluyen tres mapas **20×30 generados y validados**, no diseñados manualmente.
-Para instalar el programa sin compilar, usa el ZIP de tu sistema en [Descargas del Proyecto 2](#descargas-del-proyecto-2). Ambos instaladores incluyen el juego, el generador y los tres mapas.
-La [auditoría técnica y demo](docs/entrega-final.md) distingue pruebas automatizadas
-de comprobaciones manuales pendientes.
-
-Para desarrollo desde la raíz del repositorio:
-
-```bash
-cmake -S . -B build
-cmake --build build --parallel
-cmake --build build --target Maze_test map_generator escape_circuit
-./build/Maze_test
-ctest --test-dir build --output-on-failure
-./build/escape_circuit
-```
-
-**map_generator = preparación offline. escape_circuit = juego con mapas preparados.**
-
-El menú ofrece **START GAME, DIFFICULTY, RENDER MODE, HELP y QUIT**.
-En DIFFICULTY se elige Easy / Medium / Hard; START GAME carga respectivamente
-`mapa_facil.txt`, `mapa_medio.txt` o `mapa_dificil.txt` desde `assets/maps`.
-No se eligen dimensiones ni se generan mapas dentro del juego, tampoco al iniciarlo.
-Cerrar y volver a abrir el juego reutiliza exactamente los mismos archivos.
-
-Para preparar otro lote, ejecutar el generador desde terminal y elegir allí las dimensiones:
+Extrae el ZIP. Desde la carpeta que contiene `install.sh`, ejecuta:
 
 ```bash
-./build/map_generator --rows 20 --columns 30 --seed 12345 --workers 4 --candidates 10 --initial-energy 1000 --maximum-energy 1000 --turn-limit 2000 --extra-openings 15 --rough-percent 15 --rough-cost 2 --search-states 100 --output build/prepared-maps
-./build/escape_circuit --maps build/prepared-maps
-# Cerrar con Q y volver a abrir: no se regenera nada.
-./build/escape_circuit --maps build/prepared-maps
+bash install.sh
+"$HOME/.local/bin/escape_circuit"
 ```
 
-El generador conserva Kruskal, DSU, Dijkstra, GameVerifier, MapSelector,
-construcción/validación concurrentes y guardado/carga. Solo volver a ejecutar
-`map_generator` reemplaza el lote. Los assets incluidos siguen siendo generados
-por estos algoritmos, no hechos manualmente.
-
-Las dimensiones se configuran con `--rows` y `--columns`, sin recompilar:
-**5 ≤ rows ≤ 40, 5 ≤ columns ≤ 60, rows × columns ≤ 2400,
-rows ≤ columns ≤ 2 × rows**. También se admiten 30×40 y 15×20.
-El renderer conserva FULL MAP / DETAIL y soporte interno de dimensiones variables.
-
-`--maps DIR` se aplica tanto al menú como a `--difficulty easy|medium|hard`.
-Si falta cualquiera de los tres archivos, el juego termina con un mensaje que
-identifica el archivo y pide ejecutar el generador offline; no crea mapas de reemplazo.
-
-### Configuración reproducible de los mapas incluidos
+Para generar y jugar con otro lote, usa una carpeta nueva para no sobrescribir mapas previos:
 
 ```bash
-./build/map_generator --rows 20 --columns 30 --seed 12345 --workers 4 --candidates 10 --initial-energy 100 --maximum-energy 100 --turn-limit 240 --extra-openings 15 --rough-percent 15 --rough-cost 2 --search-states 30000 --resources 5 --resource-points 10 --batteries 3 --battery-recharge 5 --traps 3 --trap-penalty 2 --trap-score-penalty 1 --output assets/maps
+MAPAS=$(mktemp -d "$HOME/CircuitoDemo.XXXXXX")
+"$HOME/.local/bin/map_generator" --interactive --output "$MAPAS"
+# Introduce las filas y columnas cuando el generador las solicite.
+"$HOME/.local/bin/escape_circuit" --maps "$MAPAS"
 ```
 
-Este comando es preparación opcional: reemplaza los mapas de esa carpeta.
-Para experimentar, usar otra carpeta con `--output` y después `escape_circuit --maps DIR --difficulty easy`.
-El pipeline real es Kruskal → candidatos → Dijkstra → GameVerifier → MapSelector → archivos.
+Cierra con `Q` y desinstala con:
 
-| Dificultad | ID | Semilla del candidato | Costo mínimo Dijkstra |
-|---|---:|---:|---:|
+```bash
+bash "$HOME/.local/opt/circuito-escape/install.sh" uninstall
+```
+
+El instalador trabaja en `~/.local`, sin `sudo`. Los mapas guardados fuera de la instalación se conservan.
+
+</details>
+
+## Cómo jugar
+
+En **DIFFICULTY** elige Easy, Medium o Hard. **START GAME** carga el mapa del nivel y **RENDER MODE** permite alternar emoji y ASCII.
+
+| Tecla | Acción |
+| --- | --- |
+| `W A S D` o flechas | Mover al jugador |
+| `E` | Esperar un turno |
+| `H` | Abrir o cerrar la ayuda de energía. `Esc` también la cierra |
+| `1`, `2`, `3`, `0` | Dentro de H, resaltar ruta hacia A, hacia B, recorrido recomendado o ninguna |
+| `Z` | Cambiar entre el mapa completo y la vista de detalle, incluso con H abierta |
+| `Q` | Salir |
+
+### Leyenda del tablero
+
+| Celda o entidad | Modo emoji | Modo ASCII | Comportamiento |
+| --- | :---: | :---: | --- |
+| Jugador | 🤖 | `@` | Posición actual del jugador. |
+| **Vigilante** | **👀** | **`V`** | Persigue al jugador con BFS y avanza un paso en los turnos pares. |
+| Interruptor A | `A` / `a` | `A` / `a` | Mayúscula si está pendiente. Minúscula si ya fue activado. |
+| Interruptor B | `B` / `b` | `B` / `b` | Mayúscula si está pendiente. Minúscula si ya fue activado. |
+| Espacio libre | ⬜ | `.` | Casilla transitable de costo normal. |
+| Muro | ⬛ | `#` | Bloquea el paso. |
+| Terreno elevado | 🟫 | `~` | Gasta más energía al entrar. |
+| Recurso | 💎 | `R` | Suma puntos una sola vez. |
+| Batería | ⚡ | `+` | Recupera energía una sola vez, hasta el máximo. |
+| Trampa | 💥 | `T` | Penaliza energía y puntaje cada vez que se entra. |
+| Salida | 🏁 | `S` | Solo da la victoria con A y B activos, energía positiva y sin captura. |
+
+El mapa completo compacto puede usar marcadores ASCII y colores para ahorrar espacio, incluso en modo emoji. La leyenda corresponde a [`escape_circuit`](src/console_ui.cpp). Los símbolos en pantalla no son los mismos que los del archivo de mapa.
+
+Cada turno se resuelve así:
+
+1. El motor aplica la acción del jugador, los costos y los efectos de la casilla.
+2. Si no hubo captura por entrar a la casilla del vigilante, este puede avanzar en turnos pares. Busca desde su posición hasta la posición actual del jugador, respeta muros y desempata arriba, izquierda, derecha, abajo. Si no tiene camino, espera.
+3. Se comprueba captura, luego energía, luego activación de interruptores y salida. Si no hubo victoria y se alcanzó el límite, la partida termina. **Se puede ganar en el último turno permitido**, pero la captura tiene prioridad.
+
+## Mapas y algoritmos
+
+### Preparación y selección
+
+- **Construcción.** Kruskal ordena las aristas del grafo propio y usa `DisjointSet` para construir un árbol de costo mínimo sin ciclos. Las aperturas extra se agregan aparte.
+- **Validación.** Dijkstra compara `Inicio → A → B → Salida` con `Inicio → B → A → Salida`. Si un tramo no existe, invalida ese recorrido. El costo de terreno se contrasta con la energía inicial. Si hacen falta recargas, el verificador comprueba la secuencia con las reglas reales, incluidas las baterías y el vigilante. Una ruta barata por sí sola no demuestra una victoria.
+- **Selección.** Entre los candidatos con una victoria demostrada, Easy toma el menor costo y Hard el mayor. Medium toma el costo distinto de ambos extremos más cercano al promedio de los candidatos verificados. Desempata por menor identificador. Con menos de tres costos distintos, el generador informa el fallo y no guarda un lote incompleto.
+- **Concurrencia.** Construcción y validación son dos fases separadas. Cada una usa un conjunto acotado de `std::jthread`, un contador atómico para repartir tareas y una posición de resultados por mapa. Todos los hilos de construcción terminan antes de validar. La clasificación es secuencial. Los errores se informan por mapa y se muestran tiempos separados de **Construction** y **Validation**.
+
+### Ayuda durante la partida
+
+Al abrir `H`, el juego reutiliza Dijkstra desde la posición actual. Omite los interruptores activos y muestra el camino recomendado, sus tramos, el costo total y el saldo de energía: positivo, cero o negativo. También indica cuando no hay recorrido válido. La consulta no mueve al vigilante, no consume energía y no avanza el turno. Es una estimación de gasto de terreno, no una simulación de capturas, recargas, trampas ni esperas.
+
+### Mapas guardados
+
+En [`assets/maps`](assets/maps) vienen `mapa_facil.txt`, `mapa_medio.txt` y `mapa_dificil.txt`. Para usar otro lote, indica su carpeta con `escape_circuit --maps DIR`. `--difficulty easy|medium|hard` permite abrir directamente un nivel. Si el lote está incompleto o es inválido, el juego informa el error en vez de regenerarlo.
+
+El formato de texto [`CIRCUIT_ESCAPE_MAP 1`](src/map_generation/map_storage.cpp) guarda el ID, semilla, nivel, costo mínimo, dimensiones, energía, límite de turnos, posiciones y secuencia ganadora. En `cells`, `.` es paso libre, `#` muro y `E` salida. Los tipos con parámetros son `R:<costo>` (terreno), `P:<puntos>` (recurso), `B:<energía>` (batería) y `T:<energía>:<puntos>` (trampa). Jugador, vigilante y switches se guardan como coordenadas separadas, desde cero. La carga comprueba que las acciones guardadas reproduzcan una victoria.
+
+| Mapa incluido (20×30) | ID | Semilla del candidato | Costo Dijkstra |
+| --- | ---: | ---: | ---: |
 | Easy | 3 | 3668352356 | 51 |
 | Medium | 5 | 387289302 | 61 |
 | Hard | 9 | 2415097786 | 76 |
 
-Los tres comparten dimensiones y reglas; cada archivo incluye un witness ganador.
-El costo mínimo no garantiza por sí solo evitar al vigilante: la victoria se comprueba
-reproduciendo acciones. Baterías y trampas se simulan sin pesos negativos en Dijkstra.
-`Maze_test` regenera el lote, compara los assets y reproduce cada witness cargado con
-`Project2Session` hasta victoria.
+<details>
+<summary>Dimensiones, semillas y generación reproducible</summary>
 
-### Dimensiones, concurrencia y aceptación
+Filas de 5 a 40, columnas de 5 a 60 y proporción `filas ≤ columnas ≤ 2 × filas`, con área máxima de 2400. Se admiten de 1 a 10 candidatos por lote y al menos un trabajador. `map_generator --help` enumera todas las opciones.
 
-`--rows`, `--columns`, `--seed`, `--workers` y `--candidates` son parámetros runtime.
-No se recompila al cambiar dimensiones. Se rechazan configuraciones inválidas con
-un mensaje; `--candidates` admite **1 a 10**, nunca cero, y `--workers` debe ser positivo.
-`--help` enumera todos los parámetros. La clasificación requiere al menos tres costos
-distintos entre victorias verificadas; usa menor costo para Easy, mayor para Hard y
-el costo intermedio más cercano al promedio para Medium, con desempate por menor ID.
-
-La suite integra generación → validación → clasificación → guardado → carga → partida
-→ witness → victoria en **10×15, 20×30 y 40×60**. Para que sea rápida usa energía
-inicial/máxima 1000, límite 2000, 15 aperturas extra, 10 candidatos, 4 workers,
-100 estados de búsqueda y sin ítems; seed 12345 para 10×15/20×30 y 42 para 40×60.
-Seed 12345 en 40×60 con ese presupuesto solo produjo dos victorias, por lo que se
-eligió 42 de forma explícita. Esta configuración de pruebas no cambia los mapas de entrega.
-
-La construcción paralela termina antes de la validación paralela con Dijkstra;
-la clasificación es secuencial tras esperar a todos los `std::jthread`.
-Se comparan workers=1 y workers=4 (IDs, seeds, grafos, aperturas completas, rutas,
-costos, witnesses, selección y errores), sin comparar tiempos variables.
-El generador informa tiempos de construcción y validación por separado.
-Las aserciones de `Maze_test` permanecen activas también en Release.
-
-La [auditoría técnica vigente](docs/entrega-final.md) detalla evidencia y límites.
-La [auditoría anterior](docs/project2-delivery-audit.md) se conserva como historial.
-
----
-
-## 1. Información del proyecto
-
-| Campo | Información |
-|---|---|
-| Curso | CS2013 — Programación III |
-| Proyecto | Proyecto 1 — Circuito de Escape |
-| Semestre | 2026-2 |
-| Grupo | 5 |
-| Lenguaje | C++20 |
-| Construcción | CMake |
-| Interfaz | Consola con FTXUI |
-| Rama de entrega | `main` |
-| Tag de entrega | `proyecto-1-entrega` |
-
-### Integrantes
-
-| Integrante | Código UTEC | GitHub |
-|---|---:|---|
-| **Leonardo Landeo** | `202520151` | `@leonardolandeo-a11y` |
-| **Fabricio Nick** | `202520045` | `@SRHOUSE` |
-| **André Brando** | `202520185` | `@andremejia-hub` |
-| **Jared Chala** | `202520040` | `@jaredchala-bot` |
-| **Iker García** | `202520059` | `@iygt8-iterate` |
-
-El detalle verificable de responsabilidades y aportes se mantiene en [`docs/contributions.md`](docs/contributions.md).
-
----
-
-## 2. Descripción general
-
-**Circuito de Escape** es un juego de navegación por turnos sobre una cuadrícula rectangular. El agente debe alcanzar la salida antes de quedarse sin energía o superar el límite máximo de turnos.
-
-Durante el recorrido puede encontrar:
-
-- espacios libres;
-- muros;
-- terreno de costo elevado;
-- recursos;
-- baterías;
-- trampas;
-- una salida.
-
-El proyecto se concentra en el **motor de simulación**. La presentación se mantiene separada del estado y de las reglas para que el mismo `NavigationEnvironment` pueda utilizarse tanto en una partida humana como en simulaciones automáticas reproducibles.
-
----
-
-## 3. Características principales
-
-- tablero genérico `Grid<Cell, Rows, Columns>`;
-- escenarios principales de **20 × 30**;
-- siete tipos de celda;
-- perfiles **Easy**, **Standard** y **Hard**;
-- renderizado **Emoji** y **ASCII**;
-- interfaz interactiva con FTXUI;
-- estado observable mediante `Observation`;
-- resultado de cada acción mediante `StepResult`;
-- eventos tipados con `std::variant`;
-- controlador aleatorio reproducible;
-- controlador heurístico basado en distancia Manhattan;
-- `concept NavigationPolicy`;
-- adaptador genérico `PolicyController<Policy>`;
-- polimorfismo dinámico mediante `IController`;
-- controladores polimórficos administrados mediante `std::unique_ptr<IController>`;
-- simulación automática reproducible con semilla controlable;
-- pruebas automáticas integradas con CMake y CTest.
-
----
-
-## 4. Reglas de la partida
-
-El agente mantiene, como mínimo:
-
-- posición actual;
-- energía actual y máxima;
-- puntaje acumulado;
-- cantidad de recursos recogidos;
-- estado activo o finalizado.
-
-### Condiciones de término
-
-Una partida puede terminar por:
-
-```cpp
-enum class EndReason {
-    none,
-    goalReached,
-    noEnergy,
-    turnLimit
-};
-```
-
-La precedencia utilizada es:
-
-1. `goalReached`, cuando el agente se encuentra en la salida y conserva energía;
-2. `noEnergy`;
-3. `turnLimit`.
-
-Por tanto:
-
-- llegar a la salida con energía positiva produce victoria;
-- llegar a la salida con energía cero no produce victoria;
-- llegar con energía positiva exactamente en el último turno sí produce victoria.
-
-El estado final conserva la información necesaria para conocer el resultado de la partida, incluyendo turnos, energía restante, recursos recogidos y puntaje.
-
-### Resolución de una acción
-
-`NavigationEnvironment::step(Action)` concentra la lógica de cada turno.
-
-El orden general es:
-
-1. incrementar el turno;
-2. procesar una acción inválida o `wait`;
-3. calcular la posición candidata para un movimiento;
-4. rechazar movimientos fuera del tablero o contra un muro;
-5. actualizar la posición cuando el movimiento es válido;
-6. descontar el costo de entrada;
-7. aplicar el efecto de la celda destino;
-8. generar los eventos correspondientes;
-9. comprobar las condiciones de término;
-10. devolver un `StepResult`.
-
-Un movimiento hacia un muro o fuera del tablero:
-
-- consume un turno;
-- no cambia la posición;
-- descuenta `waitOrInvalidCost`;
-- genera `MovementRejectedEvent`.
-
-La acción `wait`:
-
-- consume un turno;
-- no cambia la posición;
-- descuenta `waitOrInvalidCost`;
-- no vuelve a activar la celda actual.
-
----
-
-## 5. Tipos de celda
-
-Las celdas se representan mediante `std::variant`:
-
-```cpp
-using Cell = std::variant<
-    Empty,
-    Wall,
-    RoughTerrain,
-    ResourceCell<int>,
-    Battery,
-    Trap,
-    Exit
->;
-```
-
-| Celda | Emoji | ASCII | Comportamiento |
-|---|:---:|:---:|---|
-| Agente | 🤖 | `@` | posición actual del jugador |
-| Espacio libre | ⬜ | `.` | movimiento normal |
-| Muro | ⬛ | `#` | bloquea el movimiento |
-| Terreno elevado | 🟫 | `~` | consume energía adicional |
-| Recurso | 💎 | `R` | suma puntaje una sola vez |
-| Batería | ⚡ | `B` | recupera energía una sola vez |
-| Trampa | 💥 | `T` | penaliza energía y puntaje en cada entrada |
-| Salida | 🏁 | `S` | objetivo del escenario |
-
-Los recursos y las baterías son consumibles. Después de activarse no vuelven a aplicar su beneficio. Las trampas no son consumibles y vuelven a aplicar su penalización cada vez que el agente entra en ellas.
-
----
-
-## 6. Perfiles de dificultad
-
-Las reglas variables se centralizan en `GameRules` y se obtienen mediante:
-
-```cpp
-GameRules rulesFor(Difficulty difficulty);
-```
-
-| Parámetro | Easy | Standard | Hard |
-|---|---:|---:|---:|
-| Energía inicial | 80 | 60 | 40 |
-| Energía máxima | 80 | 60 | 40 |
-| Límite de turnos | 240 | 180 | 140 |
-| Costo de celda normal | 1 | 1 | 1 |
-| Costo de terreno elevado | 2 | 2 | 3 |
-| Costo de `wait` o intento inválido | 1 | 1 | 1 |
-| Puntos por recurso | +15 | +10 | +8 |
-| Recarga de batería | +5 | +3 | +2 |
-| Penalización de energía por trampa | -1 | -2 | -3 |
-| Penalización de puntaje por trampa | 0 | -1 | -2 |
-
-El perfil predeterminado es **Standard**.
-
-`NavigationEnvironment` recibe un objeto `GameRules`, por lo que las diferencias entre dificultades se mantienen como datos configurables en lugar de condicionales dispersos por el motor.
-
----
-
-## 7. Interfaz de consola
-
-La capa de presentación utiliza **FTXUI v7.0.3**.
-
-### Menú principal
-
-Desde el menú principal se puede:
-
-- iniciar la partida;
-- seleccionar escenario;
-- seleccionar dificultad;
-- seleccionar modo de renderizado;
-- abrir la ayuda;
-- salir.
-
-La navegación de menús utiliza `W` / `S` o las flechas verticales y `Enter` para seleccionar.
-
-### Controles durante la partida
-
-| Tecla | Alternativa | Acción |
-|---|---|---|
-| `W` | `↑` | mover arriba |
-| `S` | `↓` | mover abajo |
-| `A` | `←` | mover izquierda |
-| `D` | `→` | mover derecha |
-| `E` | — | esperar un turno |
-| `H` | — | abrir/cerrar ayuda |
-| `Q` | — | salir |
-
-Las letras se aceptan en mayúsculas y minúsculas.
-
-Una entrada no reconocida muestra un aviso y vuelve a esperar una entrada válida **sin ejecutar `step()`**.
-
-### Modos de renderizado
-
-El menú ofrece:
-
-- **Emoji**, modo predeterminado;
-- **ASCII**, como alternativa para terminales que no representen correctamente Unicode o emojis de ancho completo.
-
-Durante la partida se mantienen visibles el tablero y el estado relevante: turno, energía, puntaje, recursos y el último resultado o evento.
-
----
-
-## 8. Escenarios
-
-El proyecto incluye dos escenarios principales de **20 × 30**:
-
-- **Scenario 1**;
-- **Scenario 2**.
-
-Sus implementaciones se encuentran en:
-
-```text
-src/scenarios/scenario_1.cpp
-src/scenarios/scenario_2.cpp
-```
-
-con interfaces en:
-
-```text
-include/circuit_escape/scenarios/scenario_1.h
-include/circuit_escape/scenarios/scenario_2.h
-```
-
-Ambos escenarios cuentan con una ruta alcanzable desde la posición inicial hasta la salida y se validan mediante pruebas.
-
-La posición inicial utilizada por `GameApplication` es:
-
-```cpp
-Position{1, 1}
-```
-
-La generación procedural compleja de mapas no forma parte del alcance del proyecto.
-
----
-
-## 9. Arquitectura
-
-El diseño separa la presentación, la coordinación de la aplicación y el motor:
-
-```text
-┌──────────────────────────┐
-│        ConsoleUI         │
-│  FTXUI + input + render  │
-└────────────┬─────────────┘
-             │ UICommand
-             ▼
-┌──────────────────────────┐
-│     GameApplication      │
-│   coordina la partida    │
-└────────────┬─────────────┘
-             │ Action
-             ▼
-┌──────────────────────────┐
-│ NavigationEnvironment    │
-│ estado + reglas + step() │
-└──────────┬───────┬───────┘
-           │       │
-           ▼       ▼
-  Grid<Cell,R,C>   NavigationEvent
-           │
-           ▼
-      Observation
-           │
-           ▼
-     IController
-           ▲
-           │
- PolicyController<Policy>
-      /            \
-RandomPolicy   HeuristicPolicy
-```
-
-### Responsabilidades principales
-
-| Componente | Responsabilidad |
-|---|---|
-| `ConsoleUI` | traducir eventos del teclado y renderizar con FTXUI |
-| `GameApplication` | coordinar menús, partida, animaciones y llamadas a `step()` |
-| `NavigationEnvironment` | mantener el estado, validar y ejecutar acciones, aplicar reglas y producir resultados |
-| `Grid<Cell, Rows, Columns>` | almacenar celdas, validar posiciones y exponer iteradores |
-| `IController` | interfaz virtual común para controladores automáticos |
-| `PolicyController<Policy>` | adaptar una policy genérica a `IController` |
-| `RandomPolicy` | seleccionar una acción legal con aleatoriedad reproducible |
-| `HeuristicPolicy` | escoger una acción legal usando distancia Manhattan |
-
-Para una partida humana no se necesita una clase `HumanController`: `ConsoleUI` traduce la entrada del jugador y `GameApplication` entrega la acción directamente a `NavigationEnvironment::step()`.
-
----
-
-## 10. Estado observable y resultado de un paso
-
-### `Observation`
-
-Los controladores reciben una copia del estado observable, sin referencias modificables al estado interno:
-
-```cpp
-struct Observation {
-    Position agent;
-    Position goal;
-    int energy{};
-    int maximumEnergy{};
-    int score{};
-    std::size_t collectedResources{};
-    std::size_t turn{};
-    std::size_t turnLimit{};
-    std::vector<Action> availableActions;
-};
-```
-
-### `StepResult`
-
-Cada acción produce información equivalente a:
-
-```cpp
-struct StepResult {
-    Observation observation;
-    std::vector<NavigationEvent> events;
-    bool finished{false};
-    EndReason reason{EndReason::none};
-};
-```
-
-Así, la UI y los controladores trabajan con datos del motor sin interpretar texto de consola.
-
----
-
-## 11. Sistema de eventos
-
-Los eventos se modelan mediante tipos pequeños y `std::variant`:
-
-```cpp
-using NavigationEvent = std::variant<
-    MovedEvent,
-    MovementRejectedEvent,
-    ResourceCollectedEvent,
-    EnergyChangedEvent,
-    TrapTriggeredEvent,
-    GoalReachedEvent
->;
-```
-
-Entre los eventos se encuentran:
-
-- movimiento realizado;
-- movimiento rechazado;
-- recurso recogido;
-- cambio de energía;
-- trampa activada;
-- llegada a la salida.
-
-La interfaz procesa estos valores con `std::visit`; el motor no imprime directamente en consola.
-
----
-
-## 12. Controladores y policies
-
-### `IController`
-
-`IController` define el contrato común para decisiones automáticas:
-
-```cpp
-class IController {
-public:
-    virtual ~IController() = default;
-
-    virtual Action selectAction(
-        const Observation& observation,
-        std::span<const Action> legalActions
-    ) = 0;
-};
-```
-
-Los controladores polimórficos se administran mediante `std::unique_ptr<IController>`, lo que permite intercambiar implementaciones a través de la misma interfaz sin almacenar objetos polimórficos por valor.
-
-### `NavigationPolicy`
-
-El contrato de las policies se valida en compilación:
-
-```cpp
-template<typename Policy>
-concept NavigationPolicy = requires(
-    Policy& policy,
-    const Observation& observation,
-    std::span<const Action> actions
-) {
-    { policy.selectAction(observation, actions) } -> std::same_as<Action>;
-};
-```
-
-### `PolicyController<Policy>`
-
-```cpp
-template<typename Policy>
-requires NavigationPolicy<Policy>
-class PolicyController : public IController {
-    // ...
-};
-```
-
-Este adaptador combina:
-
-- validación estática mediante `NavigationPolicy`;
-- implementación genérica mediante templates;
-- despacho dinámico mediante `IController`.
-
-### `RandomPolicy`
-
-- utiliza `std::mt19937`;
-- recibe una semilla controlable;
-- selecciona una acción legal;
-- permite reproducir secuencias de decisiones en las pruebas.
-
-### `HeuristicPolicy`
-
-Selecciona la acción legal que reduce la distancia Manhattan respecto de la salida:
-
-```text
-|row1 - row2| + |column1 - column2|
-```
-
-Es una estrategia heurística local: no pretende encontrar siempre una ruta global óptima.
-
-### Intercambio de controladores
-
-La simulación utiliza la interfaz común `IController`, de modo que un controlador basado en `RandomPolicy` puede sustituirse por otro basado en `HeuristicPolicy` sin modificar `NavigationEnvironment`.
-
----
-
-## 13. Simulación automática reproducible
-
-El proyecto permite ejecutar una simulación sin interacción humana.
-
-La API existente incluye:
-
-```cpp
-template<std::size_t Rows, std::size_t Columns>
-SimulationResult runRandomSimulation(
-    NavigationEnvironment<Rows, Columns>& environment,
-    std::uint32_t seed
-);
-```
-
-La simulación:
-
-1. reinicia el entorno;
-2. utiliza una policy con semilla controlable;
-3. obtiene `Observation` y acciones legales;
-4. selecciona una acción;
-5. ejecuta `step()`;
-6. repite hasta finalizar;
-7. conserva acciones, motivo de término, turnos, puntaje y energía restante.
-
-Las pruebas utilizan semillas fijas para verificar reproducibilidad.
-
----
-
-## 14. Aplicación de C++20 y temas del curso
-
-La ubicación detallada de cada decisión se documenta en [`docs/design.md`](docs/design.md).
-
-### Templates de funciones
-
-`include/circuit_escape/generic_functions.h` contiene algoritmos genéricos basados en iteradores, entre ellos operaciones equivalentes a conteo y búsqueda sobre rangos.
-
-Estos algoritmos se utilizan con más de un tipo de contenedor y también se prueban con rangos vacíos.
-
-La simulación automática añade otro uso de templates parametrizado por las dimensiones del entorno.
-
-### Template de clase
-
-```cpp
-template<typename CellType, std::size_t Rows, std::size_t Columns>
-class Grid;
-```
-
-`Grid` utiliza:
-
-- un parámetro de tipo;
-- dos parámetros no-tipo;
-- almacenamiento mediante `std::array<CellType, Rows * Columns>`;
-- acceso validado;
-- iteradores const y no const;
-- comprobación de dimensiones válidas en compilación.
-
-### Especialización total y parcial
-
-`CellTraits` expresa diferencias reales del dominio.
-
-Especialización total para `Wall`:
-
-```cpp
-template<>
-struct CellTraits<Wall>;
-```
-
-Especialización parcial para recursos:
-
-```cpp
-template<typename Reward>
-struct CellTraits<ResourceCell<Reward>>;
-```
-
-### Template variádico
-
-```cpp
-template<class... FLambda>
-struct Overloaded : FLambda... {
-    using FLambda::operator()...;
-};
-```
-
-`Overloaded` permite agrupar lambdas utilizadas por `std::visit`.
-
-### Fold expression
-
-Las condiciones de término utilizan una fold expression dentro de la lógica que evalúa la primera condición satisfecha:
-
-```cpp
-(evaluate(conditions), ...);
-```
-
-### Concepts y polimorfismo dinámico
-
-- `NavigationPolicy` comprueba el contrato de una policy en compilación;
-- `PolicyController<Policy>` adapta una policy válida;
-- `IController` proporciona despacho dinámico en ejecución.
-
-La evidencia de una compilación intencionalmente inválida para una policy que no satisface `NavigationPolicy` se documenta en `docs/negative_concept_test.md`. Ese ejemplo se mantiene fuera del build normal.
-
----
-
-## 15. Biblioteca estándar y elección de contenedores
-
-| Elemento | Uso principal |
-|---|---|
-| `std::array` | almacenamiento contiguo y de tamaño fijo del grid |
-| `std::vector` | acciones, eventos y resultados de simulación |
-| `std::variant` | representación de celdas y eventos |
-| `std::visit` | procesamiento de alternativas de un `variant` |
-| `std::optional` | resultados que pueden no existir, como posiciones o comandos válidos |
-| `std::span` | vistas no propietarias sobre acciones o eventos |
-| `std::unique_ptr` | propiedad de controladores polimórficos |
-| `std::mt19937` | decisiones pseudoaleatorias reproducibles |
-| `std::uniform_int_distribution` | selección aleatoria de acciones |
-| algoritmos de `<algorithm>` | operaciones genéricas y pruebas |
-
-### `std::array`
-
-El tamaño del grid se conoce en compilación:
-
-```cpp
-Grid<Cell, 20, 30>
-```
-
-`std::array` ofrece almacenamiento contiguo, no requiere redimensionamiento durante la ejecución y permite exponer iteradores directamente.
-
-### `std::vector`
-
-Se utiliza cuando el número de elementos depende de la ejecución, como en:
-
-- acciones disponibles;
-- eventos de un turno;
-- secuencias producidas por una simulación.
-
-### `std::variant`
-
-Los posibles tipos de celda y evento se conocen en compilación. `std::variant` permite representarlos de forma segura sin crear una jerarquía polimórfica separada para cada caso.
-
-### `std::span`
-
-Permite entregar una vista ligera de una secuencia contigua sin copiar el contenedor ni transferir su propiedad.
-
-### `std::unique_ptr`
-
-Se utiliza para expresar propiedad exclusiva de controladores polimórficos y permitir su intercambio mediante `IController` sin recurrir a `new` o `delete` directamente.
-
----
-
-## 16. Estructura del repositorio
-
-```text
-Maze/
-├── app/
-│   └── main.cpp
-├── assets/
-│   └── maps/
-├── docs/
-│   ├── design.md
-│   ├── contributions.md
-│   └── negative_concept_test.md
-├── include/
-│   └── circuit_escape/
-│       ├── agent.h
-│       ├── cells.h
-│       ├── console_ui.h
-│       ├── controllers.h
-│       ├── environment.h
-│       ├── game_rules.h
-│       ├── GameApplication.h
-│       ├── generic_functions.h
-│       ├── grid.h
-│       ├── menus.h
-│       ├── simulation.h
-│       ├── types.h
-│       └── scenarios/
-│           ├── scenario_1.h
-│           └── scenario_2.h
-├── src/
-│   ├── agent.cpp
-│   ├── console_ui.cpp
-│   ├── controllers.cpp
-│   ├── environment.cpp
-│   ├── game_rules.cpp
-│   ├── GameApplication.cpp
-│   ├── menus.cpp
-│   ├── types.cpp
-│   └── scenarios/
-│       ├── scenario_1.cpp
-│       └── scenario_2.cpp
-├── tests/
-│   ├── test_main.cpp
-│   ├── grid_test.cpp
-│   ├── environment_test.cpp
-│   ├── interactions_test.cpp
-│   ├── controllers_test.cpp
-│   ├── simulation_test.cpp
-│   ├── scenario_1_test.cpp
-│   ├── scenario_2_test.cpp
-│   ├── generic_functions_test.cpp
-│   ├── console_ui_test.cpp
-│   ├── event_test.cpp
-│   ├── console_render_test.cpp
-│   └── invalid_test.cpp
-├── .gitignore
-├── CMakeLists.txt
-└── README.md
-```
-
-Los archivos de animaciones y arte de la interfaz se mantienen junto a la capa de presentación.
-
----
-
-## 17. Requisitos y dependencias
-
-Se necesita:
-
-- compilador compatible con **C++20**;
-- **CMake 3.20** o superior;
-- **Git**;
-- una terminal moderna;
-- conexión a Internet durante la primera configuración de CMake para descargar FTXUI mediante `FetchContent`.
-
-Compiladores habituales:
-
-- GCC;
-- Clang / Apple Clang;
-- MSVC.
-
-FTXUI está fijado en la versión **v7.0.3**.
-
----
-
-## 18. Compilación y ejecución
-
-### Linux
+Desde una compilación local, este comando reproduce el lote incluido en una carpeta independiente:
 
 ```bash
-git clone https://github.com/leonardolandeo-a11y/Maze.git
-cd Maze
-
-cmake -S . -B build
-cmake --build build --parallel
-
-./build/Maze
+./build/map_generator --rows 20 --columns 30 --seed 12345 --workers 4 \
+  --candidates 10 --initial-energy 100 --maximum-energy 100 --turn-limit 240 \
+  --extra-openings 15 --rough-percent 15 --rough-cost 2 --search-states 30000 \
+  --resources 5 --resource-points 10 --batteries 3 --battery-recharge 5 \
+  --traps 3 --trap-penalty 2 --trap-score-penalty 1 --output build/mapas-repro
+./build/escape_circuit --maps build/mapas-repro --difficulty easy
 ```
 
-### macOS
+Para comparar resultados, repite con la misma configuración, `--workers 1` y otra carpeta de salida. Compara los tres archivos, no los tiempos.
 
-Con Xcode Command Line Tools y CMake instalados:
+</details>
+
+## Arquitectura y reutilización
+
+```mermaid
+flowchart TD
+    G["map_generator"] --> K["Kruskal · construcción paralela"]
+    K --> D["Dijkstra + GameVerifier · validación paralela"]
+    D --> S["MapSelector · selecciona tres niveles"]
+    S --> M["MapStorage · guarda tres mapas .txt"]
+    M --> J["escape_circuit · Project2Application"]
+    J --> P["Project2Session"]
+    P --> N["NavigationEnvironment · Grid"]
+    P --> B["GuardBfsPolicy"]
+    P --> H["Ayuda H · Dijkstra"]
+    D -. misma búsqueda .-> H
+```
+
+Los dos ejecutables enlazan [`Maze_core`](CMakeLists.txt). FTXUI se dedica a la interfaz de terminal. Grafo, DisjointSet, Kruskal, Dijkstra y BFS se implementan en el proyecto.
+
+| Componente del Proyecto 1 | Adaptación y uso en el Proyecto 2 | Evidencia |
+| --- | --- | --- |
+| `Grid`, `Position`, vecindad e iteradores | `Grid<Cell>` usa dimensiones en ejecución. Conserva coordenadas, acceso e iteradores y permite construir el grafo del escenario. | [Grid](tests/grid_test.cpp), [integración](tests/project2_integration_test.cpp) |
+| `NavigationEnvironment`, `Agent` y `GameRules` | `Project2Session` delega movimiento, energía, efectos y reinicio al motor. Añade interruptores y reglas de persecución y salida. | [Motor](tests/environment_test.cpp), [interacciones](tests/interactions_test.cpp), [integración](tests/project2_integration_test.cpp) |
+| `IController`, `NavigationPolicy` y `PolicyController` | El adaptador expone las acciones legales y una observación al vigilante con `GuardBfsPolicy`. | [Controladores](tests/controllers_test.cpp), [verificador](tests/map_generation/game_verifier_test.cpp) |
+| `countMatching` y `LinearSearch` | Utilidades genéricas que siguen operando sobre iteradores de `Grid` para validar celdas y localizar la salida. | [Funciones genéricas](tests/generic_functions_test.cpp), [motor](tests/environment_test.cpp) |
+| `ConsoleUI`, menús y FTXUI | Se añaden vistas FULL MAP / DETAIL, controles del Proyecto 2 y ayuda H sin reemplazar las animaciones del juego. | [Interfaz](tests/console_ui_test.cpp), [tamaños de terminal](tests/responsive_ui_test.cpp), [cinemáticas](tests/cinematic_sequence_test.cpp) |
+
+<details>
+<summary>Proyecto 1 y notas de diseño</summary>
+
+La [primera entrega](https://github.com/leonardolandeo-a11y/Maze/tree/proyecto-1-entrega) conserva su documentación histórica. El ejecutable `Maze` sigue disponible al compilar desde el repositorio. Para el Proyecto 2 se recomienda `escape_circuit`.
+
+El motor usa `CellTraits` y especializaciones para las celdas, `std::variant` para eventos, `std::visit` para procesarlos y policies intercambiables mediante `IController`. El concept `NavigationPolicy` exige que `selectAction` retorne `Action`. La [prueba negativa](tests/invalid_test.cpp) queda fuera del build normal. Al compilarla por separado debe fallar por no satisfacer el concept:
 
 ```bash
-git clone https://github.com/leonardolandeo-a11y/Maze.git
-cd Maze
-
-cmake -S . -B build
-cmake --build build --parallel
-
-./build/Maze
+g++ -std=c++20 -Iinclude -fsyntax-only tests/invalid_test.cpp
 ```
 
-### Windows — PowerShell
+</details>
 
-```powershell
-git clone https://github.com/leonardolandeo-a11y/Maze.git
-cd Maze
+## Compilar y ejecutar desde código
 
-cmake -S . -B build
-cmake --build build --config Release
-```
-
-Con un generador multi-config, el ejecutable normalmente estará en:
-
-```powershell
-.\build\Release\Maze.exe
-```
-
-### Windows — Command Prompt
-
-```cmd
-git clone https://github.com/leonardolandeo-a11y/Maze.git
-cd Maze
-
-cmake -S . -B build
-cmake --build build --config Release
-```
-
-Con Visual Studio como generador:
-
-```cmd
-build\Release\Maze.exe
-```
-
-> La ubicación exacta del ejecutable en Windows puede variar según el generador de CMake utilizado.
-
----
-
-## 19. Pruebas automáticas
-
-CMake define el ejecutable de pruebas `Maze_test` y lo registra mediante CTest.
-
-### Linux / macOS
+Requiere CMake 3.20 o posterior, Git, un compilador con C++20 y acceso a GitHub para descargar FTXUI 7.0.3 durante la primera configuración. Ejecuta desde la raíz del repositorio:
 
 ```bash
-cmake -S . -B build
-cmake --build build --parallel
-ctest --test-dir build --output-on-failure
-```
-
-### Windows
-
-```powershell
-cmake -S . -B build
-cmake --build build --config Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-Las pruebas cubren, entre otros aspectos:
-
-- acceso válido e inválido a `Grid`;
-- bordes y esquinas;
-- movimiento libre;
-- movimiento contra obstáculos;
-- movimiento fuera del tablero;
-- costos de movimiento, terreno elevado, `wait` e intentos inválidos;
-- recursos de un solo uso;
-- baterías consumibles y límite de recarga;
-- trampas repetibles;
-- perfiles `easy`, `standard` y `hard`;
-- precedencia entre condiciones de término;
-- acciones disponibles;
-- `RandomPolicy`;
-- `HeuristicPolicy`;
-- `NavigationPolicy`;
-- `PolicyController` a través de `IController`;
-- simulaciones reproducibles con la misma semilla;
-- procesamiento de eventos;
-- algoritmos genéricos con distintos contenedores y rangos vacíos;
-- traducción de comandos válidos;
-- renderizado Emoji y ASCII;
-- dimensiones 20 × 30 del renderizado;
-- solucionabilidad de los escenarios de demostración.
-- uso de `PolicyController` mediante `std::unique_ptr<IController>`;
-- rechazo de comandos desconocidos sin ejecutar `step()` ni modificar el entorno;
-- prueba negativa de compilación de una policy que no satisface `NavigationPolicy`. (no forma parte de Maze_Test)
-
-La lógica del entorno puede probarse sin leer desde `std::cin` ni escribir en `std::cout`.
-
----
-
-## 20. Ejemplos de uso
-
-### Partida interactiva
-
-1. ejecutar `Maze`;
-2. seleccionar **Scenario 1** o **Scenario 2**;
-3. seleccionar **Easy**, **Standard** o **Hard**;
-4. elegir **Emoji** o **ASCII**;
-5. seleccionar **Start Game**;
-6. desplazarse con `WASD` o las flechas;
-7. usar `E` para esperar;
-8. consultar la ayuda con `H`;
-9. alcanzar la salida antes de agotar la energía o el límite de turnos.
-
-### Simulación reproducible
-
-Una simulación aleatoria puede ejecutarse sin interfaz usando una semilla explícita:
-
-```cpp
-auto result = runRandomSimulation(environment, 2026);
-```
-
-Con la misma configuración inicial y la misma semilla, la secuencia pseudoaleatoria puede reproducirse en pruebas.
-
-La arquitectura permite utilizar el mismo entorno con una estrategia aleatoria o heurística a través de `IController`.
-
----
-
-## 21. Documentación complementaria
-
-La documentación técnica de la entrega se encuentra en `docs/`:
-
-- [`docs/design.md`](docs/design.md): decisiones de diseño y ubicación de los temas obligatorios del curso;
-- [`docs/contributions.md`](docs/contributions.md): responsabilidades y contribuciones verificables de cada integrante;
-- [`docs/negative_concept_test.md`](docs/negative_concept_test.md): evidencia del diagnóstico producido al intentar instanciar un controlador con una policy que no satisface `NavigationPolicy`.
-
-El README concentra la información necesaria para compilar, ejecutar, probar y entender el proyecto; `docs/design.md` contiene el detalle técnico adicional.
-
----
-
-## 22. Alcance y exclusiones del Proyecto 1
-
-En la primera entrega no formaban parte del alcance:
-
-- interfaz gráfica;
-- juego en red;
-- persistencia en base de datos;
-- dimensiones de tablero elegidas durante la ejecución;
-- movimiento en tiempo real;
-- enemigos móviles o múltiples agentes;
-- visión parcial compleja;
-- generación procedural compleja;
-- A*, Dijkstra u otros algoritmos avanzados de búsqueda;
-- reinforcement learning.
-
-La arquitectura mantiene el motor separado del controlador para facilitar futuras extensiones sin acoplarlas a la interfaz.
-
----
-
-## 23. Verificación de la entrega del Proyecto 1
-
-Para la entrega original, la versión evaluada debía comprobarse desde un clon limpio siguiendo las instrucciones de esta sección:
+En Linux con un generador de CMake de configuración única:
 
 ```bash
-git clone https://github.com/leonardolandeo-a11y/Maze.git Maze-verificacion
-cd Maze-verificacion
-
-cmake -S . -B build
-cmake --build build --parallel
-ctest --test-dir build --output-on-failure
-./build/Maze
+./build/escape_circuit
+./build/map_generator --help
 ```
 
-La entrega se identifica mediante el tag anotado:
-
-```text
-proyecto-1-entrega
-```
-
-El hash completo del commit etiquetado debe coincidir con el registrado en el medio de entrega del curso.
-
----
-
-## 24. Resumen rápido
-
-```bash
-git clone https://github.com/leonardolandeo-a11y/Maze.git
-cd Maze
-
-cmake -S . -B build
-cmake --build build --parallel
-ctest --test-dir build --output-on-failure
-
-./build/Maze
-```
-
-**Circuito de Escape** integra un motor de navegación por turnos desacoplado de la interfaz, reglas configurables, templates, especializaciones, concepts, eventos tipados, polimorfismo dinámico, controladores intercambiables y simulaciones reproducibles dentro de una aplicación de consola construida con C++20.
-
----
-
-## Proyecto 2 — Reutilización comprobable (criterio 1 de la rúbrica)
-
-La segunda entrega **extiende**, en lugar de duplicar, el motor de la primera. La siguiente tabla presenta la evidencia solicitada por el enunciado: **componente original → adaptación → uso actual → prueba**.
-
-| Componente original | Adaptación para el Proyecto 2 | Uso actual | Prueba o evidencia en el repositorio |
-|---|---|---|---|
-| `Grid`, `Position`, vecindad e iteradores | Especialización `Grid<Cell>` con filas y columnas dinámicas, conservando `at`, `contains`, iteración y coordenadas. | Mapas configurables; conversión de celdas al grafo de caminos. | `tests/grid_test.cpp`, `tests/project2_integration_test.cpp`, `src/graph.cpp`. |
-| `NavigationEnvironment`, `Agent`, `GameRules`, `reset`, `state` y `step` | `NavigationOptions` permite mantener los efectos originales y posponer la terminación; `Observation` incorpora una vista de mapa de solo lectura, A/B y posición del vigilante. | `Project2Session` delega movimiento, turnos, energía, recursos, baterías y trampas al motor original; añade objetivos y captura. | `tests/environment_test.cpp`, `tests/interactions_test.cpp`, `tests/project2_integration_test.cpp`. |
-| `IController`, `NavigationPolicy` y `PolicyController<Policy>` | Nueva `GuardBfsPolicy` con acciones legales y persecución por BFS. | `GameVerifier::guard_next_step` adapta la posición del vigilante y la del jugador a `Observation` y reutiliza `PolicyController<GuardBfsPolicy>`. | `tests/controllers_test.cpp`, `tests/map_generation/game_verifier_test.cpp`. |
-| Utilidades genéricas `countMatching` y `LinearSearch` | Se conservan para recorridos de celdas con los iteradores de `Grid`. | Validaciones y localización de la salida en `NavigationEnvironment`. | `tests/generic_functions_test.cpp`, `tests/environment_test.cpp`. |
-| `ConsoleUI`, `Menus`, animaciones y FTXUI | Se agregan selección de dificultad, modo ASCII/emoji, tablero dinámico, vista FULL MAP/DETAIL, símbolos A/B, vigilante y rutas Dijkstra. | `Project2Application` conecta el motor nuevo con la presentación y navegación existentes. | `tests/console_ui_test.cpp`, `tests/project2_integration_test.cpp`, `tests/menus_test.cpp`, `tests/animations_test.cpp`. |
-| CMake, CTest y semillas reproducibles | Se agregan los ejecutables `map_generator` y `escape_circuit`, pruebas de grafos y lotes deterministas. | Construcción de mapas por Kruskal, validación paralela y partida interactiva; empaquetado con NSIS. | `CMakeLists.txt`, `tests/map_generation/map_batch_test.cpp`, `tests/map_generation/kruskal_test.cpp`, `installer/windows/build-installer.ps1`. |
-
-### Evidencias específicas de algoritmos y reglas
-
-| Requisito | Implementación | Pruebas |
-|---|---|---|
-| Grafo propio, `DisjointSet`, Kruskal, árbol y aperturas adicionales | `src/graph.cpp`, `src/graph/disjoint_set.cpp`, `src/map_generation/kruskal.cpp` | `tests/graph_test.cpp`, `tests/graph/disjoint_set_test.cpp`, `tests/map_generation/kruskal_test.cpp` |
-| Dijkstra, dos órdenes A/B, costos y energía | `src/pathfinding/dijkstra.cpp`, `src/map_generation/map_validator.cpp` | `tests/pathfinding/dijkstra_test.cpp`, `tests/map_generation/map_validator_test.cpp` |
-| Niveles fácil/medio/difícil y victoria reproducible | `src/map_generation/map_selector.cpp`, `src/map_generation/game_verifier.cpp` | `tests/map_generation/map_selector_test.cpp`, `tests/map_generation/game_verifier_test.cpp` |
-| Vigilante BFS, interruptores y reglas de turnos | `src/controllers.cpp`, `src/project2_session.cpp` | `tests/controllers_test.cpp`, `tests/project2_integration_test.cpp` |
-| Construcción y validación paralelas con resultados deterministas | `src/map_generation/map_batch.cpp` | `tests/map_generation/map_batch_test.cpp` |
-| Guardar y cargar los tres mapas | `src/map_generation/map_storage.cpp` | `tests/map_generation/map_storage_test.cpp` |
-| Ayuda H y visualización de recorridos sin consumir turnos | `src/project2_session.cpp`, `src/project2_application.cpp` | `tests/project2_integration_test.cpp`, `tests/help_test.cpp` |
-
-`ctest --test-dir cmake-build-debug --output-on-failure` ejecuta `Maze_test`, que agrupa muchas comprobaciones internas. Por eso **1/1 en CTest significa un ejecutable de pruebas aprobado**, no una única aserción.
-
----
-
-## Proyecto 2 — Generador de mapas (etapa 9)
-
-El ejecutable independiente `map_generator` prepara hasta diez alternativas mediante Kruskal, valida sus rutas y energía con Dijkstra, comprueba partidas ganadoras y selecciona un mapa por dificultad. Construcción y validación se realizan en fases paralelas separadas mediante `std::jthread`; se informan sus tiempos individuales.
+En Windows con Visual Studio y PowerShell:
 
 ```powershell
-cmake -S . -B cmake-build-debug
-cmake --build cmake-build-debug --target map_generator
-.\cmake-build-debug\map_generator.exe --help
-.\cmake-build-debug\map_generator.exe --rows 10 --columns 15 --seed 12345 --workers 4 --candidates 10 --output build/generated-maps
+.\build\Release\escape_circuit.exe
+.\build\Release\map_generator.exe --help
 ```
 
-La salida utiliza tres archivos de texto: `mapa_facil.txt`, `mapa_medio.txt` y `mapa_dificil.txt`. Cada uno registra las dimensiones, celdas, costos, posiciones iniciales, reglas de energía, identificador, semilla, dificultad, costo mínimo y una secuencia ganadora reproducible. El formato `CIRCUIT_ESCAPE_MAP 1` se lee y valida con `load_map`; para generar otra configuración hay que repetir la preparación. El generador no sustituye el ejecutable del juego.
+Si usas Ninja/MinGW, los `.exe` quedan directamente en `build\`. Para reconstruir los paquetes se incluyen los scripts de [Windows](installer/windows/build-installer.ps1) y [Ubuntu](installer/linux/build-package.sh). Para instalar la versión publicada no es necesario reconstruirlos.
 
-Si un lote no tiene al menos tres costos distintos entre los mapas con victoria comprobada, el programa devuelve el código `2` sin guardar niveles incompletos. Un error de argumentos o de archivos devuelve `1`. La opción `--help` devuelve `0`.
+## Pruebas y rúbrica
 
----
+La tabla resume los ocho criterios del enunciado oficial de **Proyecto 2, §9, p. 12**, y las evidencias mínimas de §7. CTest ejecuta `Maze_test`, que agrupa la suite completa y mantiene activas las aserciones incluso en Release.
 
-## Proyecto 2 — Juego integrado con la interfaz original (etapa 10)
+| Criterio (máximo) | Comprobaciones cubiertas y dónde revisarlas |
+| --- | --- |
+| Reutilización (2) | Dimensiones sin perder la interfaz de Grid, motor con movimiento/energía/reinicio, controladores y utilidades genéricas, y [matriz de reutilización](#arquitectura-y-reutilización). |
+| Grafo y Kruskal (3) | Grafo y DSU propios, árbol conectado de costo mínimo, aperturas separadas y semillas reproducibles. [Grafo](tests/graph_test.cpp) · [DSU](tests/graph/disjoint_set_test.cpp) · [Kruskal](tests/map_generation/kruskal_test.cpp). |
+| Validación y dificultad (2) | Dos órdenes completos, tramos inaccesibles y energía/recargas, selección por costo y empates, rechazo de lotes sin tres costos ganadores. [Validador](tests/map_generation/map_validator_test.cpp) · [Selector](tests/map_generation/map_selector_test.cpp) · [Verificador](tests/map_generation/game_verifier_test.cpp). |
+| Dijkstra y ayuda H (3) | Algoritmo propio compartido, omisión de interruptores activos, costos y saldos, actualización sin consumir turnos. [Dijkstra](tests/pathfinding/dijkstra_test.cpp) · [Integración](tests/project2_integration_test.cpp) · [Partidas en terminal](tests/delivery/terminal_playthrough.py). |
+| Vigilante con BFS (2) | Camino con menos movimientos, recalcula al jugador actual, actúa en turnos pares, respeta muros, desempata y sabe esperar. [Controladores](tests/controllers_test.cpp) · [Reglas del vigilante](tests/map_generation/game_verifier_test.cpp). |
+| Reglas y partida completa (2) | A/B persistentes, precedencia de captura, energía y último turno, reinicio y reproducción de una victoria guardada. [Integración](tests/project2_integration_test.cpp) · [Carga y reproducción](tests/map_generation/map_storage_test.cpp). |
+| Concurrencia (4) | Construcción en paralelo, validación en paralelo después de la barrera, datos aislados y resultados iguales con 1/4 trabajadores, gestión de errores y tiempos separados. [Lotes concurrentes](tests/map_generation/map_batch_test.cpp). |
+| Pruebas, entrega e instalador (2) | C++20 y CTest, paquetes con ambos ejecutables, instrucciones de instalación/compilación/semillas/desinstalación y [recorrido para mostrar preparación y partida](#demostración). [Aceptación del instalador Windows](tests/delivery/windows_acceptance.py) · [Ejecución aprobada en CI](https://github.com/leonardolandeo-a11y/Maze/actions/runs/43789385348). |
 
-`Maze` conserva el flujo del Proyecto 1: `GameApplication`, `ConsoleUI`, los escenarios originales, los menús y las animaciones. El ejecutable independiente `escape_circuit` carga los mapas generados, utiliza los mismos componentes de `ConsoleUI` para dibujar celdas y coordenadas, y ejecuta las reglas del Proyecto 2 mediante `Project2Session` y `GameVerifier`.
+Las pruebas integradas incluyen generar, guardar, cargar y jugar en **10×15, 20×30 y 40×60**, validar entradas inválidas, reiniciar, esperar, quedarse sin energía y comprobar captura en la salida. Las pruebas de terminal y CI son evidencia técnica y no sustituyen la demostración del equipo.
 
-```powershell
-cmake -S . -B cmake-build-debug
-cmake --build cmake-build-debug --target Maze Maze_test map_generator escape_circuit
-ctest --test-dir cmake-build-debug --output-on-failure
-.\cmake-build-debug\escape_circuit.exe --maps assets/maps
-```
+## Demostración
 
-También puede iniciarse directamente con `--difficulty easy`, `medium` o `hard`. El menú reutiliza el arte del Proyecto 1 y ofrece selección de dificultad y modo ASCII/emoji. `WASD` y las flechas mueven al jugador, `E` espera, `H` calcula ayuda Dijkstra sin consumir turnos y `Q` sale. Dentro de la ayuda, `1`, `2`, `3` y `0` seleccionan qué ruta resaltar; `H` o `Esc` vuelve a la partida.
+1. Extrae e instala el [paquete de Ubuntu](#descargas-del-proyecto-2) sin recompilar. Abre una terminal amplia.
+2. Usa el generador instalado con `--interactive`, ingresa **15 filas y 20 columnas**, y guarda en una carpeta nueva. Muestra los tiempos de ambas fases y los tres archivos resultantes.
+3. Abre ese mismo lote con `escape_circuit --maps "$MAPAS" --difficulty easy` usando el lanzador instalado. Pulsa Enter en WELCOME. Abre `H` para mostrar el recorrido y su costo, y comprueba que consultar la ayuda no avanza el turno.
+4. Activa B y A, vuelve a abrir `H` para mostrar que omite los objetivos ya activos y termina con **VICTORY**.
+5. Sal con `Q`, desinstala y comprueba que siguen existiendo los mapas generados.
 
-El tablero del Proyecto 2 reutiliza `ConsoleUI::RenderCell` y el mismo sistema de cuadrícula y coordenadas del Proyecto 1. FULL MAP muestra el mapa completo cuando cabe en la terminal; DETAIL utiliza una cámara centrada en el jugador para cualquier dimensión válida. El mapa completo permanece en memoria. Los marcadores adicionales son A/B, vigilante y rutas de ayuda.
+<details>
+<summary>Secuencia de ensayo para el mapa fácil 15×20</summary>
 
-Las pruebas automáticas incluyen renderizado y funciones principales del Proyecto 1, los módulos de generación y los escenarios dinámicos de 10×15, 20×30 y 40×60. La comprobación de la interfaz interactiva y de las animaciones debe realizarse también en la terminal de Windows.
+Para el lote generado con el perfil interactivo, semilla base **12345** y mapa fácil **ID 10**, estas son las teclas de la secuencia guardada. Presiónalas una por una, sin los espacios ni Enter, y cierra H antes de continuar.
 
-### Project 2 items and original status layout
+| Resultado | Teclas |
+| --- | --- |
+| Turno 8 · B activado | `wwwwww aa` |
+| Turno 18 · A activado | `dd ssss aaaa` |
+| Turno 28 · Victoria | `aa ss dd ssss` |
 
-`escape_circuit` retains the original emoji rendering: diamonds (resources) add points once, batteries recharge once, and traps reduce energy and score on every entry. Its HUD shows turn, energy, score and collected resources first; difficulty, size and switch progress second; and the guard next.
+</details>
 
-To generate a 20x30 demonstration with items from Project 1:
+## Equipo
 
-```powershell
-.\cmake-build-debug\map_generator.exe --rows 20 --columns 30 --seed 12345 --workers 4 --candidates 10 --initial-energy 100 --maximum-energy 100 --turn-limit 240 --extra-openings 15 --search-states 30000 --resources 5 --resource-points 10 --batteries 3 --battery-recharge 5 --traps 3 --trap-penalty 2 --trap-score-penalty 1 --output .\cmake-build-debug\stage10-maps-items
-.\cmake-build-debug\escape_circuit.exe --maps .\cmake-build-debug\stage10-maps-items
-```
+| Integrante | Aportes principales |
+| --- | --- |
+| [Leonardo Landeo](https://github.com/leonardolandeo-a11y) | Estructura inicial, tablero, reglas, integración de interfaz y ciclo de juego. |
+| [Fabricio Nick](https://github.com/SRHOUSE) | Motor de navegación, observaciones y resultados, simulación, pruebas y animaciones. |
+| [André Mejía](https://github.com/andremejia-hub) | Costos de movimiento, concept de políticas, escenarios y pruebas del motor. |
+| [Jared Chala](https://github.com/jaredchala-bot) | Interacciones, adaptador de políticas, ayuda e interfaz, templates y pruebas. |
+| [Iker García](https://github.com/iygt8-iterate) | Interfaz de controladores, renderizado, navegación de menús y documentación. |
 
-All item placement is seeded and written in the map text files. Older version-1 map files without these items remain readable. The game is won by activating both switches and reaching the exit with positive energy within the turn limit; points are recorded but do not change the winning conditions.
-
-### Proyecto 2 — FULL MAP / DETAIL
-
-`Z` alterna FULL MAP y DETAIL en la partida y dentro de la ayuda H, sin consumir
-turnos ni modificar energía, jugador, vigilante o interruptores. FULL MAP usa una
-escala común para conservar proporciones; DETAIL muestra tiles ampliados y una
-cámara que sigue al jugador para cualquier tamaño válido, sin límite 20×30.
-El layout se adapta al espacio de terminal. Las regresiones cubren 10×15, 20×30,
-30×40 y 40×60, además de tableros altos, anchos y cuadrados.
-Usar una terminal amplia y ASCII si la fuente no representa bien emojis.
-
----
-
-## Proyecto 2: instalador Windows (NSIS)
-
-El workflow [Windows Release delivery](https://github.com/leonardolandeo-a11y/Maze/actions/workflows/windows-delivery.yml)
-compila en Windows x64 Release, ejecuta CTest y crea `CircuitoEscape-Setup.exe`
-con PowerShell/NSIS. Instala y prueba el paquete antes de subir el artefacto
-`CircuitoEscape-Windows-x64-Release` (retención 90 días). Para instalar, descarga el [ZIP de la Release de Windows](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/CircuitoEscape-Windows-x64-Release.zip), extráelo y ejecuta `CircuitoEscape-Setup.exe`. No necesitas CMake, NSIS, Python ni MinGW.
-
-El menú Inicio incluye **Jugar**, **Generar mapas**, **Jugar mapas generados** y
-**Desinstalar**. Generar mapas pide filas y columnas por terminal y guarda en
-`%LOCALAPPDATA%\CircuitoEscape\generated-maps`. Los mapas incluidos permanecen
-separados; el juego solo carga archivos. Los mapas personales se conservan al
-desinstalar. `map_generator --interactive --output DIR` ofrece el mismo diálogo
-fuera del acceso directo; siguen disponibles todos los parámetros avanzados.
-
-Para reconstruir el instalador en una máquina de desarrollo con MinGW x64 y NSIS:
-
-```powershell
-cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build-release --parallel 4
-ctest --test-dir build-release -C Release --output-on-failure
-.\installer\windows\build-installer.ps1 -BuildDirectory build-release
-```
-
-La salida está en `dist/CircuitoEscape-Setup.exe`. Se comprueba la arquitectura
-x64 de los binarios y DLL y el arranque con PATH limitado al paquete y Windows.
-El artefacto de evidencia contiene CTest, manifest SHA-256, capturas de terminal y
-resultados de instalación, generación 15×20, H/Z, victoria en seis partidas,
-reproducibilidad workers=1/4 y desinstalación.
-
-Ver [evidencias, límites y recorrido exacto de demo](docs/entrega-final.md).
-La inspección humana de fuentes/emojis y ventanas del instalador en Windows 11
-se distingue de la automatización nativa en el runner Windows Server 2022.
-No se crea una GitHub Release ni se fusiona esta rama automáticamente.
+El detalle de aportes y los registros anteriores se conservan en el [historial previo a la consolidación](https://github.com/leonardolandeo-a11y/Maze/tree/fa2342014c3c6353d3350455156063c2b9354f61/docs).
