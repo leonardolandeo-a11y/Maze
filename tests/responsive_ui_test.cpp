@@ -89,7 +89,11 @@ void run_responsive_ui_tests() {
     for (auto viewport : viewports) {
         Menus menu(true);
         check(menu.Render(viewport), viewport, "main",
-            {"START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT", "Enter: confirm"});
+            {"START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT", "Enter: confirm",
+             "Two switches. One way out.", "╚═╝"});
+        Menus legacy;
+        check(legacy.Render(viewport), viewport, "legacy-main",
+            {"START GAME", "SCENARIO", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT", "Enter: confirm"});
         for (int page = 1; page <= 3; ++page) {
             Menus settings(true);
             down(settings, page);

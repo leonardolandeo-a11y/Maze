@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <set>
 #include <string>
 
 namespace {
@@ -57,6 +58,27 @@ void run_cinematic_sequence_tests() {
     observation.collectedResources = 2;
 
     for (auto viewport : {ftxui::Dimensions{80,24}, {100,30}, {120,35}, {160,45}}) {
+        auto sprite = CinematicVictoryAnimation{}.RenderFrame(46, viewport);
+        sprite->ComputeRequirement();
+        assert((sprite->requirement().min_x > 90) == (viewport.dimx > 90));
+        if (viewport.dimx > 90) {
+            std::array<std::set<std::string>, 2> palettes;
+            const std::array sizes{ftxui::Dimensions{90,20}, viewport};
+            for (int i = 0; i < 2; ++i) {
+                const auto size = sizes[i];
+                auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(size.dimx),
+                                                    ftxui::Dimension::Fixed(size.dimy));
+                ftxui::Render(screen, CinematicVictoryAnimation{}.RenderFrame(46, size));
+                for (int y = 0; y < size.dimy; ++y)
+                    for (int x = 0; x < size.dimx; ++x) {
+                        const auto& pixel = screen.PixelAt(x, y);
+                        palettes[i].insert(pixel.background_color.Print(false));
+                        if (pixel.character == "█" || pixel.character == "▀" || pixel.character == "▄")
+                            palettes[i].insert(pixel.foreground_color.Print(false));
+                    }
+            }
+            assert(palettes[0] == palettes[1]);
+        }
         // Both sides of every original phase boundary, including falling debris and rest.
         for (int frame : {0, 4, 37, 38, 41, 42, 63, 64, 93, 94, 109, 110, 123, 124, 155, 156, 165}) {
             const auto text = render(AnimationSequence::startup(frame, viewport), viewport,

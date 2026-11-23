@@ -17,14 +17,43 @@ Element Fit(Element scene, std::optional<Dimensions> terminal) {
     const auto viewport = terminal.value_or(Terminal::Size());
     const int available_width = viewport.dimx > 0 ? viewport.dimx : 80;
     const int available_height = viewport.dimy > 0 ? viewport.dimy : 24;
-    const double scale = std::min({1.0, available_width / double(width),
-                                  available_height / double(height)});
+    const double scale = std::min(available_width / double(width),
+                                  available_height / double(height));
     const int fitted_width = std::max(1, int(width * scale));
     const int fitted_height = std::max(1, int(height * scale));
     if (scale == 1.0) return scene;
 
     auto original = Screen::Create(Dimension::Fixed(width), Dimension::Fixed(height));
     Render(original, scene);
+    if (scale > 1.0) {
+        // Text keeps its native glyphs. Sprite frames contain only half/full blocks.
+        for (int y = 0; y < height; ++y)
+            for (int x = 0; x < width; ++x) {
+                const auto& glyph = original.PixelAt(x, y).character;
+                if (!glyph.empty() && glyph != " " && glyph != "█" &&
+                    glyph != "▀" && glyph != "▄") return scene;
+            }
+        auto sample = [&](int x, int half_y) {
+            const int source_y = half_y * height / fitted_height;
+            const auto& pixel = original.PixelAt(x * width / fitted_width, source_y / 2);
+            const bool foreground = pixel.character == "█" ||
+                (pixel.character == "▀" && source_y % 2 == 0) ||
+                (pixel.character == "▄" && source_y % 2 != 0);
+            return foreground ? pixel.foreground_color : pixel.background_color;
+        };
+        Elements rows;
+        for (int y = 0; y < fitted_height; ++y) {
+            Elements columns;
+            for (int x = 0; x < fitted_width; ++x) {
+                const auto top = sample(x, y * 2);
+                const auto bottom = sample(x, y * 2 + 1);
+                columns.push_back(text(top == Color::Black && bottom == top ? " " : "▀") |
+                                  color(top) | bgcolor(bottom));
+            }
+            rows.push_back(hbox(std::move(columns)));
+        }
+        return vbox(std::move(rows)) | center | bgcolor(Color::Black);
+    }
     Elements rows;
     for (int y = 0; y < fitted_height; ++y) {
         Elements columns;
