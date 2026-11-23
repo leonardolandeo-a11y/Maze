@@ -90,7 +90,7 @@ void run_cinematic_sequence_tests() {
                                      "victory-" + std::to_string(frame));
             assert(text.find("RUN SUMMARY") == std::string::npos);
             assert(text.find("FINAL STATS") == std::string::npos);
-            assert(text.find("ENTER - MAIN MENU") == std::string::npos);
+            assert(text.find("[ ENTER ]") == std::string::npos);
             assert(text.find("█") != std::string::npos || text.find("▀") != std::string::npos);
         }
         for (int frame : {0, 15, 16, 27, 28, 41, 42, 49, 50, 61, 62, 71, 72, 83, 84, 93, 94, 125, 126, 141}) {
@@ -98,31 +98,31 @@ void run_cinematic_sequence_tests() {
                                      viewport, "death-" + std::to_string(frame));
             assert(text.find("GAME OVER") == std::string::npos);
             assert(text.find("RUN SUMMARY") == std::string::npos);
-            assert(text.find("ENTER - MAIN MENU") == std::string::npos);
+            assert(text.find("[ ENTER ]") == std::string::npos);
         }
         const auto victory = render(AnimationSequence::victory(78, observation, viewport), viewport);
         assert(victory.find("ESCAPE COMPLETED") != std::string::npos);
         assert(victory.find("¡Has escapado del circuito!") != std::string::npos);
-        assert(victory.find("ENTER - MAIN MENU") == std::string::npos);
+        assert(victory.find("[ ENTER ]") == std::string::npos);
         const auto finished = render(AnimationSequence::victory(113, observation, viewport), viewport, "victory-panel");
         auto stats = finished;
         std::erase(stats, ' ');
         for (const auto* label : {"Energía:12/40", "Puntaje:7", "Turnos:6", "Recursos:2"})
             assert(stats.find(label) != std::string::npos);
-        assert(finished.find("ENTER - MAIN MENU") != std::string::npos);
+        assert(finished.find("[ ENTER ]") != std::string::npos);
         assert(finished.find("███████╗███████╗ ██████╗ █████╗ ██████╗ ███████╗") != std::string::npos);
         assert(finished.find("██╔════╝██╔═══██╗████╗ ████║██╔══██╗██║     ██╔════╝╚══██╔══╝██╔════╝██╔══██╗") != std::string::npos);
         assert(finished.find("╰─┤█├─╯") == std::string::npos);
         assert(finished.find("MAZE") == std::string::npos);
         assert(finished.find("CIRCUITO DE ESCAPE") == std::string::npos);
         assert(render(AnimationSequence::victory(112, observation, viewport), viewport)
-                   .find("ENTER - MAIN MENU") == std::string::npos);
+                   .find("[ ENTER ]") == std::string::npos);
         for (auto reason : {EndReason::captured, EndReason::noEnergy, EndReason::turnLimit}) {
             const auto first = render(AnimationSequence::death(142, reason, observation, viewport), viewport);
             assert(first.find("GAME OVER") != std::string::npos);
-            assert(first.find("ENTER - MAIN MENU") == std::string::npos);
+            assert(first.find("[ ENTER ]") == std::string::npos);
             const auto final = render(AnimationSequence::death(177, reason, observation, viewport), viewport, "death-panel");
-            assert(final.find("ENTER - MAIN MENU") != std::string::npos);
+            assert(final.find("[ ENTER ]") != std::string::npos);
             stats = final;
             std::erase(stats, ' ');
             for (const auto* stat : {"Energía:12/40", "Puntaje:7", "Turnos:6", "Recursos:2"})

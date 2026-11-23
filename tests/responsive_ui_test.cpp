@@ -36,6 +36,8 @@ void check(ftxui::Element element, ftxui::Dimensions viewport, const std::string
         assert(screen.PixelAt(viewport.dimx - 1, viewport.dimy - 1).character == "╯");
     }
     if (name == "death" || name == "victory") {
+        assert(text.find("FINAL STATS") != std::string::npos);
+        assert(text.find("Main Menu") != std::string::npos);
         for (const auto* icon : {"▥", "ϟ", "★", "◇"})
             assert(text.find(icon) != std::string::npos);
     }
@@ -112,10 +114,10 @@ void run_responsive_ui_tests() {
             {"QUIT", "Two switches. One way out.", "Enter: confirm", "Q: quit"});
         check(VictoryAnimation{}.RenderVictoryFrame(VictoryAnimation::maxFrames - 1,
             observation, viewport), viewport, "small-victory",
-            {"ESCAPE", "COMPLETED", "¡Has escapado del circuito!", "Energía:", "ENTER - MAIN MENU"});
+            {"ESCAPE", "COMPLETED", "¡Has escapado del circuito!", "Energía:", "[ ENTER ]"});
         check(DeathAnimation{}.RenderDeathFrame(DeathAnimation::maxFrames - 1,
             EndReason::captured, observation, viewport), viewport, "small-death",
-            {"GAME OVER", "CAPTURED BY THE GUARD", "Puntaje:", "ENTER - MAIN MENU"});
+            {"GAME OVER", "CAPTURED BY THE GUARD", "Puntaje:", "[ ENTER ]"});
     }
 
     for (auto viewport : viewports) {
@@ -166,11 +168,11 @@ void run_responsive_ui_tests() {
         VictoryAnimation victory;
         check(victory.RenderVictoryFrame(VictoryAnimation::maxFrames - 1, observation, viewport),
               viewport, "victory", {"ESCAPE COMPLETED", "¡Has escapado del circuito!", "Energía:", "Recursos:",
-                                    "ENTER - MAIN MENU", "Q - EXIT"});
+                                    "[ ENTER ]", "[ Q ]"});
         DeathAnimation death;
         check(death.RenderDeathFrame(DeathAnimation::maxFrames - 1, EndReason::captured,
               observation, viewport), viewport, "death",
-              {"GAME OVER", "CAPTURED BY THE GUARD", "Puntaje:", "ENTER - MAIN MENU"});
+              {"GAME OVER", "CAPTURED BY THE GUARD", "Puntaje:", "[ ENTER ]"});
 
         ConsoleUI ui(RenderMode::ascii);
         const auto help = session.help_report();

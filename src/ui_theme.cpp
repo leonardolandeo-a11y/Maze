@@ -142,15 +142,19 @@ Element result(int frame, int frames, std::string title, std::string description
     Element heading = vbox(std::move(title_lines));
     heading->ComputeRequirement();
     if (heading->requirement().min_x > content_width ||
-        heading->requirement().min_y + 8 > dimensions.height)
+        heading->requirement().min_y + 10 > dimensions.height)
         heading = victory ? vbox({text("ESCAPE"), text("COMPLETED")}) | hcenter : text(title);
     heading = heading | bold | color(tone);
     heading->ComputeRequirement();
+    const int heading_height = heading->requirement().min_y;
+    const bool boxed_keys = dimensions.height >= heading_height + 12;
+    const bool spaced_rows = dimensions.height >= heading_height + 18;
+    int row_index = 0;
     auto stat = [&](std::string icon, std::string label, std::string value) {
-        return hbox({text(" " + icon + " ") | bold | color(tone),
-                     text(std::move(label)) | color(muted) |
-                         size(WIDTH, EQUAL, 12), filler(),
-                     text(std::move(value)) | bold | color(ink)});
+        return hbox({text("  "), text(icon + " ") | bold | color(tone),
+            text(std::move(label)) | bold | color(muted) | size(WIDTH, EQUAL, 12),
+            filler(), text(std::move(value)) | bold | color(Color::RGB(255, 255, 255)), text("  ")})
+            | bgcolor(row_index++ % 2 ? selected_surface : background);
     };
     Elements stats_lines{
         stat("▥", "Turnos:", std::to_string(observation.turn)),
@@ -158,22 +162,40 @@ Element result(int frame, int frames, std::string title, std::string description
             std::to_string(observation.maximumEnergy)),
         stat("★", "Puntaje:", std::to_string(observation.score)),
         stat("◇", "Recursos:", std::to_string(observation.collectedResources))};
+    if (spaced_rows)
+        for (int i = 3; i > 0; --i)
+            stats_lines.insert(stats_lines.begin() + i, text(""));
     const int stats_width = std::max(1, std::min(53, content_width - 4));
-    auto stats = vbox(std::move(stats_lines))
-        | size(WIDTH, EQUAL, stats_width) | borderStyled(ROUNDED, tone) | hcenter;
-    const int free_rows = std::max(0, dimensions.height - heading->requirement().min_y - 8);
+    auto stats = window(text(" FINAL STATS ") | bold | color(tone) | hcenter |
+                            size(WIDTH, EQUAL, stats_width),
+                        vbox(std::move(stats_lines)) | size(WIDTH, EQUAL, stats_width), ROUNDED)
+        | color(tone) | bgcolor(background) | hcenter;
+    auto key = [&](std::string label) {
+        Element hint = text("[ " + label + " ]") | bold | color(accent);
+        return boxed_keys ? hint | borderStyled(ROUNDED, accent) : hint;
+    };
+    Elements hints;
+    if (done) {
+        hints.push_back(key("ENTER"));
+        hints.push_back(text(" Main Menu   |   ") | color(ink) | vcenter);
+    }
+    hints.push_back(key("Q"));
+    hints.push_back(text(" Exit") | color(ink) | vcenter);
+    const int free_rows = std::max(0, dimensions.height - 2 - heading_height - 1 -
+        (spaced_rows ? 9 : 6) - (boxed_keys ? 3 : 1));
     const int stats_gap = std::min(2, (free_rows + 2) / 3);
-    const int top_margin = std::min(std::clamp(dimensions.height / 8, 0, 5), free_rows - stats_gap);
-    auto body = vbox({text("") | size(HEIGHT, EQUAL, top_margin),
+    const int controls_gap = std::min(1, free_rows - stats_gap);
+    const int top_margin = std::min(3, (free_rows - stats_gap - controls_gap) / 2);
+    auto body = vbox({text(" " + title) | bold | color(ink),
+        separator() | color(edge),
+        text("") | size(HEIGHT, EQUAL, top_margin),
         heading | hcenter,
-        text(std::move(description)) | color(ink) | hcenter,
-        text("") | size(HEIGHT, EQUAL, stats_gap),
-        stats, filler(),
-        text(done ? "ENTER - MAIN MENU   |   Q - EXIT" : "Q - EXIT") |
-            color(muted) | hcenter});
-    return window(text(" " + title + " ") | bold | color(tone), body, ROUNDED)
-        | size(WIDTH, EQUAL, dimensions.width + 4)
-        | size(HEIGHT, EQUAL, dimensions.height + 2)
-        | color(edge) | bgcolor(background) | center | bgcolor(background);
+        text(std::move(description)) | bold | color(ink) | hcenter,
+        text("") | size(HEIGHT, EQUAL, stats_gap), stats,
+        text("") | size(HEIGHT, EQUAL, controls_gap),
+        hbox(std::move(hints)) | hcenter, filler()});
+    return body | size(WIDTH, EQUAL, content_width)
+        | size(HEIGHT, EQUAL, dimensions.height)
+        | borderStyled(ROUNDED, edge) | bgcolor(background) | center | bgcolor(background);
 }
 }

@@ -79,3 +79,11 @@ Trabajo en `feat/ui-menu-cinematics-results`, sin push.
 - `cmake --build build -j 2`: correcto. Los cuatro grupos existentes de interfaz pasan en 80×24, 100×30, 120×35 y 160×45, además de las variantes compactas 60×20 y 80×20. Capturas FTXUI con color revisadas en `/tmp/maze-ui-layout` mediante `NO_COLOR= TERM=xterm-256color COLORTERM=truecolor MAZE_UI_PREVIEW_DIR=/tmp/maze-ui-layout /tmp/maze-ui-check`.
 - La suite completa conserva los dos fallos de mapas preexistentes (28/30 grupos aprobados); no se modificaron esas pruebas ni algoritmos.
 - `NO_COLOR= python3 /tmp/maze-terminal-check.py`: pasan las cuatro sesiones PTY con color, victorias, captura, Enter al menú y Q; también Q durante el inicio de ambos ejecutables. Mapas sin cambios.
+
+## Presentación final de resultados
+
+- Renderer compartido en `src/ui_theme.cpp`: encabezado delgado con el resultado, borde cian oscuro, títulos originales intactos, panel FINAL STATS centrado de 55 columnas con padding, iconos, valores blancos y filas alternadas. Controles cian agrupados debajo del panel.
+- Ajustadas únicamente las expectativas de los controles en `animations_test.cpp`, `cinematic_sequence_test.cpp` y `responsive_ui_test.cpp`; se conservaron las comprobaciones de tiempos, motivos y valores. Menú, cinemáticas y lógica sin cambios.
+- Compilación correcta y cuatro grupos existentes de interfaz aprobados. Ambas pantallas comprobadas en 80×24, 100×30, 120×35 y 160×45: título del panel único y centrado, ancho de 55 columnas, filas de una línea con 0–1 líneas de separación y controles visibles. Capturas FTXUI revisadas en `/tmp/maze-ui-final`.
+- PTY real: victorias en easy/medium/hard y captura; Enter al menú y Q funcionan, incluidos los inicios. Los mapas permanecen intactos. CTest mantiene el fallo preexistente `Map grid and graph do not match`.
+- Adaptación: en 80×24, la victoria usa indicaciones cian en una sola línea para conservar el título completo y las cuatro estadísticas; las demás vistas con espacio muestran recuadros. El trazo exacto de los caracteres depende de la fuente de la terminal; se usan los glifos originales y no imágenes rasterizadas.
