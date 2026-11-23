@@ -39,8 +39,9 @@ void run_cinematic_sequence_tests() {
     static_assert(CinematicStartupAnimation::maxFrames == 166);
     static_assert(CinematicVictoryAnimation::maxFrames == 78);
     static_assert(CinematicDeathAnimation::maxFrames == 142);
-    assert(!AnimationSequence::welcomeVisible(165));
-    assert(AnimationSequence::welcomeVisible(166));
+    assert(!AnimationSequence::startupComplete(165));
+    assert(AnimationSequence::startupComplete(166));
+    static_assert(AnimationSequence::startupFrames == 166);
     assert(!AnimationSequence::victoryComplete(112));
     assert(AnimationSequence::victoryComplete(113));
     assert(!AnimationSequence::deathComplete(176));
@@ -74,12 +75,6 @@ void run_cinematic_sequence_tests() {
             assert(text.find("GAME OVER") == std::string::npos);
             assert(text.find("RUN SUMMARY") == std::string::npos);
             assert(text.find("ENTER - MAIN MENU") == std::string::npos);
-        }
-        for (int frame : {166, 201, 1000}) {
-            const auto welcome = render(AnimationSequence::startup(frame, viewport), viewport, "welcome");
-            assert(welcome.find("WELCOME") != std::string::npos);
-            assert(welcome.find("ENTER THE CIRCUIT") != std::string::npos);
-            assert(welcome.find("Enter: continue") != std::string::npos);
         }
         const auto victory = render(AnimationSequence::victory(78, observation, viewport), viewport);
         assert(victory.find("VICTORY") != std::string::npos);

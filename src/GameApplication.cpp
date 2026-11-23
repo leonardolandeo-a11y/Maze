@@ -241,11 +241,6 @@ void GameApplication::Run(){
                         event == ftxui::Event::Character('Q')) {
                         screen.Exit();
                     }
-                    if (event == ftxui::Event::Return &&
-                        AnimationSequence::welcomeVisible(startupFrame)){
-                        startupActive = false;
-                        return true;
-                    }
 
                     return true;
                 }
@@ -335,8 +330,8 @@ void GameApplication::Run(){
 
                     if (startupActive){
                         screen.Post([&]{
-                            if (startupActive && startupFrame < AnimationSequence::startupFrames - 1)
-                                ++startupFrame; // WELCOME waits for Enter.
+                            if (startupActive && AnimationSequence::startupComplete(++startupFrame))
+                                startupActive = false;
                         });
 
                         screen.Post(ftxui::Event::Custom);

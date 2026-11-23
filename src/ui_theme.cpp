@@ -18,21 +18,19 @@ Metrics metrics(std::optional<Dimensions> terminal) {
 }
 
 Element logo() {
-    // A single stable wordmark. Canvas uses 2x4 pixels per terminal cell;
-    // aligned 2x2 blocks avoid braille/font-dependent spacing.
-    static constexpr std::array<std::string_view, 5> pixels{
-        "10001 01110 11111 11111",
-        "11011 10001 00010 10000",
-        "10101 11111 00100 11110",
-        "10001 10001 01000 10000",
-        "10001 10001 11111 11111"};
-    return canvas(46, 12, [](Canvas& image) {
-        for (int y = 0; y < 5; ++y)
-            for (int x = 0; x < 23; ++x)
-                if (pixels[y][x] == '1')
-                    for (int dx = 0; dx < 2; ++dx)
-                        image.DrawBlock(x * 2 + dx, y * 2, true, accent);
-    });
+    static const std::array<std::string, 6> mazeTitle = {
+        "███╗   ███╗ █████╗ ███████╗███████╗",
+        "████╗ ████║██╔══██╗╚══███╔╝██╔════╝",
+        "██╔████╔██║███████║  ███╔╝ █████╗  ",
+        "██║╚██╔╝██║██╔══██║ ███╔╝  ██╔══╝  ",
+        "██║ ╚═╝ ██║██║  ██║███████╗███████╗",
+        "╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝"
+    };
+
+    Elements lines;
+    for (const auto& line : mazeTitle)
+        lines.push_back(text(line) | color(accent) | bold);
+    return vbox(std::move(lines));
 }
 
 Element panel(std::string title, Element content) {
@@ -51,13 +49,7 @@ Element choice(std::string title, std::string subtitle, bool selected,
     auto heading = hbox({text(selected ? " > " : "   ") | color(accent),
         text(std::move(title)) | bold | color(selected ? accent : ink), filler(),
         text(selected ? "ENTER " : "      ") | color(muted)});
-    if (dimensions.dense)
-        return heading | bgcolor(selected ? selected_surface : surface);
-    Elements lines{heading};
-    if (dimensions.height >= 33 && !subtitle.empty())
-        lines.push_back(text("   " + subtitle) | color(muted));
-    return vbox(std::move(lines)) | borderStyled(ROUNDED, selected ? accent : edge)
-        | bgcolor(selected ? selected_surface : surface);
+    return heading | bgcolor(selected ? selected_surface : surface);
 }
 
 Element shell(std::string section, Element body, std::string controls,
@@ -67,7 +59,9 @@ Element shell(std::string section, Element body, std::string controls,
               text(std::move(section)) | color(ink), filler(),
               text("CIRCUITO DE ESCAPE ") | color(muted)}),
         separator() | color(edge)};
-    if (brand) lines.push_back(logo() | hcenter);
+    if (brand) lines.push_back(vbox({logo() | hcenter,
+        text("CIRCUITO DE ESCAPE") | bold | hcenter,
+        text("Two switches. One way out.") | color(muted) | hcenter}));
     lines.push_back(vbox({filler(), std::move(body), filler()}) | flex);
     lines.push_back(separator() | color(edge));
     lines.push_back(text(std::move(controls)) | color(muted) | hcenter);
@@ -100,7 +94,7 @@ Element result(int frame, int frames, std::string title, std::string description
             std::to_string(observation.maximumEnergy)),
         chip("Score", std::to_string(observation.score)),
         chip("Resources", std::to_string(observation.collectedResources))}));
-    auto heading = vbox({logo() | hcenter, separatorEmpty(),
+    auto heading = vbox({
         text(title) | bold | color(tone) | hcenter,
         text(std::move(description)) | color(ink) | hcenter,
         circuit(done ? frames - 1 : frame, tone) | hcenter});

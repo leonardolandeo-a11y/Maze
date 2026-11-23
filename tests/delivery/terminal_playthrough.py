@@ -130,8 +130,6 @@ def play(executable, maps, evidence, label):
         game = Terminal([str(Path(executable).resolve()), '--maps', str(maps), '--difficulty', level])
         prefix = evidence / f'{label}-{level}'
         try:
-            game.contains('WELCOME')
-            game.send('\r')
             initial = game.until(lambda f: all(t in f for t in ['Turn 0/', level.upper(), 'FULL MAP']),
                                  'complete initial gameplay frame')
             # HUD must remain identical through H, route selection and Z.

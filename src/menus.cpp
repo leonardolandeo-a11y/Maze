@@ -84,6 +84,11 @@ opción de la partida o producir un MenuCommand para GameApplication.
 bool Menus::OnEvent(ftxui::Event event) {
     using namespace ftxui;
 
+    if (event == Event::Character('q') || event == Event::Character('Q')) {
+        pendingCommand_ = MenuCommand::quit;
+        return true;
+    }
+
     const int optionCount = project2_mode_ && currentScreen_ == MenuScreen::Main
         ? 5 : OptionCount(currentScreen_);
 
@@ -292,39 +297,43 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
             | borderStyled(ROUNDED, MazeUI::edge) | bgcolor(MazeUI::background) | center;
     }
 
-    if (project2_mode_ && (currentScreen_ == MenuScreen::Main ||
-        currentScreen_ == MenuScreen::Difficulty || currentScreen_ == MenuScreen::RenderMode)) {
+    if (currentScreen_ == MenuScreen::Main || currentScreen_ == MenuScreen::Difficulty ||
+        currentScreen_ == MenuScreen::RenderMode) {
         const bool main = currentScreen_ == MenuScreen::Main;
         const bool level = currentScreen_ == MenuScreen::Difficulty;
-        const std::vector<std::string> labels = main
+        std::vector<std::string> labels = main
             ? std::vector<std::string>{"START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT"}
             : level ? std::vector<std::string>{"EASY", "MEDIUM", "HARD", "BACK"}
                     : std::vector<std::string>{"EMOJI", "ASCII", "BACK"};
-        const std::vector<std::string> hints = main
+        std::vector<std::string> hints = main
             ? std::vector<std::string>{"Play your prepared map", "Choose your challenge",
                 "Choose map symbols", "Learn the circuit", "Leave the circuit"}
             : level ? std::vector<std::string>{"Lowest verified route cost",
                 "Balanced verified route cost", "Highest verified route cost", "Return to menu"}
                     : std::vector<std::string>{"Illustrated map symbols",
                 "Portable text symbols", "Return to menu"};
+        if (main && !project2_mode_) {
+            labels.insert(labels.begin() + 1, "SCENARIO");
+            hints[0] = "Play your selected scenario";
+            hints.insert(hints.begin() + 1, "Choose your scenario");
+        }
         Elements choices;
         for (std::size_t i = 0; i < labels.size(); ++i)
             choices.push_back(row(labels[i], static_cast<int>(i), hints[i]));
         auto navigation = vbox(std::move(choices));
-        auto setup = MazeUI::panel("YOUR RUN", vbox({
-            MazeUI::chip("DIFFICULTY", difficulty),
-            MazeUI::chip("RENDER", render_mode),
-            MazeUI::chip("MAPS", "PREPARED FILES"),
+        auto setup = MazeUI::panel(labels[selectedOption_], vbox({
+            paragraph(hints[selectedOption_] + (main && selectedOption_ == 0
+                ? " and escape the circuit." : ".")) | color(MazeUI::muted),
             separatorEmpty(),
-            paragraph("Activate both switches. Evade the guard. Find your way out.")
+            MazeUI::chip("DIFFICULTY", difficulty),
+            MazeUI::chip("RENDER", render_mode)
         }));
-        Element body = metrics.layout == MazeUI::Layout::split
+        Element body = metrics.layout != MazeUI::Layout::compact
             ? hbox({
-                navigation | size(WIDTH, EQUAL, (metrics.width - 5) / 2),
-                text("   "),
-                vbox({filler(), setup, separatorEmpty(),
-                      MazeUI::circuit(0) | hcenter, filler()}) | flex})
-            : vbox({navigation, separatorEmpty(),
+                navigation | size(WIDTH, EQUAL, (metrics.width - 7) / 2)
+                    | borderStyled(ROUNDED, MazeUI::edge),
+                text("   "), setup | flex})
+            : vbox({navigation | borderStyled(ROUNDED, MazeUI::edge),
                 MazeUI::chip("CURRENT", difficulty + " / " + render_mode) | hcenter});
         return shell(main ? "MAIN MENU" : level ? "DIFFICULTY" : "RENDER MODE",
             body, "W/S or arrows: select | Enter: confirm | Q: quit", main);
