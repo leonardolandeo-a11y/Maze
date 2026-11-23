@@ -117,8 +117,7 @@ PreparedMap build_map(const MapBatchConfig& config, std::size_t id, std::uint32_
 
     // Minimum objective route length based on map size.
     // A 10x15 map requires at least 15 movements.
-    const std::size_t minimum_moves =
-        3 * (config.rows + config.columns) / 5;
+    const std::size_t minimum_moves = 2 * (config.rows + config.columns) / 5;
 
     // Retry objective placement while keeping the
     // generated maze structure unchanged.
