@@ -142,7 +142,7 @@ Element result(int frame, int frames, std::string title, std::string description
     Element heading = vbox(std::move(title_lines));
     heading->ComputeRequirement();
     if (heading->requirement().min_x > content_width ||
-        heading->requirement().min_y + 8 > dimensions.height - 2)
+        heading->requirement().min_y + 8 > dimensions.height)
         heading = victory ? vbox({text("ESCAPE"), text("COMPLETED")}) | hcenter : text(title);
     heading = heading | bold | color(tone);
     heading->ComputeRequirement();
@@ -150,7 +150,7 @@ Element result(int frame, int frames, std::string title, std::string description
         return hbox({text(" " + icon + " ") | bold | color(tone),
                      text(std::move(label)) | color(muted) |
                          size(WIDTH, EQUAL, 12), filler(),
-                     text(std::move(value)) | bold | color(ink)}) | vcenter | flex;
+                     text(std::move(value)) | bold | color(ink)});
     };
     Elements stats_lines{
         stat("▥", "Turnos:", std::to_string(observation.turn)),
@@ -158,19 +158,17 @@ Element result(int frame, int frames, std::string title, std::string description
             std::to_string(observation.maximumEnergy)),
         stat("★", "Puntaje:", std::to_string(observation.score)),
         stat("◇", "Recursos:", std::to_string(observation.collectedResources))};
-    if (spacious)
-        for (int i = 3; i > 0; --i)
-            stats_lines.insert(stats_lines.begin() + i, separatorEmpty());
-    const int stats_width = std::min(dimensions.width - 4,
-        std::max(60, dimensions.width * 3 / 4));
-    const int stats_height = spacious ? std::min(std::max(9, dimensions.height / 2),
-        dimensions.height - heading->requirement().min_y - 2) : 6;
+    const int stats_width = std::max(1, std::min(53, content_width - 4));
     auto stats = vbox(std::move(stats_lines))
-        | size(WIDTH, EQUAL, stats_width) | borderStyled(ROUNDED, tone)
-        | size(HEIGHT, EQUAL, stats_height) | hcenter;
-    auto body = vbox({heading | hcenter,
+        | size(WIDTH, EQUAL, stats_width) | borderStyled(ROUNDED, tone) | hcenter;
+    const int free_rows = std::max(0, dimensions.height - heading->requirement().min_y - 8);
+    const int stats_gap = std::min(2, (free_rows + 2) / 3);
+    const int top_margin = std::min(std::clamp(dimensions.height / 8, 0, 5), free_rows - stats_gap);
+    auto body = vbox({text("") | size(HEIGHT, EQUAL, top_margin),
+        heading | hcenter,
         text(std::move(description)) | color(ink) | hcenter,
-        vbox({filler(), stats, filler()}) | flex,
+        text("") | size(HEIGHT, EQUAL, stats_gap),
+        stats, filler(),
         text(done ? "ENTER - MAIN MENU   |   Q - EXIT" : "Q - EXIT") |
             color(muted) | hcenter});
     return window(text(" " + title + " ") | bold | color(tone), body, ROUNDED)
