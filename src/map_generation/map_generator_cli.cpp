@@ -131,8 +131,13 @@ int run_map_generator(const std::vector<std::string>& arguments,
         for (const MapBatchEntry& entry : batch.entries) {
             if (entry.winning_game) {
                 ++verified_count;
-                output << "Candidate " << entry.id << " (seed " << entry.seed
-                       << "): verified, cost " << cost_for(batch, entry.id) << '\n';
+                output << "Candidate " << entry.id
+                       << " (seed " << entry.seed << ")"
+                       << ": verified, cost "
+                       << cost_for(batch, entry.id)
+                       << ", winning turns "
+                       << entry.winning_game->actions.size()
+                       << '\n';
             } else {
                 output << "Candidate " << entry.id << " (seed " << entry.seed
                        << "): rejected - " << entry.rejection_reason << '\n';

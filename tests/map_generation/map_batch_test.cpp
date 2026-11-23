@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#include <cstdint>
+#include <iostream>
 
 namespace {
 
@@ -318,6 +320,111 @@ void dimensions_and_rejections_test() {
     assert(!single_failure.entries[0].map && !single_failure.selection);
 }
 
+std::size_t manhattan_distance(
+    Position first,
+    Position second
+) {
+    const std::size_t row_distance =
+        first.row > second.row
+            ? first.row - second.row
+            : second.row - first.row;
+
+    const std::size_t column_distance =
+        first.column > second.column
+            ? first.column - second.column
+            : second.column - first.column;
+
+    return row_distance + column_distance;
+}
+
+std::size_t objective_route_lower_bound(
+    const MapValidationInput& input
+) {
+    // Player -> A -> B -> Exit
+    const std::size_t route_a =
+        manhattan_distance(
+            input.player_start, input.switch_a
+        ) +
+        manhattan_distance(
+            input.switch_a, input.switch_b
+        ) +
+        manhattan_distance(
+            input.switch_b, input.exit
+        );
+
+    // Player -> B -> A -> Exit
+    const std::size_t route_b =
+        manhattan_distance(
+            input.player_start, input.switch_b
+        ) +
+        manhattan_distance(
+            input.switch_b, input.switch_a
+        ) +
+        manhattan_distance(
+            input.switch_a, input.exit
+        );
+
+    return std::min(route_a, route_b);
+}
+
+void minimum_objective_route_length_test() {
+    MapBatchConfig config;
+    config.rows = 10;
+    config.columns = 15;
+    config.candidate_count = 10;
+
+    // Minimum distance required by the new placement rule.
+    const std::size_t minimum_moves =
+        2 * (config.rows + config.columns) / 5;
+
+    // Seeds covering previously short objective layouts.
+    for (const std::uint32_t seed : {
+        80U,
+        217U,
+        3668352356U,
+        2415097786U
+    }) {
+        const PreparedMap map = build_map(config, 1, seed);
+
+        const std::size_t route_length =
+            objective_route_lower_bound(map.input);
+
+        assert(route_length >= minimum_moves);
+    }
+
+    // Verify that the selected EASY map also respects
+    // the minimum objective distance and remains winnable.
+    const MapBatchResult batch = run_map_batch(config);
+
+    assert(batch.selection.has_value());
+
+    const std::size_t easy_id =
+        batch.selection->easy_id;
+
+    const auto easy = std::find_if(
+        batch.entries.begin(),
+        batch.entries.end(),
+        [easy_id](const MapBatchEntry& entry) {
+            return entry.id == easy_id;
+        }
+    );
+
+    assert(easy != batch.entries.end());
+    assert(easy->map.has_value());
+    assert(easy->winning_game.has_value());
+
+    const std::size_t easy_distance =
+        objective_route_lower_bound(easy->map->input);
+
+    assert(easy_distance >= minimum_moves);
+
+    // A winning sequence must contain enough actions
+    // to cover the minimum required movements.
+    assert(
+        easy->winning_game->actions.size() >= minimum_moves
+    );
+}
+
 }
 
 void run_map_batch_tests() {
@@ -328,4 +435,7 @@ void run_map_batch_tests() {
     difficulty_selection_test();
     revalidation_clears_stale_results_test();
     dimensions_and_rejections_test();
+    minimum_objective_route_length_test();
+
+    std::cout << "All map batch tests passed!\n";
 }
