@@ -317,9 +317,11 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
             hints[0] = "Play your selected scenario";
             hints.insert(hints.begin() + 1, "Choose your scenario");
         }
-        const bool side_logo = main && metrics.height < int(labels.size()) * 3 + 12 && metrics.width >= 72;
-        const int required_height = int(labels.size()) * 3 +
-            (main && !side_logo ? 8 : 0) + 4;
+        const int card_height = metrics.height < 33 ? 3 : 4;
+        const bool side_logo = main && metrics.height < int(labels.size()) * card_height + 11 &&
+            metrics.width >= 72;
+        const int required_height = int(labels.size()) * card_height +
+            (main && !side_logo ? 7 : 0) + 4;
         const bool spaced = metrics.height >= required_height + int(labels.size()) - 1;
         Elements choices;
         for (std::size_t i = 0; i < labels.size(); ++i) {
@@ -331,7 +333,7 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
         auto navigation = vbox(std::move(choices));
         if (required_height > metrics.height)
             navigation = navigation | vscroll_indicator | frame |
-                size(HEIGHT, EQUAL, std::max(3, metrics.height - (main && !side_logo ? 12 : 4)));
+                size(HEIGHT, EQUAL, std::max(3, metrics.height - (main && !side_logo ? 11 : 4)));
         auto setup = MazeUI::panel(labels[selectedOption_], vbox({
             paragraph(hints[selectedOption_] + (main && selectedOption_ == 0
                 ? " and escape the circuit." : ".")) | color(MazeUI::muted),
@@ -346,7 +348,6 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
             : navigation;
         if (side_logo) {
             auto brand = vbox({MazeUI::logo() | hcenter,
-                text("CIRCUITO DE ESCAPE") | bold | hcenter,
                 text("Two switches. One way out.") | color(MazeUI::muted) | hcenter,
                 separatorEmpty(),
                 MazeUI::chip("CURRENT", difficulty + " / " + render_mode) | hcenter});

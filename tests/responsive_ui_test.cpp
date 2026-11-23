@@ -31,12 +31,24 @@ void check(ftxui::Element element, ftxui::Dimensions viewport, const std::string
         }
         text += '\n';
     }
+    if (name == "main" || name == "legacy-main" || name == "death" || name == "victory") {
+        assert(screen.PixelAt(0, 0).character == "╭");
+        assert(screen.PixelAt(viewport.dimx - 1, viewport.dimy - 1).character == "╯");
+    }
+    if (name == "death" || name == "victory") {
+        for (const auto* icon : {"▥", "ϟ", "★", "◇"})
+            assert(text.find(icon) != std::string::npos);
+    }
     if (name == "main" || name == "legacy-main") {
         int borders = 0;
         for (int y = 0; y < viewport.dimy; ++y)
             for (int x = 0; x < viewport.dimx; ++x)
                 borders += screen.PixelAt(x, y).character == "╭";
         assert(borders >= (name == "main" ? 6 : 7));
+        assert(text.find("CIRCUITO DE ESCAPE") == std::string::npos);
+        for (const auto* detail : {"✚", "▥", "▣", "?", "↪", "Choose your challenge",
+                                   "Choose map symbols", "Learn the circuit", "Leave the circuit"})
+            assert(text.find(detail) != std::string::npos);
     }
     if (name == "main" || name.starts_with("prepared-")) {
         for (const auto* obsolete : {"SELECT MAP SIZE", "CUSTOM MAP SIZE",
@@ -97,7 +109,7 @@ void run_responsive_ui_tests() {
         Menus menu(true);
         down(menu, 4);
         check(menu.Render(viewport), viewport, "small-main",
-            {"QUIT", "CIRCUITO DE ESCAPE", "Enter: confirm", "Q: quit"});
+            {"QUIT", "Two switches. One way out.", "Enter: confirm", "Q: quit"});
         check(VictoryAnimation{}.RenderVictoryFrame(VictoryAnimation::maxFrames - 1,
             observation, viewport), viewport, "small-victory",
             {"ESCAPE", "COMPLETED", "¡Has escapado del circuito!", "Energía:", "ENTER - MAIN MENU"});

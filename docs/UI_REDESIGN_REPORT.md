@@ -24,7 +24,7 @@ Interfaz FTXUI más compacta y coherente: inicio directo, menú cian con el logo
 ## Cambios por funcionalidad
 
 - **Inicio:** conserva las 166 tramas originales; termina sin pedir Enter. Q sigue saliendo. `StartupAnimation` permanece disponible, fuera del flujo de ambas aplicaciones.
-- **Menú:** logo de seis líneas con sus contornos originales, subtítulo y lema. Cinco opciones en Circuito de Escape; la versión clásica conserva SCENARIO. Tarjetas con bordes individuales y panel contextual desde 100×30; logo lateral y tarjetas a la derecha en 80×24. Se eliminó el circuito decorativo del menú.
+- **Menú:** logo de seis líneas con sus contornos originales y lema, sin subtítulo. Cinco opciones en Circuito de Escape; la versión clásica conserva SCENARIO. Tarjetas con bordes individuales y panel contextual desde 100×30; logo lateral y tarjetas a la derecha en 80×24. Se eliminó el circuito decorativo del menú.
 - **Derrota:** GAME OVER rojo pixelado, motivo real y estadísticas centradas: turnos, energía actual/máxima, puntaje y recursos. Sin marca MAZE.
 - **Victoria:** ESCAPE encima de COMPLETED en bloques Unicode verdes, sin trofeo, mensaje «¡Has escapado del circuito!» y el mismo panel de estadísticas. Sin marca MAZE.
 - **Escalado:** ajuste común en `CinematicView::Fit`; amplía los sprites según ancho y alto disponibles, conservando centrado, proporciones y colores superior/inferior. Sin editar las cinemáticas de derrota/victoria. Se conservan los tiempos y controles finales existentes.
@@ -70,3 +70,12 @@ Trabajo en `feat/ui-menu-cinematics-results`, sin push.
 - `cmake --build build -j 2`: correcto. `NO_COLOR= TERM=xterm-256color COLORTERM=truecolor MAZE_UI_PREVIEW_DIR=/tmp/maze-ui-correction /tmp/maze-ui-check`: pasan los cuatro grupos de interfaz existentes en los cuatro tamaños originales y los dos compactos; capturas FTXUI revisadas.
 - `python3 /tmp/maze-terminal-check.py`: vuelven a pasar las cuatro sesiones PTY, Enter al menú y Q. `ctest --test-dir build --output-on-failure` mantiene el fallo de mapas ya documentado; `/tmp/maze-all-check` mantiene 28/30 grupos aprobados y los mismos dos fallos previos.
 - Commit correctivo: `fix(ui): restaurar tarjetas del menú y corregir tipografía de resultados`. Sin push.
+
+## Ajuste de bloques y composición completa
+
+- `src/ui_theme.cpp`: cada opción muestra icono, título y descripción, con variante compacta cuando falta altura. Se retiró CIRCUITO DE ESCAPE del encabezado principal; quedan el logo y el lema. Los resultados comparten los límites exteriores completos del menú y estadísticas con iconos, ancho adaptable y filas distribuidas.
+- `src/menus.cpp`: se ajustó únicamente el cálculo de espacio para las tarjetas y el logo; se mantiene el panel contextual derecho cuando hay espacio. Títulos Unicode, cinemáticas, tiempos y lógica del juego conservados.
+- `tests/responsive_ui_test.cpp`: comprobaciones mínimas de iconos, descripciones, ausencia del subtítulo y coincidencia de las esquinas exteriores de menú, derrota y victoria.
+- `cmake --build build -j 2`: correcto. Los cuatro grupos existentes de interfaz pasan en 80×24, 100×30, 120×35 y 160×45, además de las variantes compactas 60×20 y 80×20. Capturas FTXUI con color revisadas en `/tmp/maze-ui-layout` mediante `NO_COLOR= TERM=xterm-256color COLORTERM=truecolor MAZE_UI_PREVIEW_DIR=/tmp/maze-ui-layout /tmp/maze-ui-check`.
+- La suite completa conserva los dos fallos de mapas preexistentes (28/30 grupos aprobados); no se modificaron esas pruebas ni algoritmos.
+- `NO_COLOR= python3 /tmp/maze-terminal-check.py`: pasan las cuatro sesiones PTY con color, victorias, captura, Enter al menú y Q; también Q durante el inicio de ambos ejecutables. Mapas sin cambios.

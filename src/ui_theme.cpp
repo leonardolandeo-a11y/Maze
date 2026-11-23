@@ -46,27 +46,41 @@ Element chip(std::string label, std::string value, Color tone) {
 
 Element choice(std::string title, std::string subtitle, bool selected,
                const Metrics& dimensions) {
+    const std::string icon = title == "START GAME" ? "✚" :
+        title == "DIFFICULTY" ? "▥" : title == "RENDER MODE" ? "▣" :
+        title == "HELP" ? "?" : title == "QUIT" ? "↪" : "◇";
     auto heading = hbox({text(selected ? " > " : "   ") | color(accent),
         text(std::move(title)) | bold | color(selected ? accent : ink), filler(),
-        text(selected ? "ENTER " : "      ") | color(muted)});
-    return heading | borderStyled(ROUNDED, selected ? accent : edge)
+        text(selected ? " ENTER " : "       ") | color(muted)});
+    if (dimensions.height < 33)
+        return window(hbox({text(" " + icon) | bold | color(accent), heading}),
+            text(" " + subtitle) | color(muted), ROUNDED)
+            | color(selected ? accent : edge)
+            | bgcolor(selected ? selected_surface : surface);
+    return hbox({text(" " + icon + " ") | bold | color(accent),
+        vbox({heading, text("   " + subtitle) | color(muted)}) | flex})
+        | borderStyled(ROUNDED, selected ? accent : edge)
         | bgcolor(selected ? selected_surface : surface);
 }
 
 Element shell(std::string section, Element body, std::string controls,
               const Metrics& dimensions, bool brand) {
+    const bool main_menu = section == "MAIN MENU";
     Elements lines{
         hbox({text(" MAZE / ") | bold | color(accent),
               text(std::move(section)) | color(ink), filler(),
-              text("CIRCUITO DE ESCAPE ") | color(muted)}),
+              text(main_menu ? "" : "CIRCUITO DE ESCAPE ") | color(muted)}),
         separator() | color(edge)};
-    if (brand) lines.push_back(vbox({logo() | hcenter,
-        text("CIRCUITO DE ESCAPE") | bold | hcenter,
-        text("Two switches. One way out.") | color(muted) | hcenter}));
+    if (brand) {
+        Elements branding{logo() | hcenter};
+        if (!main_menu) branding.push_back(text("CIRCUITO DE ESCAPE") | bold | hcenter);
+        branding.push_back(text("Two switches. One way out.") | color(muted) | hcenter);
+        lines.push_back(vbox(std::move(branding)));
+    }
     lines.push_back(vbox({filler(), std::move(body), filler()}) | flex);
     lines.push_back(separator() | color(edge));
     lines.push_back(text(std::move(controls)) | color(muted) | hcenter);
-    return vbox(std::move(lines)) | size(WIDTH, EQUAL, dimensions.width - 2)
+    return vbox(std::move(lines)) | size(WIDTH, EQUAL, dimensions.width + 2)
         | size(HEIGHT, EQUAL, dimensions.height)
         | borderStyled(ROUNDED, edge) | color(ink) | bgcolor(background)
         | center | bgcolor(background);
@@ -131,36 +145,37 @@ Element result(int frame, int frames, std::string title, std::string description
         heading->requirement().min_y + 8 > dimensions.height - 2)
         heading = victory ? vbox({text("ESCAPE"), text("COMPLETED")}) | hcenter : text(title);
     heading = heading | bold | color(tone);
-    auto stat = [&](std::string label, std::string value) {
-        return hbox({text(std::move(label)) | color(muted) |
+    heading->ComputeRequirement();
+    auto stat = [&](std::string icon, std::string label, std::string value) {
+        return hbox({text(" " + icon + " ") | bold | color(tone),
+                     text(std::move(label)) | color(muted) |
                          size(WIDTH, EQUAL, 12), filler(),
-                     text(std::move(value)) | bold | color(ink)});
+                     text(std::move(value)) | bold | color(ink)}) | vcenter | flex;
     };
     Elements stats_lines{
-        stat("Turnos:", std::to_string(observation.turn)),
-        stat("Energía:", std::to_string(observation.energy) + " / " +
+        stat("▥", "Turnos:", std::to_string(observation.turn)),
+        stat("ϟ", "Energía:", std::to_string(observation.energy) + " / " +
             std::to_string(observation.maximumEnergy)),
-        stat("Puntaje:", std::to_string(observation.score)),
-        stat("Recursos:", std::to_string(observation.collectedResources))};
+        stat("★", "Puntaje:", std::to_string(observation.score)),
+        stat("◇", "Recursos:", std::to_string(observation.collectedResources))};
     if (spacious)
         for (int i = 3; i > 0; --i)
             stats_lines.insert(stats_lines.begin() + i, separatorEmpty());
-    const int stats_width = std::min(60, dimensions.width - 8);
+    const int stats_width = std::min(dimensions.width - 4,
+        std::max(60, dimensions.width * 3 / 4));
+    const int stats_height = spacious ? std::min(std::max(9, dimensions.height / 2),
+        dimensions.height - heading->requirement().min_y - 2) : 6;
     auto stats = vbox(std::move(stats_lines))
-        | size(WIDTH, EQUAL, stats_width) | borderStyled(ROUNDED, tone) | hcenter;
-    Elements lines{heading | hcenter,
-        text(std::move(description)) | color(ink) | hcenter};
-    if (spacious) lines.push_back(separatorEmpty());
-    lines.push_back(std::move(stats));
-    if (spacious) lines.push_back(separatorEmpty());
-    lines.push_back(text(done ? "ENTER - MAIN MENU   |   Q - EXIT" : "Q - EXIT") |
-                    color(muted) | hcenter);
-    auto body = vbox(std::move(lines));
-    body->ComputeRequirement();
-    return window(text(" " + title + " ") | bold | color(tone),
-                  vbox({filler(), body, filler()}), ROUNDED)
-        | size(WIDTH, EQUAL, std::min(content_width + 2, body->requirement().min_x + 10))
-        | size(HEIGHT, EQUAL, std::min(dimensions.height, body->requirement().min_y + 6))
+        | size(WIDTH, EQUAL, stats_width) | borderStyled(ROUNDED, tone)
+        | size(HEIGHT, EQUAL, stats_height) | hcenter;
+    auto body = vbox({heading | hcenter,
+        text(std::move(description)) | color(ink) | hcenter,
+        vbox({filler(), stats, filler()}) | flex,
+        text(done ? "ENTER - MAIN MENU   |   Q - EXIT" : "Q - EXIT") |
+            color(muted) | hcenter});
+    return window(text(" " + title + " ") | bold | color(tone), body, ROUNDED)
+        | size(WIDTH, EQUAL, dimensions.width + 4)
+        | size(HEIGHT, EQUAL, dimensions.height + 2)
         | color(edge) | bgcolor(background) | center | bgcolor(background);
 }
 }
