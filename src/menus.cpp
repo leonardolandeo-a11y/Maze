@@ -5,6 +5,7 @@
 #include "circuit_escape/help_presentation.h"
 
 #include <sstream>
+#include <span>
 #include <array>
 #include <algorithm>
 #include <stdexcept>
@@ -42,20 +43,157 @@ namespace {
         });
     }
 
-    ftxui::Element RenderPreview(MenuScreen screen, const std::string& option) {
+    ftxui::Element RenderPreview(MenuScreen screen, const std::string& option,
+                                 ftxui::Dimensions available) {
         using namespace ftxui;
-        auto face = [](int level) {
+        auto sprite = [&](std::span<const std::string_view> pixels, auto palette,
+                          std::string label, int max_width, Color label_tone) {
+            if (available.dimy < 2) return text(label) | color(label_tone);
+            int first = 0;
+            while (first < int(pixels.size()) && pixels[first].find_first_not_of('.') == std::string_view::npos)
+                ++first;
+            int width = 1;
+            for (const auto& row : pixels) width = std::max(width, int(row.size()));
+            const int height = std::max(1, int(pixels.size()) - first);
+            const double scale = std::min({1.0, std::max(1, max_width) / double(width),
+                (available.dimy - 1) * 2 / double(height)});
+            const int w = std::max(1, int(width * scale));
+            const int h = std::max(1, int(height * scale));
+            auto sample = [&](int x, int y) {
+                if (y >= h || first == int(pixels.size())) return '.';
+                const auto& row = pixels[first + y * height / h];
+                const int col = x * width / w;
+                return col < int(row.size()) ? row[col] : '.';
+            };
+            auto tone = [&](char cell) { return cell == '.' ? MazeUI::background : palette(cell); };
+            Elements rows;
+            for (int y = 0; y < h; y += 2) {
+                Elements cells;
+                for (int x = 0; x < w; ++x) {
+                    const char top = sample(x, y), bottom = sample(x, y + 1);
+                    cells.push_back(text(top == '.' && bottom == '.' ? " " : "▀") |
+                        color(tone(top)) | bgcolor(tone(bottom)));
+                }
+                rows.push_back(hbox(std::move(cells)));
+            }
+            Element image = vbox(std::move(rows)) | hcenter;
+            if (screen == MenuScreen::Main && option == "RENDER MODE")
+                image = image | vcenter | size(HEIGHT, EQUAL, std::min(5, available.dimy - 1));
+            return vbox({image, text(std::move(label)) | color(label_tone) | hcenter});
+        };
+        static constexpr std::array<std::array<std::string_view, 11>, 3> grey_faces{{
+            {{
+                "...#####...",
+                "..#GGGGG#..",
+                ".#GGGGGGG#.",
+                "#GGKGGGKGG#",
+                "#GGGGGGGGG#",
+                "#GGGGGGGGG#",
+                "#GGKGGGKGG#",
+                "#GGGKKKGGG#",
+                ".#GGGGGGG#.",
+                "..#GGGGG#..",
+                "...#####...",
+            }},
+            {{
+                "...#####...",
+                "..#GGGGG#..",
+                ".#GGGGGGG#.",
+                "#GGKGGGKGG#",
+                "#GGGGGGGGG#",
+                "#GGGGGGGGG#",
+                "#GGGGGGGGG#",
+                "#GGKKKKKGG#",
+                ".#GGGGGGG#.",
+                "..#GGGGG#..",
+                "...#####...",
+            }},
+            {{
+                "...#####...",
+                "..#GGGGG#..",
+                ".#KGGGGGK#.",
+                "#GGKGGGKGG#",
+                "#GGGGGGGGG#",
+                "#GGGGGGGGG#",
+                "#GGGKKKGGG#",
+                "#GGKGGGKGG#",
+                ".#GGGGGGG#.",
+                "..#GGGGG#..",
+                "...#####...",
+            }},
+        }};
+        static constexpr std::array<std::array<std::string_view, 15>, 3> faces{{
+            {{
+                ".....#####.....",
+                "...#YYYYYYY#...",
+                "..#YYYYYYYYY#..",
+                ".#YYYYYYYYYYY#.",
+                ".#YYYYYYYYYYY#.",
+                "#YYYKKYYYKKYYY#",
+                "#YYYKKYYYKKYYY#",
+                "#YYYYYYYYYYYYY#",
+                "#YYKYYYYYYYKYY#",
+                "#YYYKYYYYYKYYY#",
+                ".#YYYKYYYKYYY#.",
+                ".#YYYYKKKYYYY#.",
+                "..#YYYYYYYYY#..",
+                "...#YYYYYYY#...",
+                ".....#####.....",
+            }},
+            {{
+                ".....#####.....",
+                "...#YYYYYYY#...",
+                "..#YYYYYYYYY#..",
+                ".#YYYYYYYYYYY#.",
+                ".#YYYYYYYYYYY#.",
+                "#YYYKKYYYKKYYY#",
+                "#YYYKKYYYKKYYY#",
+                "#YYYYYYYYYYYYY#",
+                "#YYYYYYYYYYYYY#",
+                "#YYYYYYYYYYYYY#",
+                ".#YYKKKKKKKYY#.",
+                ".#YYYYYYYYYYY#.",
+                "..#YYYYYYYYY#..",
+                "...#YYYYYYY#...",
+                ".....#####.....",
+            }},
+            {{
+                ".....#####.....",
+                "...#YYYYYYY#...",
+                "..#YYYYYYYYY#..",
+                ".#YYYYYYYYYYY#.",
+                ".#YKYYYYYYYKY#.",
+                "#YYYKKYYYKKYYY#",
+                "#YYYYKYYYKYYYY#",
+                "#YYYYYYYYYYYYY#",
+                "#YYYYYYYYYYYYY#",
+                "#YYYYKKKKKYYYY#",
+                ".#YYKYYYYYKYY#.",
+                ".#YYYYYYYYYYY#.",
+                "..#YYYYYYYYY#..",
+                "...#YYYYYYY#...",
+                ".....#####.....",
+            }},
+        }};
+        auto face = [&](int level, bool grey) {
             const std::array labels{"EASY", "MEDIUM", "HARD"};
-            const std::array eyes{"│  ^ ^  │", "│  o o  │", "│  > <  │"};
-            const std::array mouths{R"(│ \___/ │)", "│  ---  │", R"(│  /-\  │)"};
-            const std::array tones{MazeUI::success, MazeUI::warning, MazeUI::error};
-            return vbox({text("╭───────╮"), text(eyes[level]), text(mouths[level]),
-                text("╰───────╯"), text(labels[level]) | hcenter}) | color(tones[level]);
+            const std::array fills{Color::RGB(84,235,121), Color::RGB(255,216,77), Color::RGB(255,89,100)};
+            const std::array edges{Color::RGB(35,122,58), Color::RGB(154,117,32), Color::RGB(158,45,57)};
+            auto palette = [&](char cell) {
+                if (cell == 'G') return Color::RGB(156,163,175);
+                if (cell == 'Y') return fills[level];
+                if (cell == '#') return grey ? Color::RGB(75,85,99) : edges[level];
+                return Color::RGB(31,41,55);
+            };
+            return sprite(grey ? std::span<const std::string_view>(grey_faces[level]) :
+                std::span<const std::string_view>(faces[level]), palette, labels[level],
+                grey ? (available.dimx - 6) / 3 : available.dimx,
+                grey ? Color::RGB(156,163,175) : fills[level]);
         };
         if (screen == MenuScreen::Main && option == "DIFFICULTY")
-            return hbox({face(0), text("   "), face(1), text("   "), face(2)});
+            return hbox({face(0, true), text("   "), face(1, true), text("   "), face(2, true)});
         if (screen == MenuScreen::Difficulty && option != "BACK")
-            return face(option == "EASY" ? 0 : option == "MEDIUM" ? 1 : 2);
+            return face(option == "EASY" ? 0 : option == "MEDIUM" ? 1 : 2, false);
         if (option == "HELP")
             return RenderArt(" █████ \n██   ██\n    ██ \n   ██  \n   ██  \n       \n   ██  ") |
                 bold | color(MazeUI::accent);
@@ -65,29 +203,76 @@ namespace {
         static constexpr std::array<std::string_view, 12> player{
             "..HHHH..", ".HHHHHH.", ".HFFFFH.", ".HFEEFH.", ".HFFFFH.", "..HHHH..",
             "..TTTT..", ".TTTTTT.", ".T.TT.T.", "..TTTT..", "..L..L..", ".LL..LL."};
-        auto tone = [](char pixel) {
-            switch (pixel) {
-                case 'H': return Color::RGB(185, 195, 205);
-                case 'F': return Color::RGB(255, 205, 165);
+        static constexpr std::array<std::string_view, 9> at{
+            ".....BBB...",
+            ".BBB....BBB",
+            ".BB..BBB.BB",
+            "BB..BB..BBB",
+            "BB..BB...BB",
+            "BBB.BB..BBB",
+            ".BB..BBB.BB",
+            ".BBBB......",
+            ".....BBBBB.",
+        };
+        static constexpr std::array<std::string_view, 24> ascii_player{
+            "...............................",
+            "...............................",
+            "...............................",
+            "...............................",
+            "..............BBBBBB...........",
+            "...........BBBBBBBBBBBB........",
+            ".........BBBB.......BBBB.......",
+            "HHH.....BBBB...BBBBB.BBB....HHH",
+            "HHHHAA.BBBB..BBBBBBBBBBB.AAHHHH",
+            ".HHHAAABBB...BBBB...BBBBAAAHHH.",
+            "......AABB...BBB.....BBAA......",
+            ".......BBB...BBB.....BBB.......",
+            ".......BBBB..BBBB...BBBB.......",
+            ".......BBBB..BBBBBBBBBBB.......",
+            "........BBBB...BBBBB.BBB.......",
+            ".........BBBBB.................",
+            "...........BBBBBBBBBBBBB.......",
+            "..............BBBBBBBB.........",
+            "............LL.....LL..........",
+            "............LL.....LL..........",
+            "............LL.....LL..........",
+            "........SSSSSSS...SSSSSS.......",
+            ".......SSSSSSSS...SSSSSSS......",
+            "...............................",
+        };
+        auto original = [](char cell) {
+            switch (cell) {
+                case 'H': return Color::RGB(185,195,205);
+                case 'F': return Color::RGB(255,205,165);
                 case 'E': return Color(Color::Black);
                 case 'T': return Color(Color::BlueLight);
-                case 'L': return Color::RGB(80, 90, 105);
+                case 'L': return Color::RGB(80,90,105);
                 default: return MazeUI::background;
             }
         };
-        Elements rows;
-        for (int y = 0; y < 12; y += 2) {
-            Elements cells;
-            for (int x = 0; x < 8; ++x)
-                cells.push_back(text("▀") | color(tone(player[y][x])) |
-                    bgcolor(tone(player[y + 1][x])));
-            rows.push_back(hbox(std::move(cells)));
-        }
-        auto visual = vbox({vbox(std::move(rows)), text("EMOJI") | color(MazeUI::accent) | hcenter});
-        auto ascii = vbox({filler(), RenderArt("  @  \n /|\\ \n / \\ "), filler(),
-            text("ASCII") | color(MazeUI::accent)}) | color(MazeUI::ink);
-        if (screen == MenuScreen::RenderMode) return option == "ASCII" ? ascii : visual;
-        return hbox({visual, text("       "), ascii});
+        auto ascii = [](char cell) {
+            switch (cell) {
+                case 'B': return Color::RGB(198,205,213);
+                case 'A': return Color::RGB(144,153,165);
+                case 'H': return Color::RGB(228,232,237);
+                case 'L': return Color::RGB(139,150,163);
+                case 'S': return Color::RGB(181,190,200);
+                default: return MazeUI::background;
+            }
+        };
+        if (screen == MenuScreen::RenderMode)
+            return option == "ASCII" ? sprite(ascii_player, ascii, "ASCII", available.dimx, Color::RGB(198,205,213)) :
+                sprite(player, original, "EMOJI", available.dimx, MazeUI::accent);
+        auto grey_head = [](char cell) {
+            if (cell == 'H') return Color::RGB(156,163,175);
+            if (cell == 'F') return Color::RGB(184,192,204);
+            return Color::RGB(31,41,55);
+        };
+        auto head = sprite(std::span<const std::string_view>(player).first(6), grey_head,
+            "EMOJI", (available.dimx - 7) / 2, Color::RGB(184,192,204));
+        auto symbol = sprite(at, [](char) { return Color::RGB(184,192,204); },
+            "ASCII", (available.dimx - 7) / 2, Color::RGB(184,192,204));
+        return hbox({head, text("       "), symbol});
     }
 
     int OptionCount(MenuScreen screen) {
@@ -394,11 +579,15 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
             MazeUI::chip("DIFFICULTY", difficulty),
             MazeUI::chip("RENDER", render_mode)
         }));
+        setup->ComputeRequirement();
+        const int preview_width = metrics.width + 2 - (metrics.width - 7) / 2 - 3;
+        const Dimensions preview_space{preview_width, std::max(1, metrics.height - 4 -
+            (main && !side_logo ? 7 : 0) - setup->requirement().min_y)};
         Element body = (metrics.layout != MazeUI::Layout::compact || (!main && metrics.width >= 72))
             ? hbox({
                 navigation | size(WIDTH, EQUAL, (metrics.width - 7) / 2),
                 text("   "), vbox({setup, filler(),
-                    RenderPreview(currentScreen_, labels[selectedOption_]) | hcenter,
+                    RenderPreview(currentScreen_, labels[selectedOption_], preview_space) | hcenter,
                     filler()}) | flex})
             : navigation;
         if (side_logo) {
@@ -407,7 +596,8 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
                 separatorEmpty(),
                 MazeUI::chip("CURRENT", difficulty + " / " + render_mode) | hcenter};
             if (metrics.height >= 22) branding.push_back(
-                RenderPreview(currentScreen_, labels[selectedOption_]) | hcenter);
+                RenderPreview(currentScreen_, labels[selectedOption_],
+                    {preview_width, std::max(1, metrics.height - 13)}) | hcenter);
             body = hbox({vbox({filler(), vbox(std::move(branding)), filler()}) | flex, text("   "),
                 navigation | size(WIDTH, EQUAL, (metrics.width - 7) / 2)});
         }

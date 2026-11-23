@@ -52,12 +52,39 @@ void check(ftxui::Element element, ftxui::Dimensions viewport, const std::string
                                    "Choose map symbols", "Learn the circuit", "Leave the circuit"})
             assert(text.find(detail) != std::string::npos);
     }
-    if (name == "render-visual") assert(text.find('@') == std::string::npos);
-    if (name == "render-ascii") assert(text.find("▀") == std::string::npos);
-    if (name.starts_with("difficulty-face-")) {
-        const auto first = text.find("╭───────╮");
-        assert(first != std::string::npos);
-        assert(text.find("╭───────╮", first + 1) == std::string::npos);
+    if (name == "render-visual" || name == "render-ascii" || name == "preview-render")
+        assert(text.find('@') == std::string::npos);
+    if (ftxui::Terminal::ColorSupport() == ftxui::Terminal::Color::TrueColor) {
+        auto has_color = [&](ftxui::Color tone) {
+            for (int y = 0; y < viewport.dimy; ++y)
+                for (int x = 0; x < viewport.dimx; ++x) {
+                    const auto& cell = screen.PixelAt(x, y);
+                    if (cell.foreground_color == tone || cell.background_color == tone) return true;
+                }
+            return false;
+        };
+        const std::array fills{ftxui::Color::RGB(84,235,121), ftxui::Color::RGB(255,216,77),
+                                ftxui::Color::RGB(255,89,100)};
+        if (name == "preview-difficulty") {
+            assert(has_color(ftxui::Color::RGB(156,163,175)));
+            for (auto tone : fills) assert(!has_color(tone));
+        }
+        if (name.starts_with("difficulty-face-"))
+            for (int level = 0; level < 3; ++level)
+                assert(has_color(fills[level]) == (name.back() - '0' == level));
+        if (name == "preview-render") {
+            assert(has_color(ftxui::Color::RGB(184,192,204)));
+            assert(!has_color(ftxui::Color::RGB(255,205,165)));
+            assert(!has_color(ftxui::Color::BlueLight));
+        }
+        if (name == "render-visual") {
+            assert(has_color(ftxui::Color::RGB(255,205,165)));
+            assert(has_color(ftxui::Color::BlueLight));
+        }
+        if (name == "render-ascii")
+            for (auto tone : {ftxui::Color::RGB(198,205,213), ftxui::Color::RGB(228,232,237),
+                              ftxui::Color::RGB(139,150,163), ftxui::Color::RGB(181,190,200)})
+                assert(has_color(tone));
     }
     if (name == "main" || name.starts_with("prepared-")) {
         for (const auto* obsolete : {"SELECT MAP SIZE", "CUSTOM MAP SIZE",
@@ -139,15 +166,15 @@ void run_responsive_ui_tests() {
             Menus settings(true);
             down(settings, page);
             if (page == 1) check(settings.Render(viewport), viewport, "preview-difficulty",
-                {"EASY", "MEDIUM", "HARD", "^ ^", "o o", "> <"});
+                {"EASY", "MEDIUM", "HARD", "▀"});
             if (page == 2) check(settings.Render(viewport), viewport, "preview-render",
-                {"EMOJI", "ASCII", "@", "▀"});
+                {"EMOJI", "ASCII", "▀"});
             if (page == 3) check(settings.Render(viewport), viewport, "preview-help", {"█████"});
             settings.OnEvent(ftxui::Event::Return);
             if (page == 1) {
                 for (int level = 0; level < 3; ++level) {
                     check(settings.Render(viewport), viewport, "difficulty-face-" + std::to_string(level),
-                        {level == 0 ? "^ ^" : level == 1 ? "o o" : "> <", "BACK"});
+                        {"▀", "BACK"});
                     assert(settings.selectedDifficulty() == Difficulty::easy);
                     settings.OnEvent(ftxui::Event::ArrowDown);
                 }
@@ -155,7 +182,7 @@ void run_responsive_ui_tests() {
             if (page == 2) {
                 check(settings.Render(viewport), viewport, "render-visual", {"EMOJI", "ASCII", "BACK", "▀"});
                 settings.OnEvent(ftxui::Event::ArrowDown);
-                check(settings.Render(viewport), viewport, "render-ascii", {"ASCII", "BACK", "@"});
+                check(settings.Render(viewport), viewport, "render-ascii", {"ASCII", "BACK", "▀"});
                 assert(settings.selectedRenderMode() == RenderMode::emoji);
             }
             if (page == 3) check(settings.Render(viewport), viewport, "help",
