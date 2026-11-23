@@ -52,6 +52,13 @@ void check(ftxui::Element element, ftxui::Dimensions viewport, const std::string
                                    "Choose map symbols", "Learn the circuit", "Leave the circuit"})
             assert(text.find(detail) != std::string::npos);
     }
+    if (name == "render-visual") assert(text.find('@') == std::string::npos);
+    if (name == "render-ascii") assert(text.find("▀") == std::string::npos);
+    if (name.starts_with("difficulty-face-")) {
+        const auto first = text.find("╭───────╮");
+        assert(first != std::string::npos);
+        assert(text.find("╭───────╮", first + 1) == std::string::npos);
+    }
     if (name == "main" || name.starts_with("prepared-")) {
         for (const auto* obsolete : {"SELECT MAP SIZE", "CUSTOM MAP SIZE",
                                     "GENERATING", "NOT PREPARED"})
@@ -131,11 +138,26 @@ void run_responsive_ui_tests() {
         for (int page = 1; page <= 3; ++page) {
             Menus settings(true);
             down(settings, page);
+            if (page == 1) check(settings.Render(viewport), viewport, "preview-difficulty",
+                {"EASY", "MEDIUM", "HARD", "^ ^", "o o", "> <"});
+            if (page == 2) check(settings.Render(viewport), viewport, "preview-render",
+                {"EMOJI", "ASCII", "@", "▀"});
+            if (page == 3) check(settings.Render(viewport), viewport, "preview-help", {"█████"});
             settings.OnEvent(ftxui::Event::Return);
-            if (page == 1) check(settings.Render(viewport), viewport, "difficulty",
-                {"EASY", "MEDIUM", "HARD", "BACK"});
-            if (page == 2) check(settings.Render(viewport), viewport, "render",
-                {"EMOJI", "ASCII", "BACK"});
+            if (page == 1) {
+                for (int level = 0; level < 3; ++level) {
+                    check(settings.Render(viewport), viewport, "difficulty-face-" + std::to_string(level),
+                        {level == 0 ? "^ ^" : level == 1 ? "o o" : "> <", "BACK"});
+                    assert(settings.selectedDifficulty() == Difficulty::easy);
+                    settings.OnEvent(ftxui::Event::ArrowDown);
+                }
+            }
+            if (page == 2) {
+                check(settings.Render(viewport), viewport, "render-visual", {"EMOJI", "ASCII", "BACK", "▀"});
+                settings.OnEvent(ftxui::Event::ArrowDown);
+                check(settings.Render(viewport), viewport, "render-ascii", {"ASCII", "BACK", "@"});
+                assert(settings.selectedRenderMode() == RenderMode::emoji);
+            }
             if (page == 3) check(settings.Render(viewport), viewport, "help",
                 {"THE ESCAPE", "CONTROLS", "Wait one turn", "FULL MAP", "DETAIL", "Enter: back"});
         }

@@ -21,10 +21,33 @@ Element Fit(Element scene, std::optional<Dimensions> terminal) {
                                   available_height / double(height));
     const int fitted_width = std::max(1, int(width * scale));
     const int fitted_height = std::max(1, int(height * scale));
-    if (scale == 1.0) return scene;
 
     auto original = Screen::Create(Dimension::Fixed(width), Dimension::Fixed(height));
     Render(original, scene);
+    bool character_field = true;
+    for (int y = 0; y < height && character_field; ++y)
+        for (int x = 0; x < width; ++x) {
+            const auto& glyph = original.PixelAt(x, y).character;
+            if (glyph.size() != 1 || glyph == " ") { character_field = false; break; }
+        }
+    if (character_field) {
+        // Extend only the dense character field; keep its central art proportional.
+        Elements rows;
+        for (int y = 0; y < available_height; ++y) {
+            Elements cells;
+            const int sy = (y - (available_height - fitted_height) / 2) * height / fitted_height;
+            for (int x = 0; x < available_width; ++x) {
+                const int sx = (x - (available_width - fitted_width) / 2) * width / fitted_width;
+                const auto& pixel = original.PixelAt((sx % width + width) % width,
+                                                     (sy % height + height) % height);
+                auto cell = text(pixel.character) | color(pixel.foreground_color);
+                cells.push_back(pixel.bold ? cell | bold : cell);
+            }
+            rows.push_back(hbox(std::move(cells)));
+        }
+        return vbox(std::move(rows)) | bgcolor(Color::Black);
+    }
+    if (scale == 1.0) return scene;
     if (scale > 1.0) {
         // Text keeps its native glyphs. Sprite frames contain only half/full blocks.
         for (int y = 0; y < height; ++y)

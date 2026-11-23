@@ -42,6 +42,54 @@ namespace {
         });
     }
 
+    ftxui::Element RenderPreview(MenuScreen screen, const std::string& option) {
+        using namespace ftxui;
+        auto face = [](int level) {
+            const std::array labels{"EASY", "MEDIUM", "HARD"};
+            const std::array eyes{"│  ^ ^  │", "│  o o  │", "│  > <  │"};
+            const std::array mouths{R"(│ \___/ │)", "│  ---  │", R"(│  /-\  │)"};
+            const std::array tones{MazeUI::success, MazeUI::warning, MazeUI::error};
+            return vbox({text("╭───────╮"), text(eyes[level]), text(mouths[level]),
+                text("╰───────╯"), text(labels[level]) | hcenter}) | color(tones[level]);
+        };
+        if (screen == MenuScreen::Main && option == "DIFFICULTY")
+            return hbox({face(0), text("   "), face(1), text("   "), face(2)});
+        if (screen == MenuScreen::Difficulty && option != "BACK")
+            return face(option == "EASY" ? 0 : option == "MEDIUM" ? 1 : 2);
+        if (option == "HELP")
+            return RenderArt(" █████ \n██   ██\n    ██ \n   ██  \n   ██  \n       \n   ██  ") |
+                bold | color(MazeUI::accent);
+        if ((screen != MenuScreen::Main || option != "RENDER MODE") &&
+            (screen != MenuScreen::RenderMode || option == "BACK")) return text("");
+
+        static constexpr std::array<std::string_view, 12> player{
+            "..HHHH..", ".HHHHHH.", ".HFFFFH.", ".HFEEFH.", ".HFFFFH.", "..HHHH..",
+            "..TTTT..", ".TTTTTT.", ".T.TT.T.", "..TTTT..", "..L..L..", ".LL..LL."};
+        auto tone = [](char pixel) {
+            switch (pixel) {
+                case 'H': return Color::RGB(185, 195, 205);
+                case 'F': return Color::RGB(255, 205, 165);
+                case 'E': return Color(Color::Black);
+                case 'T': return Color(Color::BlueLight);
+                case 'L': return Color::RGB(80, 90, 105);
+                default: return MazeUI::background;
+            }
+        };
+        Elements rows;
+        for (int y = 0; y < 12; y += 2) {
+            Elements cells;
+            for (int x = 0; x < 8; ++x)
+                cells.push_back(text("▀") | color(tone(player[y][x])) |
+                    bgcolor(tone(player[y + 1][x])));
+            rows.push_back(hbox(std::move(cells)));
+        }
+        auto visual = vbox({vbox(std::move(rows)), text("EMOJI") | color(MazeUI::accent) | hcenter});
+        auto ascii = vbox({filler(), RenderArt("  @  \n /|\\ \n / \\ "), filler(),
+            text("ASCII") | color(MazeUI::accent)}) | color(MazeUI::ink);
+        if (screen == MenuScreen::RenderMode) return option == "ASCII" ? ascii : visual;
+        return hbox({visual, text("       "), ascii});
+    }
+
     int OptionCount(MenuScreen screen) {
         switch (screen) {
             case MenuScreen::Main:
@@ -267,15 +315,15 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
         return MazeUI::shell(std::move(title), std::move(body), std::move(controls), metrics, brand);
     };
     if (project2_mode_ && currentScreen_ == MenuScreen::Help) {
-        const bool wide = metrics.width >= 110;
-        const int width = wide ? (metrics.width - 10) / 2 : metrics.width - 6;
+        const bool wide = metrics.width >= 52;
+        const int panel_width = wide ? metrics.width / 2 : metrics.width + 2;
         auto line = [&](const std::string& value, Color tone = MazeUI::ink) {
-            return MazeUI::help_text(value, width, tone);
+            return MazeUI::help_text(value, panel_width - 2, tone);
         };
         auto mission = MazeUI::panel("THE ESCAPE", vbox({
-            line("Activate A and B; reach EXIT with energy before the turn limit."),
-            line("Guard: moves on even turns. Contact ends the run."),
-            line("Energy: terrain costs energy; wait / invalid move costs 1."),
+            line("Activate A + B; reach EXIT with energy before the turn limit."),
+            line("Guard moves on even turns; contact ends the run."),
+            line("Terrain costs energy; wait / invalid move costs 1."),
             line("Batteries recharge; traps drain energy.", MazeUI::muted)
         }));
         auto controls = MazeUI::panel("CONTROLS", vbox({
@@ -283,18 +331,23 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
             line("E · Wait one turn"),
             line("H · Route and energy help"),
             line("1 / 2 / 3 / 0 · Highlight A / B / route / off"),
-            line(MazeUI::zoom_help, MazeUI::accent),
+            line("Z · Alternar entre mapa completo y zoom", MazeUI::accent),
+            line("(FULL MAP / DETAIL)", MazeUI::accent),
             line("Q · Quit", MazeUI::muted)
         }));
-        Element body = wide
-            ? hbox({mission | size(WIDTH, EQUAL, width + 2), text("  "),
-                    controls | size(WIDTH, EQUAL, width + 2)})
+        Element instructions = wide
+            ? hbox({mission | size(WIDTH, EQUAL, panel_width), text("  "),
+                    controls | size(WIDTH, EQUAL, panel_width)})
             : vbox({mission, controls});
-        return vbox({text(" MAZE / HELP") | bold | color(MazeUI::accent),
-                     separator() | color(MazeUI::edge), body,
-                     text(" Enter: back | Q: quit") | color(MazeUI::muted)})
-            | size(WIDTH, EQUAL, metrics.width - 2)
-            | borderStyled(ROUNDED, MazeUI::edge) | bgcolor(MazeUI::background) | center;
+        Element keys = text("[W] [A S D]    E  H  Z  Q") | color(MazeUI::accent);
+        if (metrics.height >= 22) {
+            keys = vbox({RenderArt(metrics.dense ? "    [ W ]\n[ A ][ S ][ D ]" :
+                "       ↑\n     [ W ]\n← [ A ][ S ][ D ] →\n       ↓") | bold | hcenter,
+                text("[E] WAIT  [H] ROUTE  [Z] MAP  [Q] EXIT") |
+                    color(MazeUI::muted) | hcenter}) | color(MazeUI::accent);
+        }
+        return shell("HELP", vbox({keys | hcenter, instructions}),
+            "Enter: back | Q: quit");
     }
 
     if (currentScreen_ == MenuScreen::Main || currentScreen_ == MenuScreen::Difficulty ||
@@ -341,17 +394,21 @@ ftxui::Element Menus::Render(std::optional<ftxui::Dimensions> terminal) const {
             MazeUI::chip("DIFFICULTY", difficulty),
             MazeUI::chip("RENDER", render_mode)
         }));
-        Element body = metrics.layout != MazeUI::Layout::compact
+        Element body = (metrics.layout != MazeUI::Layout::compact || (!main && metrics.width >= 72))
             ? hbox({
                 navigation | size(WIDTH, EQUAL, (metrics.width - 7) / 2),
-                text("   "), vbox({setup, filler()}) | flex})
+                text("   "), vbox({setup, filler(),
+                    RenderPreview(currentScreen_, labels[selectedOption_]) | hcenter,
+                    filler()}) | flex})
             : navigation;
         if (side_logo) {
-            auto brand = vbox({MazeUI::logo() | hcenter,
+            Elements branding{MazeUI::logo() | hcenter,
                 text("Two switches. One way out.") | color(MazeUI::muted) | hcenter,
                 separatorEmpty(),
-                MazeUI::chip("CURRENT", difficulty + " / " + render_mode) | hcenter});
-            body = hbox({vbox({filler(), brand, filler()}) | flex, text("   "),
+                MazeUI::chip("CURRENT", difficulty + " / " + render_mode) | hcenter};
+            if (metrics.height >= 22) branding.push_back(
+                RenderPreview(currentScreen_, labels[selectedOption_]) | hcenter);
+            body = hbox({vbox({filler(), vbox(std::move(branding)), filler()}) | flex, text("   "),
                 navigation | size(WIDTH, EQUAL, (metrics.width - 7) / 2)});
         }
         return shell(main ? "MAIN MENU" : level ? "DIFFICULTY" : "RENDER MODE",

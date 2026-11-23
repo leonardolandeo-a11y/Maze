@@ -58,6 +58,12 @@ void run_cinematic_sequence_tests() {
     observation.collectedResources = 2;
 
     for (auto viewport : {ftxui::Dimensions{80,24}, {100,30}, {120,35}, {160,45}}) {
+        auto field = CinematicStartupAnimation{}.RenderFrame(63, viewport);
+        field->ComputeRequirement();
+        assert(field->requirement().min_x == viewport.dimx);
+        assert(field->requirement().min_y == viewport.dimy);
+        const auto green = render(field, viewport);
+        assert(green.front() != ' ' && green[viewport.dimx - 1] != ' ');
         auto sprite = CinematicVictoryAnimation{}.RenderFrame(46, viewport);
         sprite->ComputeRequirement();
         assert((sprite->requirement().min_x > 90) == (viewport.dimx > 90));
