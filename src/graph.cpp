@@ -49,21 +49,25 @@ GraphData build_graph(
 
             auto& adjacent = graph.neighbors[id];
 
+
             // Up
             if (row > 0 && !blocked[id - columns]) {
                 adjacent.push_back(id - columns);
             }
-            // Left
-            if (column > 0 && !blocked[id - 1]) {
-                adjacent.push_back(id - 1);
-            }
+
             // Right
             if (column + 1 < columns && !blocked[id + 1]) {
                 adjacent.push_back(id + 1);
             }
+
             // Down
             if (row + 1 < rows && !blocked[id + columns]) {
                 adjacent.push_back(id + columns);
+            }
+
+            // Left
+            if (column > 0 && !blocked[id - 1]) {
+                adjacent.push_back(id - 1);
             }
         }
     }

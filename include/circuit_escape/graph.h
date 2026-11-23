@@ -8,7 +8,7 @@
 #include <vector>
 
 // Builds an adjacency-list graph; neighbors are in deterministic
-// up, left, right, down order, matching existing guard behavior.
+// up, right, down, left order, following the project specification.
 GraphData build_graph(
     std::size_t rows,
     std::size_t columns,
