@@ -52,6 +52,27 @@ std::size_t distance(Position first, Position second) {
     return row + column;
 }
 
+    std::size_t objective_route_lower_bound(
+        const std::vector<Position>& positions
+    ) {
+    // positions[0] = Player
+    // positions[1] = Switch A
+    // positions[2] = Switch B
+    // positions[3] = Exit
+
+    const std::size_t route_a =
+        distance(positions[0], positions[1]) +
+        distance(positions[1], positions[2]) +
+        distance(positions[2], positions[3]);
+
+    const std::size_t route_b =
+        distance(positions[0], positions[2]) +
+        distance(positions[2], positions[1]) +
+        distance(positions[1], positions[3]);
+
+    return std::min(route_a, route_b);
+}
+
 template<typename Work>
 void parallel_for(std::size_t task_count, std::size_t worker_count, Work work) {
     std::atomic<std::size_t> next{0};
@@ -94,10 +115,36 @@ PreparedMap build_map(const MapBatchConfig& config, std::size_t id, std::uint32_
     }
     shuffle_positions(rooms, random);
 
+    // Minimum objective route length based on map size.
+    // A 10x15 map requires at least 15 movements.
+    const std::size_t minimum_moves =
+        3 * (config.rows + config.columns) / 5;
+
+    // Retry objective placement while keeping the
+    // generated maze structure unchanged.
+    constexpr std::size_t max_placement_attempts = 100;
+
+    for (std::size_t attempt = 0;
+         attempt < max_placement_attempts &&
+         objective_route_lower_bound(rooms) < minimum_moves;
+         ++attempt) {
+
+        shuffle_positions(rooms, random);
+         }
+
+    // Reject an insufficient placement instead of
+    // silently generating a trivial level.
+    if (objective_route_lower_bound(rooms) < minimum_moves) {
+        throw std::runtime_error(
+            "Unable to place objectives with sufficient separation"
+        );
+    }
+
     const Position player = rooms[0];
     const Position switch_a = rooms[1];
     const Position switch_b = rooms[2];
     const Position exit = rooms[3];
+
     std::size_t guard_index = 4;
     for (std::size_t i = 5; i < rooms.size(); ++i) {
         if (distance(rooms[i], player) > distance(rooms[guard_index], player)) {
