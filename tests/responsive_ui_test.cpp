@@ -31,6 +31,13 @@ void check(ftxui::Element element, ftxui::Dimensions viewport, const std::string
         }
         text += '\n';
     }
+    if (name == "main" || name == "legacy-main") {
+        int borders = 0;
+        for (int y = 0; y < viewport.dimy; ++y)
+            for (int x = 0; x < viewport.dimx; ++x)
+                borders += screen.PixelAt(x, y).character == "╭";
+        assert(borders >= (name == "main" ? 6 : 7));
+    }
     if (name == "main" || name.starts_with("prepared-")) {
         for (const auto* obsolete : {"SELECT MAP SIZE", "CUSTOM MAP SIZE",
                                     "GENERATING", "NOT PREPARED"})
@@ -84,6 +91,19 @@ void run_responsive_ui_tests() {
                     {"DIJKSTRA ENERGY HELP", "OBJECTIVES", "ROUTE", "ENERGY", "CONTROLS",
                      "Remaining", "H/Esc back", "Z · Alternar", "FULL MAP", "DETAIL"});
         }
+    }
+
+    for (auto viewport : {ftxui::Dimensions{60,20}, {80,20}}) {
+        Menus menu(true);
+        down(menu, 4);
+        check(menu.Render(viewport), viewport, "small-main",
+            {"QUIT", "CIRCUITO DE ESCAPE", "Enter: confirm", "Q: quit"});
+        check(VictoryAnimation{}.RenderVictoryFrame(VictoryAnimation::maxFrames - 1,
+            observation, viewport), viewport, "small-victory",
+            {"ESCAPE", "COMPLETED", "¡Has escapado del circuito!", "Energía:", "ENTER - MAIN MENU"});
+        check(DeathAnimation{}.RenderDeathFrame(DeathAnimation::maxFrames - 1,
+            EndReason::captured, observation, viewport), viewport, "small-death",
+            {"GAME OVER", "CAPTURED BY THE GUARD", "Puntaje:", "ENTER - MAIN MENU"});
     }
 
     for (auto viewport : viewports) {

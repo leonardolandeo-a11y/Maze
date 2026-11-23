@@ -105,8 +105,14 @@ void run_cinematic_sequence_tests() {
         assert(victory.find("¡Has escapado del circuito!") != std::string::npos);
         assert(victory.find("ENTER - MAIN MENU") == std::string::npos);
         const auto finished = render(AnimationSequence::victory(113, observation, viewport), viewport, "victory-panel");
-        for (const auto* label : {"ESCAPE COMPLETED", "Energía:    12 / 40", "Puntaje:    7", "Turnos:     6", "Recursos:   2", "ENTER - MAIN MENU"})
-            assert(finished.find(label) != std::string::npos);
+        auto stats = finished;
+        std::erase(stats, ' ');
+        for (const auto* label : {"Energía:12/40", "Puntaje:7", "Turnos:6", "Recursos:2"})
+            assert(stats.find(label) != std::string::npos);
+        assert(finished.find("ENTER - MAIN MENU") != std::string::npos);
+        assert(finished.find("███████╗███████╗ ██████╗ █████╗ ██████╗ ███████╗") != std::string::npos);
+        assert(finished.find("██╔════╝██╔═══██╗████╗ ████║██╔══██╗██║     ██╔════╝╚══██╔══╝██╔════╝██╔══██╗") != std::string::npos);
+        assert(finished.find("╰─┤█├─╯") == std::string::npos);
         assert(finished.find("MAZE") == std::string::npos);
         assert(finished.find("CIRCUITO DE ESCAPE") == std::string::npos);
         assert(render(AnimationSequence::victory(112, observation, viewport), viewport)
@@ -117,8 +123,11 @@ void run_cinematic_sequence_tests() {
             assert(first.find("ENTER - MAIN MENU") == std::string::npos);
             const auto final = render(AnimationSequence::death(177, reason, observation, viewport), viewport, "death-panel");
             assert(final.find("ENTER - MAIN MENU") != std::string::npos);
-            for (const auto* stat : {"Energía:    12 / 40", "Puntaje:    7", "Turnos:     6", "Recursos:   2"})
-                assert(final.find(stat) != std::string::npos);
+            stats = final;
+            std::erase(stats, ' ');
+            for (const auto* stat : {"Energía:12/40", "Puntaje:7", "Turnos:6", "Recursos:2"})
+                assert(stats.find(stat) != std::string::npos);
+            assert(final.find("██╔════╝ ██╔══██╗████╗ ████║██╔════╝    ██╔═══██╗██║   ██║██╔════╝██╔══██╗") != std::string::npos);
             assert(final.find("MAZE") == std::string::npos);
             assert(final.find("CIRCUITO DE ESCAPE") == std::string::npos);
             assert(final.find(reason == EndReason::captured ? "CAPTURED BY THE GUARD" :
