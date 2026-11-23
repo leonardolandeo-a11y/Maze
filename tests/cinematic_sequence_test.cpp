@@ -19,8 +19,10 @@ std::string render(ftxui::Element element, ftxui::Dimensions viewport,
     ftxui::Render(screen, element);
     std::string plain;
     for (int y = 0; y < viewport.dimy; ++y) {
-        for (int x = 0; x < viewport.dimx; ++x)
-            plain += screen.PixelAt(x, y).character;
+        for (int x = 0; x < viewport.dimx; ++x) {
+            const auto& character = screen.PixelAt(x, y).character;
+            plain += character.empty() ? " " : character;
+        }
         plain += '\n';
     }
     if (const char* directory = std::getenv("MAZE_UI_PREVIEW_DIR"); directory && !name.empty()) {
@@ -77,12 +79,14 @@ void run_cinematic_sequence_tests() {
             assert(text.find("ENTER - MAIN MENU") == std::string::npos);
         }
         const auto victory = render(AnimationSequence::victory(78, observation, viewport), viewport);
-        assert(victory.find("VICTORY") != std::string::npos);
-        assert(victory.find("RUN SUMMARY") != std::string::npos);
+        assert(victory.find("ESCAPE COMPLETED") != std::string::npos);
+        assert(victory.find("¡Has escapado del circuito!") != std::string::npos);
         assert(victory.find("ENTER - MAIN MENU") == std::string::npos);
         const auto finished = render(AnimationSequence::victory(113, observation, viewport), viewport, "victory-panel");
-        for (const auto* label : {"VICTORY", "Energy 12/40", "Score 7", "Turn 6", "Resources 2", "ENTER - MAIN MENU"})
+        for (const auto* label : {"ESCAPE COMPLETED", "Energía:    12 / 40", "Puntaje:    7", "Turnos:     6", "Recursos:   2", "ENTER - MAIN MENU"})
             assert(finished.find(label) != std::string::npos);
+        assert(finished.find("MAZE") == std::string::npos);
+        assert(finished.find("CIRCUITO DE ESCAPE") == std::string::npos);
         assert(render(AnimationSequence::victory(112, observation, viewport), viewport)
                    .find("ENTER - MAIN MENU") == std::string::npos);
         for (auto reason : {EndReason::captured, EndReason::noEnergy, EndReason::turnLimit}) {
@@ -91,7 +95,10 @@ void run_cinematic_sequence_tests() {
             assert(first.find("ENTER - MAIN MENU") == std::string::npos);
             const auto final = render(AnimationSequence::death(177, reason, observation, viewport), viewport, "death-panel");
             assert(final.find("ENTER - MAIN MENU") != std::string::npos);
-            assert(final.find("Energy 12/40") != std::string::npos);
+            for (const auto* stat : {"Energía:    12 / 40", "Puntaje:    7", "Turnos:     6", "Recursos:   2"})
+                assert(final.find(stat) != std::string::npos);
+            assert(final.find("MAZE") == std::string::npos);
+            assert(final.find("CIRCUITO DE ESCAPE") == std::string::npos);
             assert(final.find(reason == EndReason::captured ? "CAPTURED BY THE GUARD" :
                 reason == EndReason::noEnergy ? "ENERGY DEPLETED" : "TURN LIMIT EXCEEDED") != std::string::npos);
         }

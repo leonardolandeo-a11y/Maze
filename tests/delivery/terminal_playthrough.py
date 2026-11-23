@@ -173,8 +173,8 @@ def play(executable, maps, evidence, label):
                         game.send('\x1b')
                         game.until(lambda f: 'DIJKSTRA ENERGY HELP' not in f, 'Esc closes refreshed help')
                     switch_state = updated
-            victory = game.contains('Circuit complete. You escaped.', timeout=35)
-            assert 'VICTORY' in victory
+            victory = game.contains('¡Has escapado del circuito!', timeout=35)
+            assert 'ESCAPE COMPLETED' in victory
             prefix.with_suffix('.victory.txt').write_text(victory, encoding='utf-8')
             game.finish()
             assert map_fingerprints(maps) == original, 'Game changed prepared maps'

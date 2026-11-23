@@ -129,12 +129,12 @@ void run_responsive_ui_tests() {
             {"PREPARING THE ESCAPE", "GENERATING 20 x 30", "PLEASE WAIT", "Q: quit"});
         VictoryAnimation victory;
         check(victory.RenderVictoryFrame(VictoryAnimation::maxFrames - 1, observation, viewport),
-              viewport, "victory", {"VICTORY", "RUN SUMMARY", "Energy", "Resources",
+              viewport, "victory", {"ESCAPE COMPLETED", "¡Has escapado del circuito!", "Energía:", "Recursos:",
                                     "ENTER - MAIN MENU", "Q - EXIT"});
         DeathAnimation death;
         check(death.RenderDeathFrame(DeathAnimation::maxFrames - 1, EndReason::captured,
               observation, viewport), viewport, "death",
-              {"GAME OVER", "CAPTURED BY THE GUARD", "RUN SUMMARY", "ENTER - MAIN MENU"});
+              {"GAME OVER", "CAPTURED BY THE GUARD", "Puntaje:", "ENTER - MAIN MENU"});
 
         ConsoleUI ui(RenderMode::ascii);
         const auto help = session.help_report();

@@ -88,20 +88,57 @@ Element result(int frame, int frames, std::string title, std::string description
                std::optional<Dimensions> terminal) {
     const auto dimensions = metrics(terminal);
     const bool done = frame >= frames - 1;
-    auto stats = panel("RUN SUMMARY", vbox({
-        chip("Turn", std::to_string(observation.turn)),
-        chip("Energy", std::to_string(observation.energy) + "/" +
+    // Five-pixel glyphs use half-height blocks so terminal cell proportions stay intact.
+    static constexpr std::string_view alphabet = "ACDEGLMOPRSTV";
+    static constexpr std::array<std::array<int, 5>, 13> glyphs{{
+        {{14,17,31,17,17}}, {{15,16,16,16,15}}, {{30,17,17,17,30}},
+        {{31,16,30,16,31}}, {{15,16,23,17,15}}, {{16,16,16,16,31}},
+        {{17,27,21,17,17}}, {{14,17,17,17,14}}, {{30,17,30,16,16}},
+        {{30,17,30,18,17}}, {{15,16,14,1,30}}, {{31,4,4,4,4}},
+        {{17,17,17,10,4}}
+    }};
+    const int scale = dimensions.width >= int(title.size()) * 6 ? 2 : 1;
+    auto heading = canvas((int(title.size()) * 6 - 1) * scale, 10 * scale,
+        [title, tone, scale](Canvas& image) {
+            for (int i = 0; i < int(title.size()); ++i) {
+                const auto glyph = alphabet.find(title[i]);
+                if (glyph == std::string_view::npos) continue;
+                for (int y = 0; y < 5; ++y)
+                    for (int x = 0; x < 5; ++x)
+                        if (glyphs[glyph][y] & (1 << (4 - x)))
+                            for (int dx = 0; dx < scale; ++dx)
+                                for (int dy = 0; dy < scale; ++dy)
+                                    image.DrawBlock((i * 6 + x) * scale + dx,
+                                        (y * scale + dy) * 2, true, tone);
+            }
+        });
+    auto stat = [&](std::string label, std::string value) {
+        return hbox({text(std::move(label)) | color(muted) |
+                         size(WIDTH, EQUAL, 12),
+                     text(std::move(value)) | bold | color(ink)});
+    };
+    auto stats = vbox({
+        stat("Turnos:", std::to_string(observation.turn)),
+        stat("Energía:", std::to_string(observation.energy) + " / " +
             std::to_string(observation.maximumEnergy)),
-        chip("Score", std::to_string(observation.score)),
-        chip("Resources", std::to_string(observation.collectedResources))}));
-    auto heading = vbox({
-        text(title) | bold | color(tone) | hcenter,
-        text(std::move(description)) | color(ink) | hcenter,
-        circuit(done ? frames - 1 : frame, tone) | hcenter});
-    Element body = dimensions.layout == Layout::split
-        ? hbox({heading | flex, text("  "), stats | flex})
-        : vbox({heading, stats});
-    return shell(title, std::move(body), done
-        ? "ENTER - MAIN MENU   |   Q - EXIT" : "Q - EXIT", dimensions);
+        stat("Puntaje:", std::to_string(observation.score)),
+        stat("Recursos:", std::to_string(observation.collectedResources))})
+        | size(WIDTH, EQUAL, 30) | borderStyled(ROUNDED, tone) | hcenter;
+    Elements lines;
+    if (title == "ESCAPE COMPLETED")
+        lines.push_back(vbox({text("╰─┤█├─╯"), text("  ▀█▀  ")}) |
+                        color(warning) | hcenter);
+    lines.push_back(heading | hcenter);
+    lines.push_back(text(std::move(description)) | color(ink) | hcenter);
+    lines.push_back(separatorEmpty());
+    lines.push_back(std::move(stats));
+    lines.push_back(separatorEmpty());
+    lines.push_back(text(done ? "ENTER - MAIN MENU   |   Q - EXIT" : "Q - EXIT") |
+                    color(muted) | hcenter);
+    return window(text(" " + title + " ") | bold | color(tone),
+                  vbox({filler(), vbox(std::move(lines)), filler()}), ROUNDED)
+        | size(WIDTH, EQUAL, dimensions.width - 2)
+        | size(HEIGHT, EQUAL, dimensions.height - 2)
+        | color(edge) | bgcolor(background) | center | bgcolor(background);
 }
 }
