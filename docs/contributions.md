@@ -1,6 +1,6 @@
 # Contribuciones técnicas
 
-Resumen de aportes incorporados hasta `052413d`, contrastado con el historial de Git, los pull requests de integración y el [registro anterior](https://github.com/leonardolandeo-a11y/Maze/blob/fa2342014c3c6353d3350455156063c2b9354f61/docs/contributions.md). Las referencias permiten consultar los cambios y su integración en los componentes compartidos.
+Resumen de aportes incorporados hasta `052413d`, contrastado con el historial de Git, los pull requests de integración. Las referencias permiten consultar los cambios y su integración en los componentes compartidos.
 
 ## Leonardo Landeo — [@leonardolandeo-a11y](https://github.com/leonardolandeo-a11y)
 
