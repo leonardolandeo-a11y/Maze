@@ -12,12 +12,12 @@ Documentación complementaria: [diseño y temas académicos](docs/design.md), [c
 
 | Sistema | Instalador | Guía |
 | --- | --- | --- |
-| Windows x64 | [ZIP para Windows](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/CircuitoEscape-Windows-x64-Release.zip) | [Guía PDF](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/Guia_Instalacion_Maze.pdf) |
-| Ubuntu 26.04 x86_64 | [ZIP para Ubuntu](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/CircuitoEscape-Ubuntu-26.04-x86_64-Release.zip) | [Guía PDF](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/Guia_Instalacion_Maze.pdf) |
+| Windows x64 | [ZIP para Windows](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.1.0/CircuitoEscape-Windows-x64-Release.zip) | [Guía PDF de la versión anterior (v1.0.0)](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0/Guia_Instalacion_Maze.pdf) |
+| Ubuntu 26.04 x86_64 | [TAR.GZ para Ubuntu](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.1.0/CircuitoEscape-Ubuntu-26.04-x86_64-Release.tar.gz) | [Guía PDF de la versión anterior (v1.0.0-linux)](https://github.com/leonardolandeo-a11y/Maze/releases/download/v1.0.0-linux/Guia_Instalacion_Maze.pdf) |
 
 Los paquetes permiten ejecutar `escape_circuit` y `map_generator` sin compilar e incluyen los mapas y las dependencias de ejecución. El procedimiento de demostración descrito aquí utiliza **Ubuntu 26.04 x86_64**. También se incluyen instrucciones para Windows.
 
-Las descargas [`v1.0.0`](https://github.com/leonardolandeo-a11y/Maze/releases/tag/v1.0.0) y [`v1.0.0-linux`](https://github.com/leonardolandeo-a11y/Maze/releases/tag/v1.0.0-linux) están marcadas como *prerelease* y sus tags apuntan a `b313aab`. El manifiesto `BUILD-INFO.txt` del paquete Ubuntu identifica su compilación como `6a2c76d`. Para reproducir una entrega, conserva la versión del paquete y sus mapas; los ejemplos de compilación desde código corresponden a la versión del repositorio que hayas clonado.
+La release vigente es [`v1.1.0`](https://github.com/leonardolandeo-a11y/Maze/releases/tag/v1.1.0), asociada al commit `f5a0049`. El paquete Ubuntu fue compilado desde ese commit y validado manualmente. El paquete Windows se generó mediante GitHub Actions desde el [PR #153](https://github.com/leonardolandeo-a11y/Maze/pull/153), cuya rama tenía como HEAD `b223270` y cuyo contenido coincide con el árbol del commit `f5a0049`. El manifiesto `BUILD.txt` identifica la compilación de Windows. Para reproducir una entrega, conserva la versión del paquete y sus mapas; los ejemplos de compilación desde código corresponden a la versión del repositorio que hayas clonado.
 
 <details>
 <summary>Windows x64 · instalar, jugar y desinstalar</summary>
@@ -32,7 +32,13 @@ Las descargas [`v1.0.0`](https://github.com/leonardolandeo-a11y/Maze/releases/ta
 <details>
 <summary>Ubuntu 26.04 x86_64 · instalar, jugar y desinstalar</summary>
 
-Extrae el ZIP. Desde la carpeta que contiene `install.sh`, ejecuta:
+Extrae el TAR.GZ:
+
+```bash
+tar -xzf CircuitoEscape-Ubuntu-26.04-x86_64-Release.tar.gz
+```
+
+Desde la carpeta extraída que contiene `install.sh`, ejecuta:
 
 ```bash
 bash install.sh
