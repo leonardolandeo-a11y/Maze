@@ -31,6 +31,61 @@ void check(ftxui::Element element, ftxui::Dimensions viewport, const std::string
         }
         text += '\n';
     }
+    if (name == "main" || name == "legacy-main" || name == "death" || name == "victory") {
+        assert(screen.PixelAt(0, 0).character == "╭");
+        assert(screen.PixelAt(viewport.dimx - 1, viewport.dimy - 1).character == "╯");
+    }
+    if (name == "death" || name == "victory") {
+        assert(text.find("FINAL STATS") != std::string::npos);
+        assert(text.find("Main Menu") != std::string::npos);
+        for (const auto* icon : {"▥", "ϟ", "★", "◇"})
+            assert(text.find(icon) != std::string::npos);
+    }
+    if (name == "main" || name == "legacy-main") {
+        int borders = 0;
+        for (int y = 0; y < viewport.dimy; ++y)
+            for (int x = 0; x < viewport.dimx; ++x)
+                borders += screen.PixelAt(x, y).character == "╭";
+        assert(borders >= (name == "main" ? 6 : 7));
+        assert(text.find("CIRCUITO DE ESCAPE") == std::string::npos);
+        for (const auto* detail : {"✚", "▥", "▣", "?", "↪", "Choose your challenge",
+                                   "Choose map symbols", "Learn the circuit", "Leave the circuit"})
+            assert(text.find(detail) != std::string::npos);
+    }
+    if (name == "render-visual" || name == "render-ascii" || name == "preview-render")
+        assert(text.find('@') == std::string::npos);
+    if (ftxui::Terminal::ColorSupport() == ftxui::Terminal::Color::TrueColor) {
+        auto has_color = [&](ftxui::Color tone) {
+            for (int y = 0; y < viewport.dimy; ++y)
+                for (int x = 0; x < viewport.dimx; ++x) {
+                    const auto& cell = screen.PixelAt(x, y);
+                    if (cell.foreground_color == tone || cell.background_color == tone) return true;
+                }
+            return false;
+        };
+        const std::array fills{ftxui::Color::RGB(84,235,121), ftxui::Color::RGB(255,216,77),
+                                ftxui::Color::RGB(255,89,100)};
+        if (name == "preview-difficulty") {
+            assert(has_color(ftxui::Color::RGB(156,163,175)));
+            for (auto tone : fills) assert(!has_color(tone));
+        }
+        if (name.starts_with("difficulty-face-"))
+            for (int level = 0; level < 3; ++level)
+                assert(has_color(fills[level]) == (name.back() - '0' == level));
+        if (name == "preview-render") {
+            assert(has_color(ftxui::Color::RGB(184,192,204)));
+            assert(!has_color(ftxui::Color::RGB(255,205,165)));
+            assert(!has_color(ftxui::Color::BlueLight));
+        }
+        if (name == "render-visual") {
+            assert(has_color(ftxui::Color::RGB(255,205,165)));
+            assert(has_color(ftxui::Color::BlueLight));
+        }
+        if (name == "render-ascii")
+            for (auto tone : {ftxui::Color::RGB(198,205,213), ftxui::Color::RGB(228,232,237),
+                              ftxui::Color::RGB(139,150,163), ftxui::Color::RGB(181,190,200)})
+                assert(has_color(tone));
+    }
     if (name == "main" || name.starts_with("prepared-")) {
         for (const auto* obsolete : {"SELECT MAP SIZE", "CUSTOM MAP SIZE",
                                     "GENERATING", "NOT PREPARED"})
@@ -86,18 +141,50 @@ void run_responsive_ui_tests() {
         }
     }
 
+    for (auto viewport : {ftxui::Dimensions{60,20}, {80,20}}) {
+        Menus menu(true);
+        down(menu, 4);
+        check(menu.Render(viewport), viewport, "small-main",
+            {"QUIT", "Two switches. One way out.", "Enter: confirm", "Q: quit"});
+        check(VictoryAnimation{}.RenderVictoryFrame(VictoryAnimation::maxFrames - 1,
+            observation, viewport), viewport, "small-victory",
+            {"ESCAPE", "COMPLETED", "¡Has escapado del circuito!", "Energía:", "[ ENTER ]"});
+        check(DeathAnimation{}.RenderDeathFrame(DeathAnimation::maxFrames - 1,
+            EndReason::captured, observation, viewport), viewport, "small-death",
+            {"GAME OVER", "CAPTURED BY THE GUARD", "Puntaje:", "[ ENTER ]"});
+    }
+
     for (auto viewport : viewports) {
         Menus menu(true);
         check(menu.Render(viewport), viewport, "main",
-            {"START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT", "Enter: confirm"});
+            {"START GAME", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT", "Enter: confirm",
+             "Two switches. One way out.", "╚═╝"});
+        Menus legacy;
+        check(legacy.Render(viewport), viewport, "legacy-main",
+            {"START GAME", "SCENARIO", "DIFFICULTY", "RENDER MODE", "HELP", "QUIT", "Enter: confirm"});
         for (int page = 1; page <= 3; ++page) {
             Menus settings(true);
             down(settings, page);
+            if (page == 1) check(settings.Render(viewport), viewport, "preview-difficulty",
+                {"EASY", "MEDIUM", "HARD", "▀"});
+            if (page == 2) check(settings.Render(viewport), viewport, "preview-render",
+                {"EMOJI", "ASCII", "▀"});
+            if (page == 3) check(settings.Render(viewport), viewport, "preview-help", {"█████"});
             settings.OnEvent(ftxui::Event::Return);
-            if (page == 1) check(settings.Render(viewport), viewport, "difficulty",
-                {"EASY", "MEDIUM", "HARD", "BACK"});
-            if (page == 2) check(settings.Render(viewport), viewport, "render",
-                {"EMOJI", "ASCII", "BACK"});
+            if (page == 1) {
+                for (int level = 0; level < 3; ++level) {
+                    check(settings.Render(viewport), viewport, "difficulty-face-" + std::to_string(level),
+                        {"▀", "BACK"});
+                    assert(settings.selectedDifficulty() == Difficulty::easy);
+                    settings.OnEvent(ftxui::Event::ArrowDown);
+                }
+            }
+            if (page == 2) {
+                check(settings.Render(viewport), viewport, "render-visual", {"EMOJI", "ASCII", "BACK", "▀"});
+                settings.OnEvent(ftxui::Event::ArrowDown);
+                check(settings.Render(viewport), viewport, "render-ascii", {"ASCII", "BACK", "▀"});
+                assert(settings.selectedRenderMode() == RenderMode::emoji);
+            }
             if (page == 3) check(settings.Render(viewport), viewport, "help",
                 {"THE ESCAPE", "CONTROLS", "Wait one turn", "FULL MAP", "DETAIL", "Enter: back"});
         }
@@ -129,12 +216,12 @@ void run_responsive_ui_tests() {
             {"PREPARING THE ESCAPE", "GENERATING 20 x 30", "PLEASE WAIT", "Q: quit"});
         VictoryAnimation victory;
         check(victory.RenderVictoryFrame(VictoryAnimation::maxFrames - 1, observation, viewport),
-              viewport, "victory", {"VICTORY", "RUN SUMMARY", "Energy", "Resources",
-                                    "ENTER - MAIN MENU", "Q - EXIT"});
+              viewport, "victory", {"ESCAPE COMPLETED", "¡Has escapado del circuito!", "Energía:", "Recursos:",
+                                    "[ ENTER ]", "[ Q ]"});
         DeathAnimation death;
         check(death.RenderDeathFrame(DeathAnimation::maxFrames - 1, EndReason::captured,
               observation, viewport), viewport, "death",
-              {"GAME OVER", "CAPTURED BY THE GUARD", "RUN SUMMARY", "ENTER - MAIN MENU"});
+              {"GAME OVER", "CAPTURED BY THE GUARD", "Puntaje:", "[ ENTER ]"});
 
         ConsoleUI ui(RenderMode::ascii);
         const auto help = session.help_report();

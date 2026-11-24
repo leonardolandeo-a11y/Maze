@@ -39,9 +39,9 @@ void run_animation_tests() {
         victory.RenderVictoryFrame(VictoryAnimation::maxFrames - 2, observation));
     const std::string final_victory = render_animation(
         victory.RenderVictoryFrame(VictoryAnimation::maxFrames - 1, observation));
-    assert(early_victory.find("ENTER - MAIN MENU") == std::string::npos);
-    assert(final_victory.find("ENTER - MAIN MENU") != std::string::npos);
-    assert(final_victory.find("Q - EXIT") != std::string::npos);
+    assert(early_victory.find("[ ENTER ]") == std::string::npos);
+    assert(final_victory.find("[ ENTER ]") != std::string::npos);
+    assert(final_victory.find("[ Q ]") != std::string::npos);
     assert(final_victory.find("PLAY AGAIN") == std::string::npos);
 
     DeathAnimation death;
@@ -49,9 +49,9 @@ void run_animation_tests() {
         death.RenderDeathFrame(DeathAnimation::maxFrames - 2, EndReason::captured, observation));
     const std::string final_death = render_animation(
         death.RenderDeathFrame(DeathAnimation::maxFrames - 1, EndReason::captured, observation));
-    assert(early_death.find("ENTER - MAIN MENU") == std::string::npos);
-    assert(final_death.find("ENTER - MAIN MENU") != std::string::npos);
-    assert(final_death.find("Q - EXIT") != std::string::npos);
+    assert(early_death.find("[ ENTER ]") == std::string::npos);
+    assert(final_death.find("[ ENTER ]") != std::string::npos);
+    assert(final_death.find("[ Q ]") != std::string::npos);
     assert(final_death.find("CAPTURED BY THE GUARD") != std::string::npos);
 
     const std::string no_energy = render_animation(

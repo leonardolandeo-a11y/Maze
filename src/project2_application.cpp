@@ -195,8 +195,6 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
         if (startup_active) {
             if (event == Event::Character('q') || event == Event::Character('Q')) {
                 screen.Exit();
-            } else if (event == Event::Return && AnimationSequence::welcomeVisible(startup_frame)) {
-                startup_active = false;
             }
             return true;
         }
@@ -281,8 +279,8 @@ int Project2Application::run(std::optional<SavedDifficulty> difficulty) {
             // thread only reads atomic animation flags and posts callbacks.
             if (startup_active) {
                 screen.Post([&] {
-                    if (startup_active && startup_frame < AnimationSequence::startupFrames - 1)
-                        ++startup_frame; // Stay on WELCOME until Enter, never skip the cinematic.
+                    if (startup_active && AnimationSequence::startupComplete(++startup_frame))
+                        startup_active = false;
                 });
             } else if (victory_active) {
                 screen.Post([&] {

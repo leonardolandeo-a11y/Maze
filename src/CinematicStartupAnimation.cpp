@@ -1,6 +1,7 @@
 // Original cinematic scenes from 20316e5^, preserved separately from responsive panels.
 #include "circuit_escape/CinematicStartupAnimation.h"
 #include "circuit_escape/cinematic_view.h"
+#include "circuit_escape/ui_theme.h"
 #include <vector>
 #include <array>
 #include <algorithm>
@@ -232,25 +233,8 @@ ftxui::Element CinematicStartupAnimation::RenderLogoFormation(int frame) const{
 ftxui::Element CinematicStartupAnimation::RenderTitleSequence(int frame) const{
 
     //Titulo MAZE ya completamente formado
-    const std::array<std::string, 6> mazeTitle = {
-        "███╗   ███╗ █████╗ ███████╗███████╗",
-        "████╗ ████║██╔══██╗╚══███╔╝██╔════╝",
-        "██╔████╔██║███████║  ███╔╝ █████╗  ",
-        "██║╚██╔╝██║██╔══██║ ███╔╝  ██╔══╝  ",
-        "██║ ╚═╝ ██║██║  ██║███████╗███████╗",
-        "╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝"
-    };
+    ftxui::Elements titleLines{MazeUI::logo() | ftxui::hcenter};
 
-    ftxui::Elements titleLines;
-
-    for (const auto& line : mazeTitle) {
-        titleLines.push_back(
-            ftxui::text(line) |
-            ftxui::color(ftxui::Color::CyanLight) |
-            ftxui::bold |
-            ftxui::center
-        );
-    }
     //Primero el titulo se queda solo
     if (frame >= subtitleFrame) {
         titleLines.push_back(ftxui::text(""));
