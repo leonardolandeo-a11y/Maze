@@ -1,0 +1,45 @@
+digraph CircuitoEscape {
+  graph [rankdir=TB, bgcolor="white", fontname="sans-serif", nodesep=0.3, ranksep=0.5,
+         label="Circuito de Escape · Proyecto 2\nAzul: nuevo en P2 · Verde: reutilizado o adaptado de P1", labelloc=t];
+  node [shape=box, style="rounded,filled", fillcolor="#e8f1ff", color="#315278", fontname="sans-serif", fontsize=11];
+  edge [color="#526277", fontname="sans-serif", fontsize=10];
+  subgraph cluster_generation {
+    label="Preparación offline · map_generator"; color="#cbd5e1";
+    cli [label="CLI / perfil interactivo"];
+    batch [label="run_map_batch"];
+    kruskal [label="Fase 1 paralela: build_map\nKruskal + DisjointSet\nárbol y aperturas adicionales"];
+    validation [label="Fase 2 paralela: validate_map\nvalidate_map_routes + GameVerifier\nrutas y secuencia ganadora"];
+    selector [label="select_maps\nEasy / Medium / Hard"];
+    storage [label="save_selected_maps\nmap_storage.cpp"];
+    cli -> batch -> kruskal;
+    kruskal -> validation [label="join de todos los trabajadores"];
+    validation -> selector -> storage;
+  }
+  files [shape=folder, label="Tres archivos CIRCUIT_ESCAPE_MAP 1\nmetadatos, celdas y acciones ganadoras", fillcolor="#fff5da"];
+  storage -> files;
+  subgraph cluster_game {
+    label="Juego · escape_circuit"; color="#cbd5e1";
+    loader [label="Comprobación de archivos / load_map\nverifica costo y reproduce victoria"];
+    app [label="Project2Application\nselección de dificultad y eventos FTXUI"];
+    session [label="Project2Session\nA/B, captura, salida, turnos y reset"];
+    engine [label="NavigationEnvironment + Agent + GameRules\nGrid dinámico, iteradores y utilidades", fillcolor="#e7f3e9"];
+    guard [label="GameVerifier::guard_next_step\nIController / PolicyController<GuardBfsPolicy>\nBFS al jugador actual en turnos pares", fillcolor="#e7f3e9"];
+    help [label="help_report · H\nobjetivos pendientes, costos y saldo"];
+    ui [label="ConsoleUI + menús + cinemáticas\nFTXUI · FULL MAP / DETAIL", fillcolor="#e7f3e9"];
+    loader -> app -> session;
+    app -> ui [label="presentación"];
+    session -> engine [label="step / reset"];
+    session -> guard;
+    session -> help [label="consulta sin turno"];
+    help -> ui [label="reporte"];
+  }
+  graphdata [label="graph_from_grid / GraphData\nadyacencias y costos de entrada"];
+  dijkstra [label="Dijkstra propio compartido\nrun_dijkstra / dijkstra_path"];
+  files -> loader;
+  engine -> graphdata [style=dashed, label="conversión del tablero"];
+  graphdata -> dijkstra [label="entrada"];
+  validation -> dijkstra [label="ambos órdenes"];
+  help -> dijkstra [label="desde jugador actual"];
+  loader -> dijkstra [style=dashed, label="mediante validate_map_routes"];
+  validation -> guard [style=dashed, label="política compartida en simulación"];
+}
