@@ -35,9 +35,9 @@ GraphData graph_for(const Grid<Cell>& grid) {
                 }
             };
             if (row > 0) connect(row - 1, column);
-            if (column > 0) connect(row, column - 1);
             if (column + 1 < graph.columns) connect(row, column + 1);
             if (row + 1 < graph.rows) connect(row + 1, column);
+            if (column > 0) connect(row, column - 1);
         }
     }
     return graph;

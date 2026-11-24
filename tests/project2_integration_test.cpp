@@ -34,10 +34,10 @@ SavedMap make_fixture(std::size_t rows, std::size_t columns) {
     for (std::size_t row = 0; row < rows; ++row) {
         for (std::size_t column = 0; column < columns; ++column) {
             auto& neighbors = map.input.graph.neighbors[row * columns + column];
-            if (row > 0) neighbors.push_back((row - 1) * columns + column);
-            if (column > 0) neighbors.push_back(row * columns + column - 1);
-            if (column + 1 < columns) neighbors.push_back(row * columns + column + 1);
-            if (row + 1 < rows) neighbors.push_back((row + 1) * columns + column);
+                if (row > 0) neighbors.push_back((row - 1) * columns + column);
+                if (column + 1 < columns) neighbors.push_back(row * columns + column + 1);
+                if (row + 1 < rows) neighbors.push_back((row + 1) * columns + column);
+                if (column > 0) neighbors.push_back(row * columns + column - 1);
         }
     }
     map.input.player_start = {1, 1};
